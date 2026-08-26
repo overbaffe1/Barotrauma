@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Баритрама 스트림</title>
+  <style>
+    body { margin:0; overflow:hidden; font-family:sans-serif; background:#000; color:#fff; }
+    #videoContainer { position:relative; width:100%; height:100%; }
+    #localVideo { width:100%; height:100%; object-fit:cover; }
+    #cameraInset {
+      position:absolute; right:10px; bottom:10px; width:180px; height:140px; border:2px solid #fff; border-radius:8px; overflow:hidden; background:#000;
+    }
+    #cameraInset video { width:100%; height:100%; display:block; }
+    #overlay {
+      position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.6); padding:8px 12px; border-radius:6px; font-size:1.2rem; min-width:80px; text-align:center;
+    }
+    #messageBox {
+      position:absolute; left:20px; bottom:20px; right:20px; background:rgba(0,0,0,0.6); padding:10px; border-radius:6px; display:flex; gap:8px; font-size:1rem;
+    }
+    #messageInput { flex:1; background:#fff; color:#000; border:none; padding:8px; border-radius:4px; }
+    #sendBtn { background:#007; color:#fff; border:none; padding:0 12px; border-radius:4px; cursor:pointer; }
+    #messages { position:absolute; top:20px; left:20px; right:200px; bottom:200px; overflow:auto; background:rgba(0,0,0,0.5); padding:10px; font-size:0.9rem; display:none; }
+    .msg { margin:4px 0; padding:2px 6px; background:#555; border-radius:4px; max-width:80%; }
+  </style>
+</head>
+<body>
+  <div id="videoContainer">
+    <video id="localVideo" autoplay playsinline></video>
+    <div id="cameraInset"><video id="cameraVideo" autoplay playsinline></video></div>
+    <div id="overlay">Зрителей: <span id="viewerCount">0</span></div>
+  </div>
+
+  <div id="messageBox">
+    <input id="messageInput" type="text" placeholder="Напишите сообщение...">
+    <button id="sendBtn">Отправить</button>
+  </div>
+
+  <div id="messages" title="Сообщения"></div>
+
+  <script>
+    const ws = new WebSocket('ws://localhost:3000');
+    const viewerCountSpan = document.getElementById('viewerCount');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const messagesDiv = document.getElementById('messages');
+
+    // Handle viewer count from server
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'viewerCount') {
+        viewerCountSpan.textContent = data.count;
+      } else if (data.type === 'message') {
+        // Display message in the messages div
+        const p = document.createElement('p');
+        p.className = 'msg';
+        p.textContent = data.text;
+        messagesDiv.appendChild(p);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    };
+
+    // Request screen and camera access
+    async function init() {
+      try {
+        // Try to get screen sharing stream (display media)
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+        document.getElementById('localVideo').srcObject = screenStream;
+
+        // Get camera stream for inset
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        document.getElementById('cameraVideo').srcObject = cameraStream;
+      } catch (err) {
+        console.error('Ошибка доступа к медиа:', err);
+        alert('Не удалось получить доступ к камере/экрану: ' + err.message);
+      }
+    }
+
+    // Update viewer count when sending a message (optional: could also increment on connect)
+    sendBtn.onclick = () => {
+      const text = messageInput.value.trim();
+      if (!text) return;
+      // Send message to server so it broadcasts to all
+      ws.send(text);
+      // Also local echo in messages div
+      const p = document.createElement('p');
+      p.className = 'msg';
+      p.textContent = 'Я: ' + text;
+      messagesDiv.appendChild(p);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      messageInput.value = '';
+    };
+
+    // Initially init
+    init();
+
+    // Optional: count viewers on connect/disconnect could be handled by server already.
+  </script>
+</body>
+</html>
