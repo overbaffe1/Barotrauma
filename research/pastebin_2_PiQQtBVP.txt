@@ -1,0 +1,219 @@
+# Barotrauma .cs Research Notes
+Цель: понять серверную модель доверия и найти места, где клиентские данные
+используются без серверной валидации — то, что можно вызвать из CSHUB/ActionHub
+через `GameMain.Client.ClientPeer.Send(...)` + рефлексию.
+Репозиторий устроен так:
+- Корень `/` — декомпилированный клиентский билд Barotrauma.cs (с UI, рендером,
+  `GameClient`, `Character` и т.п.). 903 .cs файла.
+- `/SERVER/DedicatedServer/Barotrauma/` — серверный билд, 1283 .cs файла.
+  Файлы с одинаковыми именами в 95% случаев отличаются только токенами
+  компилятора и отсутствием UI-части. Серверная логика — именно тут.
+- `/SERVER/DedicatedServer/Barotrauma/BarotraumaShared/` и `BarotraumaServer/`
+  отсутствуют в этом дампе (всё слито в один плоский список).
+---
+## Карта сетевого взаимодействия (baseline)
+`GameServer.ReadDataMessage(NetworkConnection, IReadMessage)` —
+[SERVER/DedicatedServer/Barotrauma/Networking/GameServer.cs:898](file:///home/user/BarotraumaMod/SERVER/DedicatedServer/Barotrauma/Networking/GameServer.cs#L898)
+Первый байт пакета:
+| #  | ClientPacketHeader          | Обработчик                              |
+|----|-----------------------------|------------------------------------------|
+| 0  | UPDATE_LOBBY                | `ClientReadLobby` (segmented)            |
+| 1  | UPDATE_INGAME               | `ClientReadIngame` (segmented)           |
+| 2  | SERVER_SETTINGS             | `ServerSettings.ServerRead`              |
+| 3  | SERVER_SETTINGS_PERKS       | `ServerSettings.ReadPerks`               |
+| 4  | CAMPAIGN_SETUP_INFO         | start/load campaign (требует ManageRound)|
+| 5  | FILE_REQUEST                | `FileSender.ReadFileRequest`             |
+| 6  | VOICE                       | `VoipServer.Read`                        |
+| 7  | PING_RESPONSE               | эхо-валидация 64 байт                    |
+| 8  | RESPONSE_CANCEL_STARTGAME   | `AbortStartGameIfWarningActive`          |
+| 9  | RESPONSE_STARTGAME          | ReadyToStart/AFK + `UpdateCharacterInfo` |
+| 10 | SERVER_COMMAND              | `ClientReadServerCommand`                |
+| 11 | ENDROUND_SELF               | `connectedClient.InGame=false; ResetSync`|
+| 12 | EVENTMANAGER_RESPONSE       | `EventManager.ServerRead`                |
+| 13 | REQUEST_STARTGAMEFINALIZE   | `SendRoundStartFinalize`                 |
+| 14 | UPDATE_CHARACTERINFO        | `UpdateCharacterInfo`                    |
+| 15 | ERROR                       | `HandleClientError`                      |
+| 16 | CREW                        | `mpCampaign.ServerReadCrew`              |
+| 17 | MEDICAL                     | `mpCampaign.MedicalClinic.ServerRead`    |
+| 18 | TRANSFER_MONEY              | `mpCampaign.ServerReadMoney`             |
+| 19 | REWARD_DISTRIBUTION         | `mpCampaign.ServerReadRewardDistribution`|
+| 20 | RESET_REWARD_DISTRIBUTION   | `mpCampaign.ResetSalaries`               |
+| 21 | CIRCUITBOX                  | `ReadCircuitBoxMessage`                  |
+| 22 | READY_CHECK                 | `ReadyCheck.ServerRead`                  |
+| 23 | READY_TO_SPAWN              | `ReadReadyToSpawnMessage`                |
+| 24 | TAKEOVERBOT                 | `ReadTakeOverBotMessage`                 |
+| 25 | TOGGLE_RESERVE_BENCH        | `crewManager.ReadToggleReserveBenchMessage`|
+| 26 | REQUEST_BACKUP_INDICES      | `SendBackupIndices`                      |
+Пакеты 0 и 1 используют `SegmentTableReader<ClientNetSegment>` с сегментами
+SyncIds, ChatMessage, Vote, CharacterInput, EntityState, SpectatingPos.
+---
+## 🔥 HIT #1 — Medical Clinic Price=0 (уже реализовано у тебя, но разбор механики)
+[SERVER/.../MedicalClinic.cs:60 (`ProcessNewAddition`)](file:///home/user/BarotraumaMod/SERVER/DedicatedServer/Barotrauma/MedicalClinic.cs#L60)
+сервер читает `NetCrewMember` и кладёт его в `PendingHeals` как есть.
+`NetAffliction.Price` — это `public ushort Price`, помеченный
+`[NetworkSerialize(68)]`, и сервер его не перезаписывает.
+При HEAL:
+1. `ProcessHealing(client)` → `HealAllPending(false, client)`.
+2. `GetTotalCost()` суммирует `affliction.Price` из PendingHeals. Если 0 —
+   `TryPurchase(client, 0)` возвращает `true` (см. `MultiPlayerCampaign.TryPurchase`:
+   `if (price == 0) return true;`).
+3. Для каждой affliction вызывается
+   `health.ReduceAfflictionOnAllLimbs(identifier, prefab.MaxStrength, null, null)` —
+   снимается до MaxStrength, а не до присланного `Strength`.
+4. Outpost combat проверяется только на HEAL, не на ADD. То есть можно
+   накидать пары в любой момент, а вылечить, когда бой кончится.
+5. RateLimiter 20 пакетов / 5 сек — ничего, шлётся один ADD со всеми.
+Бонусы, которые ты можешь не использовать:
+- `case 8: ProcessAddEverything(client)` — пакет с `subHeader=8` добавляет все
+  healable-аффликшены crew, сервер сам посчитает цену. Не эксплойт, но можно
+  использовать вместо своего перечисления.
+- `case 0: ProcessRequestedAfflictions` — подписаться на серверные апдейты
+  аффликшенов любого Team1 персонажа (шпионаж за здоровьем всей команды).
+  Подписка живёт 1 минуту, затем авто-отписка.
+- `Identifier` вообще не валидируется на предмет «есть ли эта affliction у
+  персонажа» — `ReduceAfflictionOnAllLimbs` получит неизвестный идентификатор
+  и просто ничего не сделает для него, без ошибки. То есть можно слать
+  сразу весь `AfflictionPrefab.List` одним пакетом, лишнее отфильтруется
+  само (как ты уже и делаешь).
+---
+## 🔥 HIT #2 — SERVER_COMMAND permission bypass (НОВОЕ)
+[SERVER/.../GameServer.cs:1750 (`ClientReadServerCommand`)](file:///home/user/BarotraumaMod/SERVER/DedicatedServer/Barotrauma/Networking/GameServer.cs#L1750)
+```csharp
+ClientPermissions command = (ClientPermissions)inc.ReadUInt16();
+...
+if ((command != ClientPermissions.ManageRound   || mpCampaign == null) &&
+    (command != ClientPermissions.ManageCampaign || mpCampaign == null) &&
+    !sender.HasPermission(command))
+{
+    // Permission denied
+    return;
+}
+```
+Логика: `if( (A) && (B) && (C) return;`
+- `A = (command != ManageRound || mpCampaign == null)` — ложно, если `command == ManageRound && mp != null`
+- `B = (command != ManageCampaign || mpCampaign == null)` — ложно, если `command == ManageCampaign && mp != null`
+- `C = !sender.HasPermission(command)`
+Если клиент в мультиплеерной кампании посылает `command = ManageRound` или
+`command = ManageCampaign`, то `A` или `B` равно `false`, и вся `&&` цепочка
+короткозамыкается на `false` — проверка права пропускается, даже если у клиента
+нет этого права.
+**Что даёт ManageCampaign:** выполняется `mpCampaign.ServerRead(inc, sender)`,
+а это `MultiPlayerCampaign.ServerRead` — огромный метод, который обрабатывает:
+- `purchasedHullRepairs`, `purchasedItemRepairs`, `purchasedLostShuttles` —
+  пытается купить за свой кошелёк (`GetBalance(sender) >= cost`), но `TryPurchase`
+  не проверяется на успех для hull/item repairs!
+  Достаточно иметь `balance >= cost` на момент проверки. `TryPurchase` списывает
+  деньги (`TryDeduct`) — если хватает, то нормально; это не бесплатный ремонт.
+- Покупка предметов из магазина (`CargoManager.PurchaseItems`).
+- Покупка апгрейдов (`UpgradeManager.TryPurchaseUpgrade`).
+- `purchasedItemSwaps` — `UpgradeManager.PurchaseItemSwap` (свап установленного
+  оборудования).
+- Все эти операции проходят через `HasCampaignInteractionAvailable(sender, ...)`
+  — если сервер не выставил `AllowRemoteCampaignInteractions`, нужно быть
+  в 250 юнитах от NPC с нужным `CampaignInteractionType`.
+**Что даёт ManageRound:**
+- `end=true` — завершить раунд (`EndGame`), даже без прав.
+- `continueCampaign=true` — загрузить кампанию заново с диска (`LoadCampaign`).
+- `tryStartGame` — `TryStartGame()` (старт голосования/старт раунда).
+- `availableTransition != None` — форсировать `LoadNewLevel()` с навигацией
+  по карте (!). Можно телепортировать карту вперёд/назад.
+**Важная оговорка:** дальше внутри ManageRound-веток тоже есть проверки
+`AllowedToManageCampaign(sender, ManageRound/ManageCampaign/ManageMap)`,
+которые могут отсечь попытки. Но `LoadNewLevel`-ветка при `availableTransition`
+проверяет `ManageCampaign || ManageMap` — то есть за `ManageCampaign` байпасом
+пройдёт. Это надо проверить вживую.
+**Это самый интересный новый баг. Стоит написать модуль, который:**
+1. В режиме кампании шлёт SERVER_COMMAND с `(ushort)ClientPermissions.ManageCampaign`
+   и собранным телом `mpCampaign.ServerRead` для покупки HullRepairs без
+   необходимой суммы (если `TryPurchase` всё же не списывает при `price==0`...
+   хотя тут price не 0, нужна полная сумма).
+2. Или `ManageRound` + `availableTransition != None` для прыжка по карте.
+---
+## 🔥 HIT #3 — TAKEOVERBOT бесплатный наём
+[SERVER/.../GameServer.cs:1820 (`ReadTakeOverBotMessage`)](file:///home/user/BarotraumaMod/SERVER/DedicatedServer/Barotrauma/Networking/GameServer.cs#L1820)
+```csharp
+if (base.ServerSettings.ReplaceCostPercentage > 0f &&
+    !CampaignMode.AllowedToManageCampaign(sender, ClientPermissions.ManageMoney) &&
+    !CampaignMode.AllowedToManageCampaign(sender, ClientPermissions.ManageHires))
+{
+    SendConsoleMessage("No permission to manage money or hires.");
+    return;
+}
+if (campaign.TryHireCharacter(...)) { ... SpawnAndTakeOverBot ... }
+```
+Проверка прав — только если `ReplaceCostPercentage > 0`. На серверах со
+стандартным `ReplaceCostPercentage = 0` (дефолт) любой может нанять любого
+hireable бота бесплатно через прямой пакет. Цена снимается в
+`TryHireCharacter` — если `ReplaceCostPercentage == 0`, сумма = 0.
+Если у тебя ManageCampaign-байпас (#2), то `AllowedToManageCampaign(..., ManageMoney)`
+вернёт `true` даже при ненулевом ReplaceCostPercentage, и стоимость тоже
+спишется с кошелька, но путь открыт.
+---
+## 🔥 HIT #4 — SpectateOnly / ReadyToSpawn самоуправление
+`ReadReadyToSpawnMessage` (пакет 23):
+```csharp
+sender.SpectateOnly = (inc.ReadBoolean() && (AllowSpectating || sender.Connection == OwnerConnection));
+sender.WaitForNextRoundRespawn = new bool?(inc.ReadBoolean());
+```
+Клиент сам выставляет `SpectateOnly = true` без проверки прав (если на
+сервере включён спектейт). Можно зайти в спектейторы в любой момент, обходя
+`IsDead`/афк-кик. Обратное переключение (`SpectateOnly=false`) тоже работает —
+можно зайти обратно в игру после смерти, обойдя респаун-шаттл на серверах с
+`AllowSpectating=true`.
+`WaitForNextRoundRespawn` тоже клиентский — можно отложить свой респаун.
+`UpdateCharacterInfo` (пакет 14) даёт клиенту пересоздать `CharacterInfo`
+(имя, внешность, JobPreferences) — но только если у него ещё нет
+`existingCampaignData` (т.е. это первый коннект или смерть с discard).
+---
+## 🔥 HIT #5 — Wallet Transfer: нащупываются края
+`NetWalletTransfer.Amount` — `int`, без `[MinValueInt]/[MaxValueInt]`.
+Сервер проверяет только `Amount > 0`. Если ты шлёшь `Sender = Some(self.CharacterID)`,
+то:
+```csharp
+if (id != sender.CharacterID && !AllowedToManageWallets(sender)) return;
+Wallet wallet = GetWalletByID(id);
+...
+TransferMoney(wallet, ref ...);
+```
+`TransferMoney` вызывает `from.TryDeduct(amount)` — если денег не хватает,
+тихо возвращается. Но если `Sender = None`, то требуется право
+`AllowedToManageWallets`. Без права сервер всё равно позволяет
+получить деньги из банка через голосование (`Voting.StartTransferVote`) с
+кэпом `MaximumMoneyTransferRequest`.
+Свой кошелёк → другой кошелёк: `TryDeduct` откатывает, если баланс меньше.
+Интересный момент: `Wallet.Balance.set` использует
+`Math.Clamp(value, 0, 1_073_741_823)`. Если зафейкствовать `Amount = int.MinValue`,
+то `Balance += Amount` ушло бы в минус, но `Amount <= 0` режется на входе.
+Если зафейкствовать `Amount > 1_073_741_823` (например, 2 млрд), то после
+`ClampBalance` баланс получателя застрянет на максимуме, а отправителю
+`TryDeduct` не даст (он не может иметь столько). Не эксплойт.
+`REWARD_DISTRIBUTION` (пакет 19) полностью требует `AllowedToManageWallets` —
+без права бесполезен.
+**Вывод:** Wallet Transfer защищён хорошо, кроме кворум-голосования. Лучше
+использовать MedicalClinic для «бесплатного», а деньги добывать через
+апгрейды/магазин в `mpCampaign.ServerRead` за байпас #2.
+---
+## Текущий прогресс
+- `[DONE] NetWalletTransfer.cs, NetWalletTransaction.cs, NetWalletUpdate.cs,
+  NetWalletSetSalaryUpdate.cs, Wallet.cs, Networking/ClientPacketHeader.cs,
+  SERVER/.../MultiPlayerCampaign.cs, SERVER/.../MedicalClinic.cs`
+- `[partial: 1-3400] SERVER/.../Networking/GameServer.cs` — основной диспатчер
+  пакетов и ClientReadServerCommand. Осталось ~1900 строк (3400-5301) —
+  EntityEventManager, KarmaManager, AssignJobs, chat/spam, FileSender и т.д.
+## Следующие цели
+1. Дочитать `GameServer.cs` (3400-5301).
+2. `SERVER/.../Networking/NetEntityEventManager.cs` + `ServerEntityEvent` —
+   спавн/уничтожение сущностей по ID.
+3. `Character.cs` методы `ServerReadInput`, `ServerEventRead` — клиентский
+   ввод, который обрабатывается без валидации (movement, drag, Use).
+4. `Items/Components/Fabricator.cs`, `Deconstructor.cs`, `Medical.cs` —
+   ломаются ли цены/результаты так же, как медклиника.
+5. `Items/Components/WifiComponent.cs`, `CircuitBox.cs` — пакет 21.
+6. `Voting.cs` `StartTransferVote` — что именно голос разрешает.
+7. `CrewManager.cs` — `ReadToggleReserveBenchMessage`.
+8. `CampaignMode.cs` — `AllowedToManageCampaign`, `TryPurchase` базовый,
+   `AllowImmediateItemDelivery`.
+9. `ServerSettings.cs` — `ServerRead` пакет 2 (может позволять менять
+   `MaximumMoneyTransferRequest`, `RespawnMode` и т.п. без прав).
+10. `EventManager/` — `ServerRead` пакет 12, отвечает на события (тракторные
+    миссии, предатели).

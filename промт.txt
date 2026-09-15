@@ -1,0 +1,249 @@
+# ПРОМТ ДЛЯ ПРОДОЛЖЕНИЯ РАБОТЫ (скопируй в новый диалог целиком)
+
+Ты — агент на Arena.ai, работаешь в клоне репозитория Barotrauma по пути
+`/home/user/Barotrauma` (ветка `arena/01a03e3d-barotrauma`). Это продолжение
+длинного исследования — предыдущий диалог мог умереть, здесь всё состояние.
+
+## ПРОЕКТ
+Исследуем кодовую базу игры Barotrauma (форк, ~2518 .cs файлов, 689,676 строк)
+на предмет серверных доверительных границ: векторов «клиент доверяет серверу»,
+доступных из самописных C#-модов (CSHUB/ActionHub) через сетевые пакеты
+(WriteOnlyMessage + заголовок + INetSerializableStruct.Write + ClientPeer.Send).
+ВТОРИЧНАЯ цель: понять внутренности игры для написания читерских/исследовательских
+модов (спавн предметов, таланты, деньги, пакеты).
+
+## ЮЗЕР (как общаться)
+- Русский язык, неформально («чет», «че скажешь», «ладна»). Отвечай так же:
+  технически, но без официоза.
+- Юзер играет в живую игру (ник SkylEiotic, персонаж-ассистент), тестирует моды
+  на своём выделенном/локальном сервере (соло-сессии: имя игрока в дампах "Dummy").
+- Периодически присылает логи PacketDump (hex-дампы пакетов) — их надо декодировать
+  по образцам ниже и сверять с исходниками.
+- Присылает ошибки компиляции модов — чинить файлы в research/mods/ и выдавать
+  заново. Моды компилируются ПРОТИВ БИНАРНИКА ИГРЫ (не сорсфорка!), у юзера
+  Barotrauma + CSHUB-мод-хост (Workshop id 2880887340).
+- Модули юзер кладёт в
+  `C:\Users\<юзер>\AppData\Local\Daedalic Entertainment GmbH\Barotrauma\WorkshopMods\Installed\2880887340\CSharp\Client\Modules\`
+  — один файл = один модуль (не в общий файл, у него отдельные .cs файлы).
+
+## ФОРМАТ ОТЧЁТА ПОСЛЕ КАЖДОЙ ВОЛНЫ (обязательно!)
+- Начинай с «Продолжаю копать неисследованные области.»
+- Секции: `## Проверенные файлы (checked X of Y)`, `## 🔥 Новые находки` (нумерованные,
+  честно: подтверждено/опровергнуто), `## 📊 Прогресс (всего исследовано)`,
+  предложения следующих целей + «продолжаю?».
+- После каждой волны: `python3 research/mark.py "<относительный путь>" "1-N"`
+  для каждого прочитанного файла, дописать блок `[WAVE N — title]` в конец
+  `research/RESEARCH_NOTES.txt`, потом `python3 research/generate.py` из корня репо.
+- НОМЕР ВОЛНЫ: последняя — 298. СЛЕДУЮЩАЯ — 299. РАЗМЕР ВОЛНЫ ~800-1000 строк.
+- Анализируй ~2000-5000 строк за волну. НЕ выдавай желаемое за действительное:
+  вектор считается подтверждённым только после полной проверки цепочки до сервера
+  (кто валидирует? есть ли clamp? ловится ли исключение?).
+
+## ИНСТРУМЕНТЫ ИССЛЕДОВАНИЯ (в research/)
+- `research/paths.csv` — все 2518 .cs файлов (path, lines).
+- `research/ranges.json` — исследованные диапазоны строк.
+- `research/mark.py "<path>" "1-100,250-300"` — отметить прочитанное (запуск из корня репо).
+- `research/generate.py` — перегенерация `research/COVERAGE_PROGRESS.txt` (запуск из корня).
+- `research/RESEARCH_NOTES.txt` — ГЛАВНЫЙ файл выводов (~5560 строк, волны 2-245).
+  Читай хвост перед продолжением. Всё новое дописывай туда же.
+- `/tmp/BarotraumaMod/` — dnSpy-дампы юзера (эталон бинарника). Также внешний
+  репозиторий https://github.com/overbaffe1/BarotraumaMod (клонится через git;
+  raw.githubusercontent заблокирован, используй api.github.com).
+
+## СТАТУС (после волны 251)
+- ГОТОВО файлов: 281 (~197,373 строк по прямому пересчёту ranges.json). Частично: 74 (~12,313 строк). Не начато: 2165.
+- Охват: ~247,356 / 689,676 ≈ 35.9%. Архив обновлён (волна 295, следующий ~305).
+- Волна 290: CharacterEditor endless runner (3 WallGroup).
+- Волна 291: CharacterEditor CreateGUI (3 зоны) + ParamsEditor (singleton).
+- Волна 292: CharacterEditor панели файлов/выбора + анимационные виджеты в мире.
+- Волна 293: CharacterEditor виджеты Head/Torso/Tail/Foot.
+- Волна 294: CharacterEditor swim-виджеты + spritesheet editor + IK.
+- Волна 295: CHARACTER EDITOR SCREEN закрыт по существу (joint limits, Nudge, RadialWidget).
+- Волна 296: LevelEditorScreen начат (стресс-тесты, Test кнопка).
+- Волна 297: LEVEL EDITOR SCREEN ЗАКРЫТ (1592, Save = правка XML паков).
+- Волна 298: SpriteEditorScreen ЗАКРЫТ (1142): скан всех xml паков на 16 типов спрайт-элементов, SaveSprites пишет sourcerect+origin АТРИБУТАМИ в SourceElement и сохраняет доки (hot-patch спрайтов), ваниль вне DEBUG исключён, [GENDER]/[HEADID] пропускаются.
+- Волна 271: ItemAssemblyPrefab ЗАКРЫТ — ассембл = минисуб, PasteEntities(pos, sub, xmlElement) = спавн из кода.
+- Волна 272: SubEditor CreateUI (панели слоёв/undo-лист).
+- Волна 273: SubEditor контекстные меню + модель слоёв.
+- Волна 274: SubEditor Update-хвост (хоткеи, света в контейнерах гасятся).
+- Волна 275: SubEditor Alt-линейка + Draw-цикл.
+- Волна 276: SubEditor финал хвоста (линейка, CreateImage PNG-рендер, сетка). Кластер редактора закрыт по существу.
+- Волна 277: SerializableEntityEditor начат (инспектор из [Editable], PropertyCommand с мержем слайдеров).
+- Волна 278: SerializableEntityEditor фабрики полей ([Editable] = UI-спецификация).
+- Волна 279: SerializableEntityEditor строки/теги (TextPicker, ContainerTagPicker, multi-edit).
+- Волна 280: SerializableEntityEditor Color + TextPicker (инспектор закрыт по существу).
+- Волна 281: EventEditorScreen начат (ExportXML = готовый XML события; TestMode).
+- Волна 282: EventEditor SaveProject (.sevproj) + Load = реверс события в граф.
+- Волна 283: EditorNode модель (CreateNodes, Value-коннекторы из [Serialize]).
+- Волна 284: EVENT EDITOR закрыт (EditorNode + NodeConnection).
+- Волна 285: EventConversationNode (карточки диалогов). EVENT EDITOR КЛАСТЕР ЗАКРЫТ.
+- Волна 286: CharacterEditor Wizard начат (мастер, автопути, коллайдеры 0.85).
+- Волна 287: Wizard финализация (капсула из box, humanoid второй коллайдер x0.75).
+- Волна 288: WIZARD ЗАКРЫТ. CharacterEditorScreen.CreateCharacter = генерация существа (формат + override).
+- Волна 289: CharacterEditorScreen Select/Spawn (тест-арена Content/AnimEditor.sub с бесконечным раннером, SpawnCharacter = Create + forceStanding + ForceSelectAnimationType + StoreSnapshot, human с джобой получает GiveJobItems+wearables).
+- Волна 267: SubEditorScreen начат (лимиты, TransformWidget, PasteAssembly = спавн из XML, undo-команды).
+- Волна 268: SubEditor SaveSub/LoadSub (TrySaveAs + ModProject, дубли ID, легаси-света).
+- Волна 269: SubEditor вход/выход (DummyChar "Galldren", AutoSave в THREAD, AutoHull).
+- Волна 270: SubEditor HUD/Update (Undo/Redo через commandIndex, SerializableEntityEditor.CommandBuffer — свойства тоже undo, WiringMode подсветка проводов, Ctrl+Z/Y).
+- Волна 266: BackgroundCreature (декоративная фауна: чисто клиентская, ClientOnly-рандом — каждый клиент видит своих; параллакс Depth<=10000; Swarm/Wander/stenning).
+- Волна 265: LevelObjectPrefab (префабы объектов уровня: SpawnPosType/Alignment/кластеризация перлином с группами/DepthRange/качание/SonarDisruption/TakeLevelWallDamage/OverrideProperties по триггерам). КЛАСТЕР УРОВНЯ ЗАКРЫТ.
+- Волна 263: LevelGenerationParams (все параметры генерации уровня; GetRandom = детерминирован сидом).
+- Волна 264: CaveGenerator (жадный путь по вороной-сайтам, скругление ячеек, GeneratePolygons = Farseer Body + render triangles, кромки с усреднёнными нормалями).
+- Волна 262: Reputation/Factions/CampaignMetadata. Репутация хранится в CampaignMetadata ("reputation.<id>"); лимиты потерь за раунд (NPC 20, стены 10, кражи 0.0025/mk); таланты = MAX по экипажу; фракционные AutomaticMissions (сами спавнят миссии по репутации-дистанции-вероятности).
+- Волна 261: AutoItemPlacer (сервер only; PreferredContainers двухпроходно; RegenerateLoot; seed аутпоста = детерминизм лута; кражи через TakenItems) + LocationType (Store-цены/баланс ПЕР ТИП локации; AreaSettings biome/zone; BiomeGate Allow/Deny/Force; Hireable с AlwaysAvailableIfMissingFromCrew).
+- Волна 260: GameSession client (respawn-логика: permadeath vs classic, HR-бот/тейковер только в друж. аутпосте), Tutorial = ОДНО СОБЫТИЕ событийного движка (+GodMode, O2-кламп, ID-карта com+eng), CampaignSettings = INetSerializableStruct (все мультипликаторы NetworkSerialize, дефолты из CampaignModePresets XML).
+- Волна 259: CargoMission (слоты карго конкурируют между миссиями, reward за ящик, доставка через RootContainer), NestMission (предметы на стенах пещер, монстры при подходе <3000, StatusEffectOnApproach), MineralMission (руда генерится ЗАРАНЕЕ при генерации уровня, fallback Cave=>SidePath=>MainPath=>AbyssCave, существующая руда тоже цель).
+- Волна 258: КЛАСТЕР EVENTACTIONS ЗАКРЫТ ЦЕЛИКОМ (~70 классов). Кастомные события в модах = только комбинация существующих действий (классы зашиты в бинарник, reflection по имени XML-элемента). Ключевое: CheckVisibility (IsTargetVisible seeThroughWindows), CheckAffliction (SourceCharacter = кто наложил), AfflictionAction (отрицательная сила = снять, ignoreUnkillability), MessageBoxAction auto-close условия, LayerAction (слои субов), UIHighlight (GUI.GetAdditions).
+- Волна 257: EventActions закрыты на ~90% (34 файла). Ключевое: NPCChangeTeam (AddToCrew: StartItemsGiven=true, idCard+wifi ретаг, AddToCrewEventData), MissionAction (BFS по карте + CreateLocationIfNotFound = смена типа пустой локации; MTRandom(seed+префаб+actions)), Priority кламп 60..100 (100 = выше emergency AI), StatusEffectAction actionIndex = позиция в Descendants() (ломается при правке XML).
+- Волна 256: ConversationAction закрыт (shared+client). Диалог = GUIMessageBox с append-историей; выбор = EVENTMANAGER_RESPONSE [byte hdr][u16 actionId][byte option] (255=ignore); Speaker = Talk-interaction + AI wait-order; прерывание по смерти/дистанции 300; ForceSay говорит В ЧАТ (в MP у опций заглушен GameMain.Client==null-гейтом).
+- Волна 255: движок событий ЗАКРЫТ ЦЕЛИКОМ (Event/EventPrefab/EventSet/ScriptedEvent). ScriptedEvent = последовательность Actions + GoTo/Label; таргеты = снимки+предикаты с кэшем. EventSet: все фильтры выбора; GetDebugStatistics = офлайн-симулятор спавна монстров. Probability = шанс действия, Commonness = шанс выбора; кулдаун по умолчанию у НЕ-скриптов.
+- Волна 254: SpawnAction (спавн NPC: SetOriginalTeamAndChangeTeam+LootingIsStealing+LoadTalents; фоллбек [faction]->coalition), TagAction (19 критериев тегирования, traitor=IsTraitor), TriggerAction (Examine-интеракция на NPC). PirateMission ПОЛНОСТЬЮ детерминирована сидом уровня: клиент вычисляет патруль пиратов сам (не реплицируется!) — знание о пиратском субе до сонара доступно клиенту.
+- Волна 253: EventManager client wire (STATUSEFFECT = клиент сам грузит эффект из XML по индексу действия; CONVERSATION полный; UNLOCKPATH = u16 -> Locked=false клиентски; MISSION unlock). Mission wire = i16 state. MonsterEvent: чары создаются заранее (DisabledByEvent) и активируются при соблюдении гейтов (дистанция/кто-то рядом/LOS/abyss). Трейторы воруют % XP команды (сервер).
+- Волна 252: кластер уровня закрыт. Level wire = только разрушаемые стены (f32 pos + 16бит moveState / u16+byte dmg). LevelObjectManager = сетевая entity (rangedInt index + 8бит health + per-trigger 8+16 бит, интервал NetConfig.LevelObjectUpdateInterval). Уровень детерминирован seed'ом (beacon/hunting из MTRandom(seed) вычислимы на клиенте). UnsyncedExtraWalls — несинхронизируемый список стен.
+- CAMPAIGN_STATE wire закрыт в обе стороны (волна 249: клиентский ClientWrite = локации/миссии/репэры/4 item-листа/апгрейды; .save = GZip-контейнер). Волна 250: REQUEST_BACKUP_INDICES = строка пути от любого клиента -> glob-енумерация *.save.bk (оракул). Исключения в хендлерах роняют батч пакетов.
+- Волна 251: выбор пути/локации на карте = AllowedToManageCampaign(ManageMap) + SendCampaignState; AllowDebugTeleport позволяет клиенту локально «переезжать» кампанию. LevelTrigger wire = 8+16 бит. HintManager: клиент знает о саботаже (ForceDeteriorationTimer).
+- Networking (Client/Server/Shared) 100%. GameServer.cs, GameClient.cs, Character.cs,
+  Item.cs, CargoManager, MultiPlayerCampaign, Wallet, Store.cs, CrewManager (все 3
+  партиала), Store.cs, TabMenu, NetLobbyScreen, ServerListScreen(+PingUtils/ServerInfo),
+  DebugConsole client+server, GUI.cs, CampaignUI, HRManagerUI, TalentMenu, TalentTree,
+  CharacterInfo client, RoundSummary, MedicalClinic (все 3), TraitorManager+prefabs,
+  UpgradeStore, MiniMap, SubmarineSelection, GameSession.cs — ВСЕ ПОЛНЫЕ.
+- Из крупных остались в основном офлайн-редакторы (SubEditorScreen 6903,
+  CharacterEditorScreen 5573) и рассыпуха средних файлов.
+
+## ГЛАВНЫЕ ПОДТВЕРЖДЁННЫЕ НАХОДКИ (не переоткрывай)
+1. **TalentOverspend (S-Tier, ФЛАГМАН, РАБОТАЕТ, юзер подтвердил вживую)**: пакет
+   UpdateTalents(11) → CharacterNetworking.cs:308-331. Сервер проверяет бюджет по
+   «всего заработано» (GetTotalTalentPoints), а не по остатку; список пакета
+   пересоздаётся при каждом сообщении => бюджет сбрасывается. GetAvailableTalentPoints
+   сервером не используется. Пороги: primary ст.0=1pt, ст.1=3, spec s0=5,s1=6,s2=7,s3=8.
+2. **Sell anything by ID (A-Tier, подтверждён юзером: продал/купил вживую)**:
+   SERVER_COMMAND(10) + perms u16 ManageCampaign(0x40) → MultiPlayerCampaign.ServerRead
+   → ReadSoldItems: клиент контролирует {prefabId, itemId, removed, sellerId, origin}.
+   Сервер: цена ПО PREFAB, удаление ПО ITEM-ID (без проверки владения, prefabId и itemId
+   не связаны), платит продавцу, списывает с store.Balance (не с банка!). Все проверки
+   «можно ли продавать» — клиентские. Гейты: HasCampaignInteractionAvailable(Store)
+   (рядом NPC-магазин 250 юнитов ИЛИ AllowRemoteCampaignInteractions) +
+   AllowedToManageCampaign(SellInventoryItems [+SellSubItems]) — при 1 клиенте на
+   сервере фоллбэк AnyOneAllowedToManageCampaign = true. Деньги ограничены балансом
+   магазина (не принтер). Модуль SellByIdModule.cs готов и работает.
+3. **Деньги/кошелёк**: MONEY-пакет(26) = NetWalletUpdate = [BitField][байтовый поток]:
+   NetWalletTransaction[]{Option<ushort> charID, Option<int> rewardChg, Option<int> balChg,
+   int rewardDist, int balance}. Wallet.Balance клампится [0, int.MaxValue/2≈1.07e9].
+   TRANSFER_MONEY(19) прямой путь залатан (Amount<=0 отклоняется), но VoteType.TransferMoney
+   в голосовании читает int32 БЕЗ знака → отрицательное = печать денег (ограничена клампом
+   1.07 млрд), нужна предварительная голосовалка. TryPurchase: цена всегда серверная.
+4. **Вир-формат NetStruct**: [header byte][BitField: 7 бит/байт LSB-first, бит7
+   последнего байта = конец][байтовый поток по порядку членов]. Int в BitField
+   LSB-first. WriteOnlyMessage INTERNAL — из мода создавать через
+   AccessTools.TypeByName("Barotrauma.Networking.WriteOnlyMessage") + Activator.
+5. **IWriteMessage — битовый поток**: WriteBoolean=1 бит, WriteRangedInteger=биты,
+   байтовые записи — с текущей битовой позиции. Корректность пакета = точное зеркало
+   порядка Read* вызовов сервера (см. ServerRead в MultiPlayerCampaign серверном).
+6. **Харвест строк (уловка)**: идентификаторы в entity/store-событиях —
+   length-prefixed ASCII на СМЕЩЁННОЙ битовой позиции. Сдвиг буфера вправо на
+   0..7 бит (с переносом) даёт читаемый текст (merchantclowns, wateringcan,
+   huskcult, revolverround, имена ботов...). Встроен в PacketDumpModule v7/v8.
+7. **Опровергнуто (НЕ повторять)**: Fabricator-крафт валиден; цены серверные; Pump/
+   PowerContainer/Sonar/Steering/Wifi — clamp; Inventory.ServerEventRead — CanClientAccess;
+   CircuitBox — нужен физический предмет; ConnectionPanel — Locked+шок после; прямой
+   негативный TRANSFER_MONEY — закрыт.
+8. Гейт SERVER_COMMAND: связка perms=ManageRound(0x1)/ManageCampaign(0x40) ОБХОДИТ
+   внешнюю HasPermission-проверку в ClientReadServerCommand (дальше своя валидация).
+9. TRAITOR_MESSAGE(22) = byte state(0=Incomplete,1=Completed,2=Failed) + Identifier.
+   EVENTACTION(21)=15, READY_CHECK(27)=1B. MEDICAL(12)=24-й заголовок + subheader.
+10. Полные enum заголовков — в research/RESEARCH_NOTES.txt (волна 218) и в NetworkMember.cs.
+
+11. **ПРАВДИВЫЙ ИСТОЧНИК БАГА OVERSPEND (волна 240)**: TalentTree.cs:131 —
+   IsViableTalentForCharacter проверяет GetTotalTalentPoints() - selectedTalents.Count
+   (ЭТА ЖЕ функция используется и клиентом в TalentMenu, и сервером). UI показывает
+   GetAvailableTalentPoints (правильный остаток), валидация идёт по total-earned.
+   Уже открытые таланты: early-out «backwards compat» (return true) — им и протаскиваем.
+   Apply-флоу: клик мутирует только selectedTalents локально → Apply →
+   CheckTalentSelection → GiveTalent + CreateEntityEvent(UpdateTalentsEventData)
+   = провод. Отдельного apply-пакета НЕТ.
+12. **CREW(7) и CharacterInfo wire задокументированы в ОБЕ стороны** (волны 239/243):
+   писатель — HRManagerUI.SendCrewState; читатель — CharacterInfo.ClientRead
+   (u16 id, имена, BotStatus, salary, теги, внешность, jobUintID+скиллы, exp,
+   доп.таланты, permanentlyDead, refund/reset counts). Job ищется по UINT id,
+   неизвестный job = исключение на клиенте (версионная защита).
+13. **Покупка суба — через ГОЛОСОВАНИЕ** (волна 241): InitiateSubmarineChange(sub,
+   transferItems, VoteType.PurchaseSub/PurchaseAndSwitchSub/SwitchSub) → сервер
+   CanPurchaseSub → TryPurchaseSubmarine → TryPurchase. Клиент за субы НЕ платит
+   локально (контраст с ремонтами — те оптимистичные).
+14. **Оптимистичные покупки клиента** (Store/Repairs/TakeoverBot): клиент сам себе
+   списывает/ставит флаги, потом SendCampaignState/пакет; сервер перепроверяет и
+   синком откатывает. WaitForServerUpdate в UpgradeStore блокирует кнопки до эха.
+15. **Маскировка = официальная механика подмены личности** (волна 243): IdCard хранит
+   StoredOwnerAppearance; DrawJobIcon(evaluateDisguise) рисует фальшивую иконку
+   работы. Теги карточки name:/job:. Поле для шпионских модов.
+16. **Официальные команды-спуферы в DebugConsole client** (волна 233):
+   togglespoofeventmanagerid (SpoofEntityManagerReceivedId, БЕЗ флага чита —
+   «сервер считает клиент вечно отстающим»), sendrawpacket [hex] (DEBUG: произвольные
+   байты в сервер через DebugSendRawMessage — официальное доказательство что пакетный
+   слой принимает что угодно), spamchatmessages (DEBUG). checkcraftingexploits /
+   analyzeitem — официальные детекторы эконом-эксплойтов от разработчиков.
+17. **Рандомные находки**: Wallet HUD >1M = «toomuchtoshow» (3 места в коде);
+   MiniMap кислород при невалидном сигнале = Rand.Range(0,100) а не ноль;
+   Levenshtein-антифлуд серверов в браузере (>10 похожих ≥80% = скрыть);
+   Windows-username утекает в FILE_TRANSFER (путь к сейву).
+
+## ПРАВИЛА НАПИСАНИЯ МОДОВ CSHUB (вымучено, СОБЛЮДАТЬ!)
+- Класс наследует CSModuleBase: Id, Name, Description, Category, GetLabel(), OnClick().
+  Namespace CSHUB.Modules. GUI-кнопка в меню хаба появляется автоматически.
+- GUI OnClick выполняется в GameMain.Update — ВСЕ публичные точки входа в try/catch,
+  иначе падает клиент.
+- НИКОГДА не именуй internal-типы: ItemPrefab, Map, Location, StoreInfo, CampaignMode,
+  MultiPlayerCampaign, CargoManager, PurchasedItem, WriteOnlyMessage, ClientPeer.
+  Работать через var + публичные члены (публичные члены internal-классов вызывать МОЖНО
+  через инстанс из публичных членов). Цены: рефлексия по имени метода
+  ("GetAdjustedItemSellPrice", параметр "ItemPrefab").
+- ПУБЛИЧНЫЕ и nameable: Item, Character (Character.Controlled?.ID — свой ushort ID),
+  GameMain(.Client/.GameSession), GameClient, Identifier, Sprite, все GUI* (GUIImage,
+  GUIListBox, GUITickBox, GUITextBox...), enum-ы ClientPacketHeader/ServerPacketHeader/
+  ClientPermissions/DeliveryMethod (namespace Barotrauma.Networking), Timing.TotalTime.
+- ClientPeer internal → Send через рефлексию по рантайм-типу
+  GameMain.Client.ClientPeer.GetType() (метод с 3 параметрами, первый IWriteMessage;
+  есть и 2-параметровый вызов — опциональный compress).
+- Harmony: никогда AccessTools.Method(type, name, types[]) по игровым типам —
+  AmbiguousMatchException; перечисляй GetMethods() и фильтруй руками. Абстрактные
+  методы не патчатся — бери конкретный тип из живого инстанса. nameof() после
+  рефакторинга проверять грепом. Field vs Property — резолвить динамически.
+- Крэйты кампании писать в пакет АТОМАРНО: временный WriteOnlyMessage через
+  рефлексию, потом WriteBytes(tmp.Buffer, 0, tmp.LengthBytes) одним куском.
+- IWriteMessage.BitPosition — int (не long!). GameClient.CharacterID НЕ существует —
+  свой ID на клиенте = Character.Controlled?.ID.
+- GUIButton.Text имеет публичный сеттер. GUI.AddMessage(string, Color) есть.
+- После слияний/правок: проверять баланс скобок и грепом отсутствие internal-имён.
+
+## МОДЫ (research/mods/, все рабочие или исправленные)
+- **PacketDumpModule.cs — v8** (последняя версия!): захват IN/OUT пакетов, фильтр
+  мусора (OUT 07/06, OUT 01<800B, IN 0C/0D/0A/0B, IN 02<64B, IN 03<800B, дубли),
+  харвестер строк (сдвиги 0..7), счётчики скипов, лог cshub_packetdump.txt.
+  Патчи: ClientPeer.Send (конкретный тип) + GameClient.ReadDataMessage (IN).
+- **SellByIdModule.cs — v9 (исправленный)**: UI выбора предмета (иконки, поиск,
+  2 уровня: префабы→экземпляры), продажа по ID, продвинутый режим (ценовой префаб
+  отдельно от цели), MONEY-эхо декодер (MiniBitField), выбор магазина ‹›.
+  Все 5 ошибок компиляции юзера исправлены (CloseWindow, int BitPosition,
+  Character.Controlled?.ID).
+- **TalentOverspend.cs — v8, ФЛАГМАН** (1142 строки): рабочий, подтверждён юзером.
+- **TalentBudgetSelfTest.cs** — тест для репо, не для CSHUB.
+
+## ЧТО ДАЛЬШЕ (кандидаты волны 246+)
+- Кампания/ло́би/UI закрыты целиком. Остались: офлайн-редакторы (SubEditorScreen 6903,
+  CharacterEditorScreen 5573 — нетворкинга почти нет), GUIComponent.cs 1522, Limb.cs
+  1419, Fabricator client 1431, LightSource 1629, SerializableEntityEditor 1757,
+  MainMenuScreen 1749, Character client partial 1474, разные средние файлы.
+- Приоритет юзера: моды и живые дампы. Ошибки компиляции/дампы — приоритет над сорсами.
+- Идеи модов: спавн предметов (Lua-референс SandboxMenu от юзера), шпионские механики
+  на базе IdCard-маскировки, «traitor UI» на базе TRAITOR_MESSAGE/EVENTACTION.
+
+## КАК ВЕСТИ СЕБЯ
+- Отвечай по-русски, неформально. После каждой волны — формат отчёта выше.
+- Если юзер прислал дамп: декодируй по заголовкам (первый байт) и сверяй с
+  RESEARCH_NOTES.txt, ищи аномалии и подтверждения векторов.
+- Если юзер прислал ошибки компиляции: правь research/mods/*.cs через edit_file,
+  проверяй грепом (не internal-типов в коде, баланс скобок), обновляй wave в notes.
+- Файлы-артефакты не коммитить в git принудительно — workspace сохраняется сам.
+- Начинай каждую сессию с чтения хвоста research/RESEARCH_NOTES.txt (последние ~200
+  строк) чтобы не потерять контекст.
