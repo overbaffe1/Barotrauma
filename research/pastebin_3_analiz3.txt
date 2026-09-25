@@ -1,0 +1,393 @@
+# RESEARCH NOTES — Barotrauma .cs (overbaffe1/BarotraumaMod) — "анализ 3"
+Рабочие файлы:
+- лог покрытия путей/строк: `research/RESEARCH_LOG.txt`
+- машинный JSON для будущих обновлений: `research/research_progress.json`
+- генератор индекса: `research/build_research_index.py`
+Импортировано из прошлой сессии:
+- research log paste: https://pastebin.com/DMNTtzJU
+- research notes paste: https://pastebin.com/UNQmy85f
+---
+## 🔥 Подтверждённые главные находки из прошлой сессии
+### 1) MEDICAL / бесплатная медклиника — подтверждено по клиенту и серверу
+- Клиент шлёт `ClientPacketHeader.MEDICAL = 17`.
+- Подзаголовки: `ADD_PENDING = 4`, `HEAL_PENDING = 7`.
+- Серверный `MedicalClinic.HealAllPending` считает `totalCost` из **клиентских** `NetAffliction.Price`.
+- `CampaignMode.TryPurchase(client, price)` делает `price == 0 || wallet.TryDeduct(price)`.
+- Значит `Price = 0` даёт серверное `true` **без списания денег**.
+- Лечение при этом идёт по `prefab.MaxStrength`, а не по присланному `Strength`.
+### 2) Магазин / репутация на покупку — сервер НЕ перепроверяет доступность товара
+- UI/клиент использует `ItemPrefab.CanBeBoughtFrom(...)` и скрывает/блокирует товары по `MinReputation`, `RequiredFaction`, и т.п.
+- Сервер в покупке фильтрует в основном только деньги и фактический stock.
+- Следствие: если клиент всё же отправляет пакет покупки, сервер не режет покупку по репутации.
+- Практически: можно купить репутационно-локнутый товар, если предмет реально есть в stock и хватает денег.
+### 3) Деньги / transfer / salary — основные obvious-дырки закрыты
+- `TRANSFER_MONEY`: отрицательные суммы запрещены, sender проверяется, баланс проверяется.
+- `REWARD_DISTRIBUTION` / `RESET_REWARD`: обычному игроку нельзя без прав `ManageMoney`.
+- Апгрейды, ремонт, крафт, найм — цену сервер обычно считает сам.
+---
+## 🔥 Новые находки прошлой волны
+### 1) 🛒 Фантомная продажа через `SoldItem` стала НАМНОГО сильнее как кандидат
+Проверенная цепочка по коду:
+- `MultiPlayerCampaign.ReadSoldItems` читает из пакета напрямую:
+  - `prefabId`, `itemId`, `removed`, `sellerId`, `origin`
+- `SoldItem` хранит `SellerID`, но в серверной ветке продажи **SellerID не валидируется**.
+- `CargoManager.SellItems`:
+  - считает цену серверно через `sellValues[item.ItemPrefab]`;
+  - если `store.Balance >= itemValue` и `!item.Removed`, идёт дальше;
+  - потом делает `Entity.FindEntityByID(item.ID)` только чтобы удалить реальный entity, **но если entity == null, код не abort**;
+  - после этого всё равно выполняет `store.Balance -= itemValue;` и `this.campaign.GetWallet(client).Give(itemValue);`
+- В `MultiPlayerCampaign.ServerRead`:
+  - если у клиента есть **оба** права `SellInventoryItems` и `SellSubItems`, список `soldItems` уходит в `CargoManager.SellItems(...)` **напрямую**, без скрытого `predicate|12` фильтра.
+**Вывод:**
+- На серверах, где игроку/роли выдали обе продажи, фантомная продажа с несуществующим `itemId` выглядит почти как подтверждённая кодовая дыра.
+- Минимальная идея: подать валидный `prefabId` + фейковый `itemId`, `removed=false`, `origin=Character`.
+- Ограничения: нужны права продажи; у магазина должен быть баланс; предмет должен иметь серверную sell-цену.
+### 2) `Terminal` — полезно для модов, не дыра
+- Сервер читает строку через `msg.ReadString()`, нужен `item.CanClientAccess(c)` и `!Readonly`, длина режется до 200.
+- Сервер пишет строку в display/history, логирует и шлёт в wiring через `signal_out`.
+- Для модов: терминал = легальный канал клиент→server-item→signal network для коротких команд/строк (если не readonly).
+### 3) `ButtonTerminal` — полезно для trigger-модов
+- Клиент шлёт только `signalIndex`; сервер проверяет `CanClientAccess`, может требовать активирующий предмет/тег через `ActivatingItems`; потом шлёт `signal_out1/2/...`.
+### 4) `Engine` — дыры на цену/силу не видно
+- Сетевой ввод клиента жёстко квантован: `ReadRangedInteger(-10, 10) * 10f` (force только -100..100). Нужен `item.CanClientAccess(c)`.
+- Modding-деталь: wiring-сигнал `set_force` тоже умеет ставить `lastReceivedTargetForce`.
+### 5) `Holdable` — интересная деталь placement-хаков, но не free-exploit
+- Пакет содержит `Vector2 simPosition`.
+- Сервер проверяет `item.CanClientAccess(c)`, `Attachable`, `!attached`, `MathUtils.IsValid(simPosition)`, затем **clamp** к 171 units от персонажа и `AttachToWall()`.
+- Позицию сервер не принимает как есть.
+### 6) `ConnectionPanel` / rewiring — выглядит закрыто
+- Сервер режет по `Locked`, `TemporarilyLocked`, `AllowRewiring`, `item.CanClientAccess(c)`, доступности самих проводов, `CheckCharacterSuccess`.
+---
+## 🔥 Новые находки текущей волны
+### 1) `WifiComponent` — маленький легальный synced int-array
+- Клиентский event шлёт не только `Channel`, но и все 10 ячеек `channelMemory`.
+- Сервер читает их через `ReadRangedInteger(0, 10000)`; при `item.CanClientAccess(c)` копирует и рассылает назад.
+- `ChatBox.cs:865-872` реально использует `radio.SetChannelMemory(index, channel)` и шлёт `CreateClientEvent<WifiComponent>(radio)`.
+- Для модов: у радио есть **10 синхронизируемых integer slots 0..10000** = маленькая легальная сетевая память.
+### 2) `PowerContainer` — батареи управляются жёстко
+- Клиент может менять только `RechargeSpeed`, квантованно по 10% шагам; после `CanClientAccess` сервер clamp-ит в `0..MaxRechargeSpeed`. Никаких клиентских `Charge/Capacity/Output`.
+### 3) `PowerDistributor` — ratio/name only
+- Только 2 события: rename group (32 символа) и change ratio (`0..1` шаг `0.05`); нужен `CanClientAccess`.
+### 4) `Pump` — не может выйти за -100..100, но логика давления полезна
+- Клиент управляет только `FlowPercentage` (-100..100) и `IsActive`; нужен `CanClientAccess`.
+- Если `flowPercentage > 0` и hull переполнен, помпа наращивает `Pressure` и при `CanCauseLethalPressure` — `LethalPressure`. Конфиг помпы определяет lethal pressure.
+### 5) `Sonar` — packet-toggle’ом халявный mineral-сканер не разлочивается
+- Сервер принимает `UseMineralScanner` от клиента после `CanClientAccess`.
+- Но клиентский UI кнопки/рендер минералов требует `HasMineralScanner == true` и `HasMineralScanner && UseMineralScanner`.
+### 6) `CircuitBox` — surprisingly жёстко защищён
+- Mutating opcodes (`AddComponent`, `AddWire`, `RemoveWire`, `DeleteComponent`, label ops…) идут через helper: `!IsLocked()`, `item.CanClientAccess(client)`, `HasRequiredItems(character)`.
+- Не выглядит как лёгкая дыра.
+### 7) `Steering` — есть серый кандидат на weird-state
+- manual steering input валидируется и clamp-ится.
+- autopilot-ветка: `newPosToMaintain = new Vector2(msg.ReadSingle(), msg.ReadSingle())` кладётся в `posToMaintain` **без `MathUtils.IsValid` и без clamp**; `UpdateAutoPilot` использует `this.posToMaintain.Value` в `GetSteeringVelocity(...)`.
+- Кандидат на weird-state / NaN / bad-coordinate поведения.
+---
+## 🔥 Новые находки следующей волны
+### 1) `Reactor` — полностью закрыт как money/free-exploit, но полезные механики
+- Серверный пакет принимает только `autoTemp`, `powerOn`, `fissionRate` 0..100, `turbineOutput` 0..100, `temperatureBoost` -25..25; всё gated `CanClientAccess`.
+- `temperatureBoost` — намеренная механика (клиентский UI пишет то же в том же диапазоне). Есть `blameOnBroken` (karma/overheat/meltdown attribution).
+- Пока подлодка Team1 у friendly outpost connection, fuel rods **не тратят condition**.
+### 2) `Steering` — уточнение: сервер принимает `posToMaintain` как произвольную мировую точку
+- Клиентский packet при autopilot+maintainPos шлёт `WriteSingle(X)+WriteSingle(Y)`; сервер кладёт в `posToMaintain` **без range-clamp к sonar radius/UI**; autopilot прямо использует `GetSteeringVelocity(posToMaintain, 10f)`.
+- Обычный UI ограничивает точку радиусом sonar; сервер не повторяет.
+- Хороший modding/use-case: packet’ом задавать автопилоту waypoint дальше/иначе, чем обычный UI.
+### 3) `CircuitBox` — докопался глубже, дюпа не видно
+- `AddComponentInternal` спавнит компонент и потом удаляет использованный ресурс (`RemoveItem(resource)`); `DeleteComponent` делает refund только по реально существующим `Components`; удаление чистит связанные wires.
+---
+## 🔥 Ещё одна новая волна — дыры/валидация
+### 1) `Inventory.SharedRead` — нет bounds-check на диапазон слотов
+- `SharedRead` читает `byte start`, `byte end`; потом `for (int j = start; j < end; j++) receivedItemIds[j] = newItemIds;`
+- Проверки `end <= capacity` / `j < receivedItemIds.Length` **нет**.
+- Malformed inventory packet → `IndexOutOfRangeException`; `ServerEntityEventManager` ловит exception = entity-event exception/log-spam DoS класс. Не дюп, но реальный сетевой validation bug.
+### 2) `Item.ServerEventRead` — unchecked component index / bad cast
+- `ComponentState` читает `componentIndex` в диапазоне `0..components.Count-1`, потом сразу `(this.components[componentIndex] as IClientSerializable).ServerEventRead(msg, c)`.
+- `InventoryState` так же: `(this.components[containerIndex] as ItemContainer).Inventory.ServerEventRead(msg, c)`.
+- Проверок на `null` / `is ItemContainer` / `is IClientSerializable` **нет**.
+- `ServerEntityEventManager.Read` позволяет адресовать любой `IClientSerializable entityID`. → ещё один exception/log-spam vector (generic рouting + unchecked cast).
+### 3) `Item.ReadPropertyChange` — packet-only hidden item property edits
+- Серверный `ReadPropertyChange` строит список через `GetInGameEditableProperties(true)`, включая `ConditionallyEditable` свойства item’а.
+- На сервере `ConditionalityEditable.ConditionType.OnlyByStatusEffectsAndNetwork` возвращает true просто потому, что `GameMain.NetworkMember.IsServer`.
+- Обычный client UI считает in-game editable item’ы в основном по item-level `InGameEditable`, а component props ещё требуют `component.AllowInGameEditing`.
+- Примеры интересных item-level packet-only targets: `DescriptionTag`, `Rotation` (если `AllowRotating`), `ImpactTolerance`, `ImpactDamage`, `ImpactDamageProbability`, некоторые цветовые item-поля для pickable.
+### 4) `ImpactDamage` / `ImpactDamageProbability` — juicy item-level target
+- Доступны как item-level `ConditionallyEditable(ReceivesSubmarineImpacts, ...)`.
+- `ReadPropertyChange` **не применяет общий clamp по атрибутам** `MinValueFloat/MaxValueFloat`; `SerializableProperty.TrySetValue` пихает float прямо в setter/поле.
+- У `ImpactDamage` нет защитного setter clamp; у `ImpactDamageProbability` нет clamp к `0..1`.
+- Сервер использует в `Item.ReceiveImpact`: `Rand.Range(0f,1f) < ImpactDamageProbability` и `Condition -= impactStrength * ImpactDamage`.
+- Варианты: `probability > 1` → всегда срабатывает; `ImpactDamage < 0` → удар чинит предмет; большой `ImpactDamage` → сверх-хрупкость. `Condition` clamp-ится в `0..MaxCondition`.
+### 5) `Rotation` — сильный packet-only кандидат на скрытое mid-round перепозиционирование
+- `Rotation` доступен как item-level `ConditionallyEditable(AllowRotating, ...)`; setter просто `this.RotationRad = WrapAnglePi(...)`.
+- Куда завязан: `TriggerComponent` (поворот physics body/trigger area), `ItemContainer` (позиции/rotation contained items), `RangedWeapon` (launch transform), `Turret` (light-components компенсация).
+- Packet-only изменение `Rotation` может менять не только визуал, но рабочую геометрию/оффсеты/trigger-поведение mid-round. Кандидат.
+### 6) `AllowSwapping` — permission-bound target
+- Клиентский upgrade packet называет `itemToRemoveID`/`itemToInstallIdentifier`; сервер вызывает `UpgradeManager.PurchaseItemSwap(itemToRemove, itemToInstall, false, sender)`.
+- Внутри: `if (!itemToRemove.AllowSwapping) return;`.
+- Если у игрока есть права на апгрейды, packet-подмена `AllowSwapping` на item’е может обходить запрет свапа.
+### 7) `Hull.Status` — сильная штука, но только для тех, у кого `ConsoleCommands` + `fire`/`editfire`
+- Клиент может прислать hull status update (water volume + fire sources), сервер реально применяет, если есть `ConsoleCommands` и разрешённые команды `fire`/`editfire`.
+- Для обычного игрока не juicy; для модераторов/неудачно выданных прав — прямой сетевой способ управления водой/пожарами.
+- Коррекция: большинство component `InGameEditable`-свойств НЕ дыра, т.к. `ItemComponent.AllowInGameEditing` по умолчанию false и на сервере режется; реально открытый компонентный случай — `NameTag`.
+---
+## 🔥 Ещё одна новая волна — другие .cs
+### 1) `CustomInterface` — отдельная очень интересная поверхность записи свойств
+- Это не `Item.ReadPropertyChange`, а отдельный путь.
+- После `CanClientAccess` (или item в инвентаре и `DrawHudWhenEquipped=true`) сервер разбирает значения элементов интерфейса; `SetPropertyValueToSignal(...)` делает `TrySetValue(...)` по совпавшему `SerializableProperty` в `item.AllPropertyObjects`.
+- Нет завязки на `ItemComponent.AllowInGameEditing`. Если custom interface привязан к `propertyname`, он может писать значение напрямую в свойство item/компонента.
+- `min/max/step` у NumberInput — по сути UI-метаданные, сервер их сам не форсит.
+- Не универсальная дыра (нужен item с настроенным `CustomInterface`), но отдельная trust-surface.
+### 2) `Fabricator` — новый malformed-packet bug
+- `ServerEventRead` читает `recipeHash` и делает `this.StartFabricating(this.fabricationRecipes[recipeHash], ...)`; проверки `ContainsKey` **нет**.
+- Мусорный `recipeHash` = `KeyNotFoundException` = entity-event exception/log-spam vector.
+- Сам крафт потом повторно валидирует ingredients/money/recipe visibility/limits; новой бесплатной крафт-дыры тут нет.
+### 3) Паттерн
+- `Fabricator` = malformed packet / missing dictionary check.
+- `CustomInterface` = альтернативный «легальный» property-write канал, опасный если контент настроен неаккуратно.
+- Искать дальше: client присылает identifier/hash/index без `ContainsKey`; интерфейсные элементы пишут свойства через `TrySetValue`, но сервер не форсит UI bounds.
+---
+## 🔥 Ещё одна новая волна — Powered / CustomInterface связка
+### 1) Конкретный identifier-пример для `CustomInterface`
+- В официальном modding guide пример item: `identifier="op_clownjukebox"`.
+- Пример target’ит component `Powered`: `propertyname="IsActive" targetitemcomponent="Powered"`, `propertyname="PowerConsumption" targetitemcomponent="Powered"`.
+- Это пример из документации, не подтверждение наличия в текущем репо-контенте.
+### 2) `Powered.PowerConsumption` — juicy content-dependent кандидат
+- `PowerConsumption` setter без clamp; `CustomInterface` может писать в component properties через `TrySetValue`.
+- В `Powered.UpdateGrids` если `currLoad < 0`, код переводит компонент в ветку источника питания (`AddSrc(...)`).
+- Если есть item с `CustomInterface`, который target’ит `Powered.PowerConsumption`, и packet’ом проталкивается отрицательное значение → кандидат на нестандартное питание / power-source behavior.
+- `MinVoltage` тоже без clamp в setter; `HasPower` проверяет `Voltage >= MinVoltage`. Content-defined `CustomInterface`, пишущий `Powered.MinVoltage`, теоретически уводит порог в минус.
+### 3) `Repairable` и `Deconstructor` — нового жира не дали
+- `Repairable`: non-traitor sabotage сервер превращает в repair; нужен `CanClientAccess` + `HasRequiredItems`.
+- `Deconstructor`: клиент только toggles active; разбор и лут серверные.
+### 4) `ConnectionPanel` — новый malformed-packet exception path
+- Сервер выделяет `List<Wire>[] wires = new List<Wire>[Connections.Count];`, заполняет только до `min(connectionCount, Connections.Count)`.
+- Позже после access checks он идёт по **всем** серверным соединениям и делает `wires[l].GetEnumerator()`.
+- Если клиент с доступом шлёт `connectionCount` меньше реального `Connections.Count`, часть `wires[l]` остаются null → null-list exception. Ещё один entity-event exception/log-spam vector.
+---
+## 🔥 Ещё одна новая волна — Character / TalentTree / Hull
+### 1) `Character` + `TalentTree` — серверный talent packet закрыт
+- `UpdateTalents`/`ConfirmTalentRefund` требуют `CanManageTalents` (свой персонаж или бот своей команды с `ManageBotTalents`).
+- Каждый talent из пакета перепроверяется через `TalentTree.IsViableTalentForCharacter(...)` (points, subtree limit, option-stage, tree requirements).
+### 2) `Hull` — background paint path новой дыры не дал
+- WaterVolume/FireSources остаётся только для клиентов с `ConsoleCommands` + `fire/editfire`.
+- background sections требует `c.Character.AllowInput`, held `Sprayer`, подходящую `LiquidColors`, проверку расстояния.
+### 3) Самая сильная линия: `CustomInterface -> Powered`
+- `Character/TalentTree` закрыты; `Hull` даёт moderator/admin power; `CustomInterface -> Powered.PowerConsumption/MinVoltage` — самый жирный content-dependent кандидат.
+---
+## 🔥 Ещё одна волна — новые логические компоненты
+### 1) `MemoryComponent` — серверно-синхронизируемая строковая память
+- `signal_in` записывает строку в память если `Writeable=true`; `signal_store`/`lock_state` переключают запись; состояние рассылается после 0.5с.
+### 2) `ConnectionSelectorComponent` — runtime signal selector
+- `SelectedConnection` меняется в рантайме; `set_connection`/`move_input` сдвигают выбор; `WrapAround`, `SkipEmptyConnections`.
+### 3) `SignalCheckComponent` — компаратор с самозаменой target/output
+- `set_output` меняет true-ветку; `set_targetsignal` меняет строку сравнения.
+### 4) `RegExFindComponent` — regex processor с `TIMEOUT`
+- Обычный output + `FalseOutput`; `UseCaptureGroup`, `OutputEmptyCaptureGroup`; после повторных slow-match — `TIMEOUT` в `signal_out`.
+### 5) `MotionSensor` — детектор кинематики
+- Реагирует на Human/Monster/Pet/Wall; `DetectOwnMotion`; Wall-режим смотрит относительное движение субмарин; `RangeX/RangeY`, `DetectOffset`, `MinimumVelocity`.
+### 6) `SmokeDetector` и `WaterDetector` — env-signal блоки
+- `SmokeDetector` сканирует connected hulls на fire sources; `WaterDetector` даёт `true/false`, `water_%`, `high_pressure`.
+### 7) `RelayComponent` — signal + power gate
+- `IsOn` управляет сигналами и питанием; `toggle`/`set_state`; `MaxPower` задаёт throughput.
+---
+## 🔥 Следующая волна — другие новые .cs
+### 1) `Controller` — богатый интерактивный primitive
+- toggle/switch, `signal_out`/`trigger_out`; `position_out` управляет focus target; `ForceUserToStayAttached`; `SpawnItemOnSelected`.
+### 2) `DelayComponent` — очередь сигналов
+- `set_delay` меняет задержку; `ResetWhenSignalReceived`, `ResetWhenDifferentSignalReceived`; одинаковые сигналы могут увеличивать `SendDuration`.
+### 3) `OscillatorComponent` — генератор волн
+- Pulse/Sawtooth/Sine/Square/Triangle; `set_frequency`/`frequency_in`; `set_outputtype`/`set_wavetype`.
+### 4) `ColorComponent` — RGBA/HSV formatter
+- Принимает `signal_r/g/b/a`; `UseHSV=true` конвертирует HSV→RGB; шлёт `r,g,b,a`.
+### 5) `ConcatComponent`, `StringComponent`, `BooleanOperatorComponent`, `ArithmeticComponent`
+- `ConcatComponent` = bounded string combiner с `Separator`; `StringComponent` = temporal 2-input string; `BooleanOperatorComponent` = temporal boolean logic + live `set_output`; `ArithmeticComponent` = math primitive с runtime `ClampMin/ClampMax`.
+### 6) `NameTag` — маленькая, но живая editable surface
+- `WrittenName` реально editable, лимит 32 символа, `AllowInGameEditing`+`EditableWhenEquipped`.
+---
+## 🔥 Ещё одна волна — другие новые .cs (повтор с той же информацией, сверено)
+### 1) `ArithmeticComponent`, `BooleanOperatorComponent`, `StringComponent`, `ConcatComponent` — программные signal-logic bricks.
+### 2) `DelayComponent` — queued delay primitive.
+### 3) `OscillatorComponent` — runtime waveform generator.
+### 4) `ColorComponent` — RGBA/HSV formatter.
+### 5) `NameTag` — маленькая editable component surface.
+---
+## 🔥 Следующая волна — ещё другие .cs
+### 1) `Door` — automation primitive
+- integrated-button двери шлют `activate_out`; по проводам `toggle`/`set_state`; шлют `state_out`; jam/stuck/cooldown логика; при закрытии выталкивают персонажей.
+### 2) `Controller` — seat / remote-control / focus primitive (повтор)
+### 3) `NotComponent`, `EqualsComponent`, `TrigonometricFunctionComponent`
+- Not = инвертор + idle-output; Equals = temporal string equality; TrigonometricFunction = trig adapter (Sin/Cos/Tan/Asin/Acos/Atan, atan2 через `signal_in_x`/`signal_in_y`).
+### 4) `LightComponent` — runtime light
+- `set_state`/`toggle`, `set_color`; `Range`, `Flicker`, `FlickerSpeed`, `PulseFrequency`, `PulseAmount`, `BlinkFrequency`; brightness подстраивается по voltage.
+---
+## 🔥 Ещё одна новая волна — ещё новые .cs
+### 1) `RemoteController` — target-acquisition primitive
+- При выборе/экипировке ищет ближайший item по tag/identifier; `OnlyInOwnSub`; команда; перепоиск при удалении цели/смене субмарины/выходе из радиуса.
+### 2) `Scanner` — attach-and-wait primitive
+- Требует attachable `Holdable`; `ScanTimer` растёт пока прикреплён; сервер шлёт прогресс; hooks `OnScanStarted`/`OnScanCompleted`.
+### 3) `LinkedControllerCharacterComponent` — связь предмета с персонажем
+- Жёстко привязывает item к character; auto-remove при исчезновении; меняет `DeconstructTimeMultiplier` по числу оставшихся limb’ов.
+### 4) `MiniMap` — status-display primitive
+- Отдельные требования по water/oxygen detectors; hull-status / electrical-view / item-finder режимы.
+---
+## 🔥 Ещё одна новая волна — следующие новые .cs
+### 1) `IdCard` — identity/disguise primitive
+- Хранит owner name/job/team/tags/appearance; наследует теги/описание; при equip/unequip триггерит disguise status check.
+### 2) `EntitySpawnerComponent` — spawn automation primitive
+- Rect/circle crew-area и spawn-area; `trigger_in`/`toggle`/`set_state`; timer-based; item/creature; max total/max in area; optional preload; `state_out`.
+### 3) `GeneticMaterial` — gene/taint/refine primitive
+- При equip применяет affliction effects; отдельный tainted effect; `SetTaintedOnDeath`; combine vs refine; nested genes; quality-based taint.
+### 4) `ItemLabel`, `Propulsion`, `OxygenGenerator`
+- Label = display primitive; Propulsion = force by cursor; OxygenGenerator = распределение кислорода по linked vents пропорционально hull volume.
+---
+## 🔥 Новая волна — с практическим профитом
+### 1) `TriggerComponent` — logic bug и жирный runtime primitive
+- `set_force` принимает любой float без clamp и без `MathUtils.IsValid`.
+- `Width`, `Height`, `Radius`, `BodyOffset` при изменении сразу перестраивают trigger-body.
+- Баг: `if (!this.HorizontalForce) force.Y = 0f; if (!this.VerticalForce) force.Y = 0f;` — `HorizontalForce=false` ошибочно режет Y, а не X.
+- Abuse: если есть доступ к `set_force`, можно переключать trap между мягким/жёстким vacuum/launcher; через `CustomInterface`/status effect можно двигать/раздувать trigger hitbox.
+### 2) `ElectricalDischarger` — content-dependent target
+- `Range`, `RangeMultiplierInWalls`, `Duration`, `Reload`, `OutdoorsOnly` на прямых setter’ах без серверной нормализации.
+- Строит стенную цепочку и бьёт `charactersInRange` через `character.ApplyAttack(...)`.
+- Через `CustomInterface`/status effect: почти безоткатный электрошокер, длиннее wall-chain, режим outdoors-only.
+### 3) `ItemContainer` — скрытая automation-поверхность
+- `AutoInject` и slot-level `autoinject` раз в 1с автоматически используют contained items, если владелец экипирован и HP ниже `AutoInjectThreshold`.
+- `SetContainedActive(true)` при экипировке автоматически включает вложенные компоненты с `RelatedItem.SetActive=true`.
+- Шлёт `contained_conditions`, `contained_conditions_percentage`, `contained_items`. База под авто-медпак/стим/умный пояс.
+### 4) `Connection` — signal->status-effect surface
+- `SendSignalIntoConnection(...)` после доставки сигнала пробегает `conn.Effects`; при ненулевом сигнале вызывает `conn.Item.ApplyStatusEffect(effect, ActionType.OnUse, ...)`.
+- Connection node сам по себе может быть скрытой точкой исполнения эффектов.
+### 5) `Pickable` — легальный de-wire primitive
+- После подбора `OnPicked(...)` вызывает `DropConnectedWires(picker)` — дропает wire items с connection panels прямо в позицию пикера.
+---
+## 🔥 Новая волна — order/chat packet surface
+### 1) `OrderChatMessage` / `ChatMessage` — malformed order identifier bug
+- `OrderChatMessage.ReadOrder` делает `OrderPrefab.Prefabs[orderIdentifier]`, `OrderPrefab.Prefabs[dismissedOrderIdentifier]` без `ContainsKey`/`TryGetValue`.
+- `ChatMessage.ServerRead` вызывает разбор до основной логики. Мусорный order identifier → exception/log-spam через chat packet.
+### 2) `orderPriority` сервер не clamp-ит
+- `OrderChatMessage.ReadOrder` читает `orderPriority` как сырой `byte`; `ChatMessage.ServerRead` делает `WithManualPriority(orderMessageInfo.Priority)`; `Order.WithManualPriority` принимает int как есть.
+- `CharacterInfo.HighestManualOrderPriority == 3` — intended ceiling 3; `Character.SetOrder(...)` сортирует по `ManualPriority`.
+- Кастомный клиент может слать priority 255 и переприоритизировать ботов сильнее обычного UI.
+### 3) `wallSectionIndex`
+- `OrderChatMessage.ReadOrder` читает `wallSectionIndex` сырым байтом; `Order.TargetSpatialEntity` делает `structure.Sections[this.WallSectionIndex.Value]` без bounds-check → exception path.
+### 4) `ReadyCheck` — popup/grief primitive
+- Если ready-check не активен, любой клиент может прислать `Start`; сервер делает `ReadyCheck.StartReadyCheck(client.Name, client)`.
+- `Update` принимает сырой `ReadyStatus` byte без валидации; completion-test `pair.Value > ReadyStatus.Unanswered` — мусорный ненулевой статус считается ответом.
+---
+## 🔥 Ещё одна волна — забавные механики
+### 1) `Projectile` — weapon primitive
+- hitscan или физическое тело; `HitScanCount` (несколько лучей); `MaxTargetsToHit` (пробивание); липнет к персонажам/структурам/предметам/дверям; `GoThroughLightTargets`; `FriendlyFire`; `Rope` → harpoon/tether.
+### 2) `Rope` — grappling/towing primitive
+- `ProjectilePullForce`, `TargetPullForce`, `SourcePullForce`; `MaxLength`, `MinPullDistance`, `MaxAngle`; snap-политики; `LerpForces`, `IncreaseForceForEscapingTargets`; анимации HoldToRope/DragWithRope/HangWithRope.
+### 3) `Growable` — ферма/генератор/живая стена
+- Рост от `GrowthSpeed`; спавн продукта/семян по вероятности; `GrowthWeights`; `FireVulnerability`; в CharacterInventory — мгновенно decays; ветви растут из vine tiles.
+### 4) `EntitySpawner` — server-runtime primitive
+- Спавнит item в мир/субмарину/inventory; для inventory: `slot`, `SpawnIfInventoryFull`, `IgnoreLimbSlots`, `condition`, `quality`; character по species/CharacterInfo; remove queue рекурсивно снимает contained.
+### 5) `RespawnManager` — team-aware shuttle orchestration
+- Работает по командам; min-respawn-ratio; fallback на main sub; отдельно клиенты и боты.
+### 6) `Turret` — signal-controlled sentry
+- `AllowAutoOperateWithWiring` (set_auto_operate/toggle_auto_operate); `FriendlyTag`, `FriendlyTeamType`, `TargetHumans`, `TargetMonsters`, `TargetItems`, `TargetSubmarines`; linked ammo containers как циклические loaders; `LaunchWithoutProjectile`.
+### 7) `WreckAI` — encounter-orchestrator
+- Выбирает room под brain; flood; jam дверей; спавнит защитные клетки; не активируется пока игроки/спектаторы не подошли; при смерти brain каскадно убивает агентов.
+### 8) `LevelTrigger` — hidden automation/effect graph node
+- Детектит Human/Creature/Item/Submarine; цепляется от других trigger’ов по тегам (`OtherTrigger` + `allowedothertriggertags`); применяет `StatusEffect`/`Attack`/force/water-flow; force-режимы Force/Acceleration/Impulse/LimitVelocity; `InfectIdentifier`/`InfectionChance`.
+### 9) `PowerTransfer` — signal-bus + overload/fire primitive
+- Строит множества connected recipients; форвардит не-силовые сигналы через transfer graph; `power_value_out`/`load_value_out`; при перегрузе ломается и может породить `FireSource`.
+### 10) `CharacterInventory` — loadout/equip
+- Initial items спавнятся через `EntitySpawner`; per-slot force placement; `TryPutItemWithAutoEquipCheck` авто-дроп/свап limb gear; hand/limb slot логика.
+### 11) `FireSource` — саморастущий пожар
+- Растёт по X и высоте в зависимости от кислорода; выжигает кислород; burn урон; жжёт non-fireproof items включая вложенные; перепрыгивает в соседние hull через открытые gaps; большой — оставляет persistent burn decals.
+### 12) `WayPoint` — spawn/path orchestration
+- Автогенерирует indoor/outdoor waypoint-сетку по субмарине; грузит tags/job/idcarddesc/idcardtags/exitpointsize; `GetRandom` по spawnType/assignedJob/spawnPointTag/sub; `SelectCrewSpawnPoints`/`SelectOutpostSpawnPoints`.
+### 13) `Networking/Client` — permadeath bot-takeover primitive
+- `TryTakeOverBot(...)`; сервер требует permanently-dead, remap’ит на bot, выкидывает старые campaign data; Client держит permissions/spectate/voice/chat spam/karma/in-game state.
+### 14) `Attack` — готовый damage/effect DSL
+- affliction damage + `StructureDamage` + `ItemDamage` + `LevelWallDamage` + penetration + sever chance; per-limb force, root/world force, torque; ranged AI: `RequiredAngle`, `AimRotationTorque`, `SwayAmount`, `SwayFrequency`, `AvoidFriendlyFire`; status effects fan-out (target/attacker/limb/all limbs/nearby/contained).
+### 14.5) `Affliction` — buff/debuff engine
+- periodic effects; auto-growing/decaying strength; limb-specific resistance; convulsions; screen distortion; status-effect fan-out; `Probability`, `DivideByLimbCount`, `MultiplyByMaxVitality`, `Penetration`.
+### 14.6) `Explosion` — multi-effect blast primitive
+- blast damage + structure/level-wall damage + EMP + ballast flora + item repair + fire; fireproof containers/items и ignore-tags; obstacle-aware falloff.
+### 15) `SaveUtil` — архив/backup + защита от path traversal
+- Rolling hidden backups; `IsExtractionPathValid` не даёт писать выше root-dir при decompress; парсит content package names; helpers для enumerate/backup/restore/delete.
+### 16) `LevelObjectManager` — procedural encounter/decor
+- Считает wall/cave/path/start/end spawn surfaces; prefab selection с commonness/clustering/alignment/min width; `TriggerOthersDistance`; server-side network sync для updateable level objects.
+### 17) `LevelObjectPrefab` — world-object recipe system
+- child objects, nested trigger/property overrides, per-biome/commonness override, rotation/scale oscillation, physics-body привязка к trigger index.
+### 18) `OutpostGenerator` — hallway merge / auto-wire
+- Авто-соединяет junction boxes красными/синими wire; убирает лишние двери при близких gaps; перелинковывает waypoint’ы между модулями.
+### 19) `LevelObject` — breakable trigger-bearing prop
+- physics body + breakable health + `LevelTrigger` + `OnBroken` status effects; active prefab меняется через trigger override state.
+### 20) `MapEntity` — core link/clone/upgrade primitive
+- link parsing/resolution; upgrade attach points; highlight/layer/scale/depth; clone с сохранением linked wires/entities. Проверка новых жирных дыр не дала.
+### 21) `Planter` — farm station logic
+- принимает seed/fertilizer из held items; fertilizer ускоряет рост в 2 раза; семена/ростки через `ItemContainer`; finished/decayed выдёргиваются harvest-путём; наличие seed’ов зажигает attached lights.
+### 22) `RangedWeapon` — launcher primitive
+- достаёт projectile из nested sub-container’ов; charge-up; skill-based spread/reload; dual-wield penalties; auto-snap предыдущего rope-linked projectile.
+### 23) `Throwable` — throw-state primitive
+- стадии Initiated/Throwing; bullet-mode в полёте; OnImpact/OnBroken наследуют thrower’а; `OnSecondaryUse`.
+### 24) `SpawnItemPerk` — round-start item distributor
+- точный identifier или случайный по tag; раскладывает по priority/preferred/secondary контейнерам; остаток уходит в cargo crate delivery.
+### 25) `SpawnAction` — scripted-event spawner
+- NPC prefab’ы, species, item’ы; в target inventory; `SpawnLocation`, `SpawnPointType`, `SpawnPointTag`, module tags; вне player view; return через `TargetTag`.
+### 26) `LatchOntoAI` — attach/detach behavior
+- цепляется к стенам/субмарине/персонажу; weld или hinge; отцепление по скорости/времени/проходимости; шлёт latch/unlatch network events.
+---
+## Полезные modding-заметки для будущих промтов
+### Паттерн 1: где реально искать дыры
+1. клиент шлёт структуру;
+2. сервер берёт из неё значимую экономическую/доступностную часть;
+3. сервер не пересчитывает это сам.
+- Попадают: `MedicalClinic` (доверяет `Price`); `Store availability` (доверяет инициативе покупки, не перепроверяя MinReputation/RequiredFaction).
+### Паттерн 2: где обычно всё закрыто
+- Сервер сам пересчитывает цену, ингредиенты, talent validity, repair cost, wallet checks, permission checks.
+### Паттерн 3: хорошие файлы для следующих волн
+- `Steering.cs`, `Sonar.cs`, `WifiComponent.cs`, `CircuitBox.cs`, `Item.cs` (ChangeProperty/component dispatch), `Inventory.cs` (item-dupe / foreign item IDs).
+---
+## Короткие вердикты для action-hub идей
+- **Очень горячее:** MEDICAL free heal; Shop rep bypass; Phantom sell с правами (особенно если у роли оба sell-права).
+- **Скорее закрыто:** transfer money / reward distribution / upgrades / repair / fabricate / hire.
+- **Полезно для utility-модулей:** Terminal, ButtonTerminal, Holdable, Engine.
+---
+## 🔥 Лобби-волна — `NetLobbyScreen.cs`, `BanList.cs`, `BannedPlayer.cs`
+### 1) `NetLobbyScreen` — дыры нет, главный lobby-state primitive
+- Держит `SelectedSub`, `SelectedEnemySub`, `SelectedShuttle`, `SelectedMode`, `MissionTypes`, `LevelSeed`; `RandomizeSettings()`, `SetBotCount()`, `SetBotSpawnMode()`, `SetTraitorProbability()`, `SetTraitorDangerLevel()`; `Select()` делает `Voting.ResetVotes(...)`.
+### 2) `BanList` — admin-control primitive
+- Банит по `Address` и `AccountId`; legacy import; авто-чистит expired bans; `ServerAdminWrite/Read` permission-gated.
+### 3) `BannedPlayer` — дыры нет
+- name + address/accountid + reason + optional expiration + runtime unique id.
+### 3.5) `PreviousPlayer` / `TempClient` — дыр сами по себе не дали
+- `PreviousPlayer` хранит disconnect-state; `TempClient` — lobby/client-list snapshot.
+- `PreviousPlayer.MatchesClient(...)` fallback на address-only matching, вместе с `GameServer.OnInitializationComplete(...)` даёт same-IP identity bleed для accountless клиентов.
+### 4) `ServerPeer` / `LidgrenServerPeer` — lobby/auth logic bug
+- `LidgrenServerPeer.HandleConnection(...)` смотрит только на `connectedClients.Count`, pending не учитывает.
+- `ServerPeer.UpdatePendingClient(...)` при `connectedClients.Count >= MaxPlayers` вызывает `RemovePendingClient(...)`, **но не делает `return`**.
+- Если у pending-клиента `InitializationStep == Success`, код всё равно идёт дальше и делает promotion + `OnInitializationComplete(...)` → кандидат на max-players bypass / inconsistent extra join.
+- Проверка похожего имени в `ReadConnectionInitializationStep(AuthInfoAndVersion)` смотрит только на `ConnectedClients`, другие pending не проверяются → race на duplicate/homoglyph join.
+### 5) `GameServer` — malformed lobby surface
+- `ClientReadServerCommand` для `SelectMode`: raw `ushort modeIndex`; потом `SelectedModeIndex = (int)modeIndex` (clamp), **но следом** напрямую `GameModes[(int)modeIndex]` → большой modeIndex = exception/log-spam в lobby command surface.
+### 6) `P2PServerPeer` — отдельной новой дыры не дал; наследует pending/full-capacity logic bug.
+### 7) `ConnectCommand` — дыры нет; client-side parser/serializer для reconnect/share.
+### 8) `P2POwnerDoSProtection` — logic bug
+- В `CheckForExcessivePackets(...)` передаёт **один и тот же `count` от текущего endpoint’а**, а не счётчик каждого `e` → один шумный P2P peer может вызвать ложные kick/ban для других endpoint’ов.
+### 9) `DoSProtection` / `RateLimiter` — новых дыр нет
+- `DoSProtection` = packet-count + slow-handler watchdog; `RateLimiter` = generic spam governor с ladder announce/kick/ban, exempt owner/SpamImmunity.
+### 10) `P2POwnerPeer` — auth-stage DoS surface
+- Пока remote peer в `AuthenticationPending`, каждый новый пакет копируется в `UnauthedMessages`; лимита на количество/общий размер нет → unbounded queued messages до завершения auth.
+### 11) `AccountInfo` — logic bug
+- `Equals` проверяет только, что `this.OtherMatchingIds` входит в `other.OtherMatchingIds`, обратную сторону не проверяет → equality асимметрична при одинаковом primary id и разных alias-наборах.
+### 12) `P2POwnerToServerHeader` / `ServerPeer.2.cs` — дыр нет.
+### 13) `FileSender` — есть дыра
+- Если `AllowFileTransfers=true`, пакет file request (case 5) идёт в `FileSender.ReadFileRequest(...)`.
+- Для `FileTransferType.CampaignSave` сервер делает `StartTransfer(..., GameMain.GameSession.DataPath.LoadPath)` без permission-проверки → data exfiltration.
+- Здесь же сырой файл-доступ к submarine files и mod archives, если путь разрешён настройками.
+### 14) `ChildServerRelay` — дыры нет; inter-process pipe relay для P2P server.
+### 13) Мелкие networking/auth файлы — новых дыр не дали
+- `Endpoint`, `LidgrenEndpoint`, `SteamP2PEndpoint`, `EosP2PEndpoint`, `AuthenticationTicket`, `Authenticator`, `ClientAuthTicketAndVersionPacket`, `ClientPeerPasswordPacket`, `ServerPeerPasswordPacket`, `ServerPeerContentPackageOrderPacket`, `PeerDisconnectPacket` — справочный слой lobby/auth handshake.
+---
+## 🔥 Ещё одна новая волна — `AfflictionPrefab.cs` и `Structure.cs`
+### 1) `AfflictionPrefab` — affliction-recipe primitive
+- `HealableInMedicalClinic`, `HealCostMultiplier`, `BaseHealCost`, `IgnoreTreatmentIfAfflictedBy`.
+- `Effect`-диапазоны по strength: vitality loss, speed/skill multipliers, resistance tags/limbs, AI tags/dialog flags, screen blur/distort/chromatic/grain/face tint, `StatusEffect`, `StatValue`, `AbilityFlag`.
+- `PeriodicEffect` — отдельные периодические импульсы по strength/interval.
+### 2) `Structure` — wall/breach primitive
+- Секция стены начинает течь при `damage >= 10% MaxHealth`; крупная брешь до `gap.Open ~ 0.75`; при резком росте — wall-breach explosion с `lacerations`/`internaldamage`, stun, optional `walldamageprojectile`.
+- `Rotation`, `Scale`, `Rect`, `FlipX/Y` пересобирают wall-sections и physics bodies.
+- `GetAttachTarget(...)` даёт легальную attach-surface для items на structures без bodies.
