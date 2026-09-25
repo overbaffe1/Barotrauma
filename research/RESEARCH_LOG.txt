@@ -3,9 +3,9 @@ Updated: 2026-08-26
 
 Total .cs files: 2518
 Total lines: 689676
-Done: 773 files / 360236 lines
+Done: 776 files / 361521 lines
 Partial: 0 files / 0 lines
-Not started: 1745 files / 329440 lines
+Not started: 1742 files / 328155 lines
 
 === RESEARCHED ===
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Camera.cs  442/442
@@ -93,6 +93,7 @@ Not started: 1745 files / 329440 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/HRManagerUI.cs  1289/1289
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/HUDLayoutSettings.cs  231/231
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/IMEPreviewText.cs  90/90
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs  423/423
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/MedicalClinicUI.cs  1199/1199
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/ParamsEditor.cs  57/57
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GUI/RectTransform.cs  987/987
@@ -207,6 +208,7 @@ Not started: 1745 files / 329440 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs  690/690
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/LevelEditorScreen.cs  1592/1592
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/MainMenuScreen/MainMenuScreen.cs  1749/1749
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs  426/426
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/NetLobbyScreen.cs  5812/5812
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/RoundSummaryScreen.cs  68/68
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/ServerListScreen.cs  1924/1924
@@ -257,6 +259,7 @@ Not started: 1745 files / 329440 lines
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/Events/EventManager.cs  104/104
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/Mission.cs  135/135
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/SalvageMission.cs  84/84
+[DONE   ] Barotrauma/BarotraumaServer/ServerSource/GameMain.cs  436/436
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs  88/88
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/GameSession/CrewManager.cs  177/177
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/GameSession/Data/Wallet.cs  54/54
@@ -809,7 +812,6 @@ Not started: 1745 files / 329440 lines
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/GUIRadioButtonGroup.cs  0/92
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/GUIScrollBar.cs  0/349
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/GUIStyle.cs  0/275
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs  0/423
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/ShapeExtensions.cs  0/371
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/UISprite.cs  0/189
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/VotingInterface.cs  0/306
@@ -891,7 +893,6 @@ Not started: 1745 files / 329440 lines
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignEndScreen.cs  0/90
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs  0/100
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs  0/75
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs  0/426
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/ParticleEditorScreen.cs  0/388
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/Screen.cs  0/69
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/PanelAnimator.cs  0/112
@@ -956,7 +957,6 @@ Not started: 1745 files / 329440 lines
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/NestMission.cs  0/20
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs  0/32
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs  0/39
-[NEW    ] Barotrauma/BarotraumaServer/ServerSource/GameMain.cs  0/436
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/GameSession/GameModes/CharacterCampaignData.cs  0/201
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Program.cs  0/278
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Screens/UnimplementedScreen.cs  0/14

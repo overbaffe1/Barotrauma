@@ -1,7 +1,7 @@
 BAROTRAUMA RESEARCH COVERAGE (per-file checked lines)
 Updated: 2026-08-26
 
-TOTAL .cs: 2518   DONE: 773   PARTIAL: 0   NOT STARTED: 1745
+TOTAL .cs: 2518   DONE: 776   PARTIAL: 0   NOT STARTED: 1742
 
 === FULLY EXPLORED (checked lines = total) ===
 CHECKED 442/442  Barotrauma/BarotraumaClient/ClientSource/Camera.cs
@@ -89,6 +89,7 @@ CHECKED 81/81  Barotrauma/BarotraumaClient/ClientSource/GUI/Graph.cs
 CHECKED 1289/1289  Barotrauma/BarotraumaClient/ClientSource/GUI/HRManagerUI.cs
 CHECKED 231/231  Barotrauma/BarotraumaClient/ClientSource/GUI/HUDLayoutSettings.cs
 CHECKED 90/90  Barotrauma/BarotraumaClient/ClientSource/GUI/IMEPreviewText.cs
+CHECKED 423/423  Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs
 CHECKED 1199/1199  Barotrauma/BarotraumaClient/ClientSource/GUI/MedicalClinicUI.cs
 CHECKED 57/57  Barotrauma/BarotraumaClient/ClientSource/GUI/ParamsEditor.cs
 CHECKED 987/987  Barotrauma/BarotraumaClient/ClientSource/GUI/RectTransform.cs
@@ -203,6 +204,7 @@ CHECKED 1321/1321  Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/
 CHECKED 690/690  Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs
 CHECKED 1592/1592  Barotrauma/BarotraumaClient/ClientSource/Screens/LevelEditorScreen.cs
 CHECKED 1749/1749  Barotrauma/BarotraumaClient/ClientSource/Screens/MainMenuScreen/MainMenuScreen.cs
+CHECKED 426/426  Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs
 CHECKED 5812/5812  Barotrauma/BarotraumaClient/ClientSource/Screens/NetLobbyScreen.cs
 CHECKED 68/68  Barotrauma/BarotraumaClient/ClientSource/Screens/RoundSummaryScreen.cs
 CHECKED 1924/1924  Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/ServerListScreen.cs
@@ -253,6 +255,7 @@ CHECKED 22/22  Barotrauma/BarotraumaServer/ServerSource/Events/EventLog.cs
 CHECKED 104/104  Barotrauma/BarotraumaServer/ServerSource/Events/EventManager.cs
 CHECKED 135/135  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/Mission.cs
 CHECKED 84/84  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/SalvageMission.cs
+CHECKED 436/436  Barotrauma/BarotraumaServer/ServerSource/GameMain.cs
 CHECKED 88/88  Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs
 CHECKED 177/177  Barotrauma/BarotraumaServer/ServerSource/GameSession/CrewManager.cs
 CHECKED 54/54  Barotrauma/BarotraumaServer/ServerSource/GameSession/Data/Wallet.cs
@@ -807,7 +810,6 @@ CHECKED 0/168  Barotrauma/BarotraumaClient/ClientSource/GUI/GUIProgressBar.cs
 CHECKED 0/92  Barotrauma/BarotraumaClient/ClientSource/GUI/GUIRadioButtonGroup.cs
 CHECKED 0/349  Barotrauma/BarotraumaClient/ClientSource/GUI/GUIScrollBar.cs
 CHECKED 0/275  Barotrauma/BarotraumaClient/ClientSource/GUI/GUIStyle.cs
-CHECKED 0/423  Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs
 CHECKED 0/371  Barotrauma/BarotraumaClient/ClientSource/GUI/ShapeExtensions.cs
 CHECKED 0/189  Barotrauma/BarotraumaClient/ClientSource/GUI/UISprite.cs
 CHECKED 0/306  Barotrauma/BarotraumaClient/ClientSource/GUI/VotingInterface.cs
@@ -889,7 +891,6 @@ CHECKED 0/93  Barotrauma/BarotraumaClient/ClientSource/Screens/BlurEffect.cs
 CHECKED 0/90  Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignEndScreen.cs
 CHECKED 0/100  Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs
 CHECKED 0/75  Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs
-CHECKED 0/426  Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs
 CHECKED 0/388  Barotrauma/BarotraumaClient/ClientSource/Screens/ParticleEditorScreen.cs
 CHECKED 0/69  Barotrauma/BarotraumaClient/ClientSource/Screens/Screen.cs
 CHECKED 0/112  Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/PanelAnimator.cs
@@ -954,7 +955,6 @@ CHECKED 0/24  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/MonsterMi
 CHECKED 0/20  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/NestMission.cs
 CHECKED 0/32  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs
 CHECKED 0/39  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs
-CHECKED 0/436  Barotrauma/BarotraumaServer/ServerSource/GameMain.cs
 CHECKED 0/201  Barotrauma/BarotraumaServer/ServerSource/GameSession/GameModes/CharacterCampaignData.cs
 CHECKED 0/278  Barotrauma/BarotraumaServer/ServerSource/Program.cs
 CHECKED 0/14  Barotrauma/BarotraumaServer/ServerSource/Screens/UnimplementedScreen.cs

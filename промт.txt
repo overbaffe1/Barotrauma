@@ -34,7 +34,13 @@
 - После каждой волны: `python3 research/mark.py "<относительный путь>" "1-N"`
   для каждого прочитанного файла, дописать блок `[WAVE N — title]` в конец
   `research/RESEARCH_NOTES.txt`, потом `python3 research/generate.py` из корня репо.
-- НОМЕР ВОЛНЫ: последняя — 389. СЛЕДУЮЩАЯ — 390. РАЗМЕР ВОЛНЫ ~800-1500 строк (увеличена).
+- НОМЕР ВОЛНЫ: последняя — 390. СЛЕДУЮЩАЯ — 391. РАЗМЕР ВОЛНЫ ~800-1500 строк.
+- АУДИТЫ ДЫР: юзер просил не забывать — периодически (примерно раз в 3-4 волны)
+  включать в волну скриптовый аудит гейтов/пакетов. Проведено: #1 (386, ServerEventRead
+  гейты), #2 (387, все прямые клиент→сервер пакеты), #3 (390, server→client файлы:
+  DecompressToDirectory + FileReceiver — найден StartsWith prefix-баг и raw-path
+  TransferOnSameMachine, оба low). Кандидаты дальше: Client.WriteServerInfo хвосты,
+  голосование/kick-каналы перепроверка, Lidgren handshake lenient-режим.
 - Анализируй ~2000-5000 строк за волну. НЕ выдавай желаемое за действительное:
   вектор считается подтверждённым только после полной проверки цепочки до сервера
   (кто валидирует? есть ли clamp? ловится ли исключение?).
@@ -50,10 +56,10 @@
   репозиторий https://github.com/overbaffe1/BarotraumaMod (клонится через git;
   raw.githubusercontent заблокирован, используй api.github.com).
 
-## СТАТУС (после волны 358)
-- ГОТОВО файлов: 687 (~325,701 строк). ЧАСТИЧНЫХ: 0. Не начато: 1831.
-- Охват: 47.23% (325.7K/689.7K) — ПЛАНКА 47% ВЗЯТА.
-- Архив barotrauma_research.zip обновлён на волне 354 (следующий ~волна 365).
+## СТАТУС (после волны 390)
+- ГОТОВО файлов: 776 (~361,521 строк). ЧАСТИЧНЫХ: 0. Не начато: 1742.
+- Охват: 52.42% (361.5K/689.7K).
+- Архив barotrauma_research.zip обновлён на волне 385 (следующий ~волна 395).
 - Аудио-движок (SoundManager+SoundChannel) ЗАКРЫТ: чистый клиент поверх OpenAL.
 - Волна 290: CharacterEditor endless runner (3 WallGroup).
 - Волна 291: CharacterEditor CreateGUI (3 зоны) + ParamsEditor (singleton).
@@ -339,3 +345,4 @@
 - Волна 387: DeathPrompt 545 + АУДИТ #2 (прямые пакеты). DeathPrompt: Create(delay)-корутина, UseDeathPrompt-гейт; музыка смерти "crewdead" ровно 25с; ★кинематографичный fade-in (фон 5с, заголовок 1с, причина на 2й, пенальти на 3й); причина = CauseOfDeath.Affliction.SelfCauseOfDeathDescription (от первого лица!); permadeath/ironman = текст вместо кнопок; skillloss красным rich-text; EndRoundTimeRemaining «раунд заканчивается через...». ★АУДИТ #2: все прямые каналы клиент→сервер (20+ ClientPacketHeader) — каждый уже разобран или гейтится (пермы/кампейн/Ironman/AllowFileTransfers); новых дыр НЕ найдено; клиент не может слать entity-events за чужого (sender-привязка). Вывод: за 387 волн дверей не осталось. Кандидаты 388: Al.cs 467, SoundFilters 422, DeformableSprite 418, BallastFloraBehavior 408.
 - Волна 388: SoundFilters 422 + DeformableSprite 418. SoundFilters = адаптация CSCore (Ms-PL): полный набор BiQuad (Lowpass/Highpass/Bandpass/Notch/LowShelf/HighShelf), Direct Form I, ★проверка Найквиста (sampleRate ≥ 2×freq) в конструкторе; DefaultQ=1/√2 (Баттерворт); ★ПРИМЕНЕНИЕ: OggSound.MuffleBuffer фильтрует ВЕСЬ сэмпл при ЗАГРУЗКЕ (Lowpass на MuffleFilterFrequency) в отдельный AlMuffledBuffer (память<CPU, подтверждает 358 волну), VoipSound.ApplyFilters — на живой поток. DeformableSprite: вершинная сетка поверх спрайта для лимбов (деформации-шрамы запоминаются), техники DeformShader из волны 363. Кандидаты 389: BallastFloraBehavior 408, Al.cs 467, GameMain server 436, ModDownloadScreen 426, LoadingScreen 423.
 - Волна 389: BallastFloraBehavior client 408 КЛАСТЕР 100% + Al.cs 467. Флора-клиент: DamagedFlower/LeafSprites (повреждённые варианты!), Damage/DeathParticleEmitter; ★перлин-тряска веток при уроне (ShakeAmount=PerlinNoise×10×timer — органическая дрожь); HUD-прогрессбар здоровья корня (UpdateHUDProgressBar игроку в отсеке!); CreateShapnel (опечатка в проде!) 16-32 шрапнелей; zStep 0.000001 микро-слои; DebugDraw: IgnoreTargets-лейблы «Ignored X for N steps». Al.cs: статический прокси над native OpenAL DllImports, ленивый GetError (поэтому SoundChannel собирает ошибки), Alc-часть = устройства/контексты/Capture. Кандидаты 390: GameMain server 436, ModDownloadScreen 426, LoadingScreen 423, RemainingItemComponents.
+- Волна 390: GameMain server 436 + ModDownloadScreen 426 + LoadingScreen 423 + МИНИ-АУДИТ #3 (server→client файлы). Сервер: физика 1 итерация (грубые коллизии), анти-спираль смерти (аккумулятор клампится = время пропускается), -ownerkey = голый int из argv (владение сервером), owner online → stdin-консоль Clear (логи только по сети), -lenienthandshake (ослабленный handshake, кандидат на аудит), GameAnalytics на сервере закомменчен «TODO consent». ModDownloadScreen: полный флоу скачивания модов, ХЕШ-ПРОВЕРКА после декомпресса (throw при mismatch), клиентские моды (!HasMultiplayerSyncedContent) остаются включёнными, SubscribeToAllOnWorkshop + автоподключение. LoadingScreen: ★ПАСХАЛКА SCP: Containment Breach («Sometimes we would have had time to scream», NIL, e8m106]af), фон = портреты локаций/миссий, сломанное сплэш-видео отключает сплэши навсегда. АУДИТ #3: ★IsExtractionPathValid StartsWith БЕЗ сепаратора → sibling-папки с общим префиксом проходят (../TempMods_DownloadXXX/) — классический zip-slip-вариант, низкая severity; FileReceiver.Initiate чист (invalid chars вкл. / и \, ext .sub/.save, моды — любой ext но хеш спасает, капы 500 MiB/50 MiB); ★TransferOnSameMachine: сервер шлёт только owner, но клиент принимает raw path от ЛЮБОГО сервера (чтение произвольного локального файла как саб/сейв, low); таутология EndpointMatches(x,x)=always true (дев-баг). DeserializeElement — только GameSettings, не сеть. Кандидаты 391: RemainingItemComponents (Engine shared 296 + client 186, PowerTransfer хвосты), Client.WriteServerInfo, GameSession хвосты, ProceduralLevel-хвосты.

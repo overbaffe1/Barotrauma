@@ -110,7 +110,7 @@ Barotrauma/BarotraumaClient/ClientSource/GUI/Graph.cs,81,done,81
 Barotrauma/BarotraumaClient/ClientSource/GUI/HRManagerUI.cs,1289,done,1290
 Barotrauma/BarotraumaClient/ClientSource/GUI/HUDLayoutSettings.cs,231,done,231
 Barotrauma/BarotraumaClient/ClientSource/GUI/IMEPreviewText.cs,90,done,90
-Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs,423,new,0
+Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs,423,done,423
 Barotrauma/BarotraumaClient/ClientSource/GUI/MedicalClinicUI.cs,1199,done,1199
 Barotrauma/BarotraumaClient/ClientSource/GUI/ParamsEditor.cs,57,done,57
 Barotrauma/BarotraumaClient/ClientSource/GUI/RectTransform.cs,987,done,987
@@ -306,7 +306,7 @@ Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EventEditorScreen.c
 Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs,690,done,690
 Barotrauma/BarotraumaClient/ClientSource/Screens/LevelEditorScreen.cs,1592,done,1592
 Barotrauma/BarotraumaClient/ClientSource/Screens/MainMenuScreen/MainMenuScreen.cs,1749,done,1749
-Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs,426,new,0
+Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs,426,done,426
 Barotrauma/BarotraumaClient/ClientSource/Screens/NetLobbyScreen.cs,5812,done,5812
 Barotrauma/BarotraumaClient/ClientSource/Screens/ParticleEditorScreen.cs,388,new,0
 Barotrauma/BarotraumaClient/ClientSource/Screens/RoundSummaryScreen.cs,68,done,68
@@ -421,7 +421,7 @@ Barotrauma/BarotraumaServer/ServerSource/Events/Missions/NestMission.cs,20,new,0
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs,32,new,0
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/SalvageMission.cs,84,done,98
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs,39,new,0
-Barotrauma/BarotraumaServer/ServerSource/GameMain.cs,436,new,0
+Barotrauma/BarotraumaServer/ServerSource/GameMain.cs,436,done,436
 Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs,88,done,88
 Barotrauma/BarotraumaServer/ServerSource/GameSession/CrewManager.cs,177,done,177
 Barotrauma/BarotraumaServer/ServerSource/GameSession/Data/Wallet.cs,54,done,54

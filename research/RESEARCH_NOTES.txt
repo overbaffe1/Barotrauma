@@ -11568,3 +11568,96 @@ Sounds/OpenAL/Al.cs (467). Балласт-флора КЛАСТЕР 100% (shared
   (Al.Position, BlendState и т.д.) = int-константы спецификации OpenAL 1.1.
   Alc-часть: устройства/контексты/Capture (волна 382/358). GetErrorString —
   человекочитаемые коды.
+
+================================================================================
+[WAVE 390 - GameMain server 436 + ModDownloadScreen 426 + LoadingScreen 423 + МИНИ-АУДИТ #3 (server->client файлы)]
+================================================================================
+ФАЙЛЫ: BarotraumaServer/ServerSource/GameMain.cs, Client Screens/ModDownloadScreen.cs,
+Client GUI/LoadingScreen.cs. Аудит-кандидат DeserializeElement ОТПАЛ: используется
+ТОЛЬКО в GameSettings (локальный XML), сеть не при чём.
+
+--- GAMAIN SERVER (главный цикл выделенного сервера) ---
+  ★ Физика сервера: VelocityIterations=1, PositionIterations=1 (!) — самый дешёвый
+  Farseer-конфиг. Сервер судит о коллизиях грубо, клиент — точно. Расхождения
+  предсказуемы (кли-сервер рассинхрон позиций при плотном трафике).
+  ★ Анти-«спираль смерти»: Timing.Accumulator > AccumulatorMax → accumulator =
+  Step (время ПРОПУСКАЕТСЯ, а не отыгрывается). Перегруженный сервер молча
+  теряет игровое время вместо замедления.
+  -ownerkey: режим dedicated — SteamManager НЕ инициализируется вообще (сразу EOS,
+  если нет steamworks-либы). Owner key = ГОЛЫЙ INT из командной строки — владение
+  сервером = «знаешь int из argv». OwnerConnection от этого ключа.
+  ★ Консоль сервера: без owner-коннекта — читает stdin (DebugConsole.UpdateCommandLine,
+  ~800 строк буфера на кадр); ЕСТЬ owner-коннект → DebugConsole.Clear() каждый кадр —
+  stdin-консоль ОТКЛЮЧАЕТСЯ, логи уезжают только owner'у по сети.
+  -lenienthandshake → NetConfig.UseLenientHandshake: серверный/клиентский свитч,
+  ослабляющий handshake (есть и в клиентском меню, и в DebugConsole клиента).
+  Для тестов. Если копать handshake-атаки — смотреть сюда первым.
+  HyperTypeDescriptionProvider.Add(Character/Item/ItemComponent/Hull) — HyperDescriptor
+  (быстрая рефлексия свойств) = движок PropertySync. Регистрация вручную тут.
+  GameAnalytics на сервере ЗАКОММЕНЧЕН: «TODO: figure out how consent is supposed
+  to work for servers» — серверы аналитику не шлют вообще.
+  «Running slowly» (avg < 98% FixedUpdateRate) уходит ТОЛЬКО owner'у и пермам.
+  Warning если Stopwatch frequency < 1500 ticks/s («syncing accuracy issues»).
+  Exit: SaveUtil.CleanUnnecessarySaveFiles() — подчистка временных сейвов.
+
+--- MODDOWNLOADSCREEN (загрузка модов с сервера) ---
+  Полный флоу: список ServerContentPackages → mandatory отсутствующие → очередь →
+  RequestFile(Mod, name, hash) → .bar в TempMods_Download → DecompressToDirectory →
+  ContentPackage.TryLoad → ★ХЕШ-ПРОВЕРКА (ожидаемый vs фактический, throw при
+  несовпадении). Мод с сервера НЕ может тихо подменить контент — хеш из списка,
+  полученного при коннекте.
+  Subs (non-mandatory пакеты) МОЖНО пропускать; клиентские (!HasMultiplayerSyncedContent)
+  моды остаются включёнными ПОВЕРХ серверного набора; EnabledPackages.BackUp() перед
+  сменой (восстановление своего сета потом).
+  AllowModDownloads=false → кнопка Cancel одна = принудительный дисконнект.
+  Vanilla hash mismatch → LogAndThrowException (в аналитику). No core package → throw.
+  IsServerOwner — список не нужен (файлы локально те же).
+  SubscribeToAllOnWorkshop: недостающие UGC-ID → BulkDownloader.SubscribeToServerMods
+  + ConnectCommand (автоподключение обратно после подписки!). Клиент Quit сам.
+  Скачанные сабы мэтчатся к серверным ПО ИМЕНИ+MD5 (paths обновляются); LoadingScreen
+  потом. Прогрессбар-текст обновляется через SanitizedValue-сравнение (анти-рефлоу).
+
+--- LOADINGSCREEN (экран загрузки + сплэши) ---
+  ★★ ПАСХАЛКА: «//SCP-CB reference» — при noiseVal<0.2 рандомный текст из
+  ["NIL", "black white gray", "Sometimes we would have had time to scream",
+  "e8m106]af", "NO"] — консоль SCP: Containment Breach! <0.3 — случайный «seed»,
+  <0.5 — координаты из PadLeft-нулей. Крик в темноте «иногда у нас было время
+  крикнуть» живёт в Бароте.
+  Сплэш-видео: skip Esc/Space/Enter/LMB после 0.5с (анти-даблскип), auto-dispose
+  через 1.5с после конца; ЛЮБАЯ ошибка видео → EnableSplashScreen=false НАВСЕГДА
+  в конфиг (кbroken codecs убивают интро).
+  Фон загрузки = рандомный портрет локации (UsePortraitInRandomLoadingScreens),
+  миссия с портретами ПЕРЕБИВАЕТ. LoadState -1→100 → «PressAnyKey».
+  Первый запуск → выбор языка прямо на лоадскрине (CJK-шрифт dynamicLoading=true).
+  Тип сохраняется снапшотом строк (selectedTipString) — «чтобы тип не менялся,
+  когда текстпаки подгружаются во время загрузки».
+
+--- ★МИНИ-АУДИТ #3: server->client передача файлов (SaveUtil.Decompress + FileReceiver) ---
+  ★★ НАЙДЕНА ДЫРА (низкая severity, классика): SaveUtil.IsExtractionPathValid =
+  fileDirFull.StartsWith(rootDirFull, OrdinalIgnoreCase) БЕЗ сепаратора! Path.Combine
+  с именем "../TempMods_DownloadXXX/file" → GetFullPath → sibling-папка «TempMods_DownloadXXX»
+  ПРОХОДИТ проверку (общий префикс!). Малварный сервер может писать файлы в соседние
+  каталоги с тем же префиксом имени. GetFullPath резолвит «..», абсолютные пути
+  блокируются, но prefix-sibling — нет. Blast radius мал (имя папки фиксированное),
+  но это учебниковый StartsWith-баг.
+  FileReceiver.Initiate ЧИСТ: fileName из сети не содержит '/' '\' ':' '*' и прочие
+  invalid chars (IndexOfAny), .sub/.save extension enforced, размеры: 500 MiB моды
+  («500 MiB should be good enough, right?» — комментарий дева) / 50 MiB всё остальное.
+  МОДЫ: расширение НЕ проверяется вообще (любое имя+контент), но потом хеш-проверка
+  в ModDownloadScreen спасает.
+  ★ TransferOnSameMachine: сервер шлёт ТОЛЬКО OwnerConnection (клиент=хост, файлы
+  общие). Клиент же принимает его ОТ ЛЮБОГО СЕРВЕРА без проверки «это мой owner» —
+  путь СЫРОЙ из сети, только File.Exists → OnFinished → SubmarineInfo(path) /
+  загрузка кампании. Малварный сервер может заставить owner-клиента прочитать
+  произвольный локальный файл как саб/сейв. Write-примитива нет, наружу файл не
+  уходит. Severity low.
+  ★ Таутология-баг: activeTransfers.Find(t => t.Connection.EndpointMatches(
+  t.Connection.Endpoint)) — объект сравнивается С САМИМ СОБОЙ = всегда true. Дев
+  имел в виду inc.Sender.EndpointMatches(t.Connection...). Два одновременных
+  источника файлов могли бы путаться по ID (в реале сервер один).
+  ReadBytes: excess bytes ОБРЕЗАЮТСЯ по FileSize; out-of-order DataBuffer чистится
+  k < Received; DecompressToDirectory ретраит IOException ×4 по 250мс.
+  ИТОГО АУДИТА: новых векторов клиент-компрометации с чужого сервера — нет
+  (сервер и так владеет клиентом на время сессии), есть 1 префикс-баг записи +
+  1 raw-path чтение от доверенного севрера.
+

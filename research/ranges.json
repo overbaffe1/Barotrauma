@@ -4656,5 +4656,23 @@
       1,
       467
     ]
+  ],
+  "Barotrauma/BarotraumaServer/ServerSource/GameMain.cs": [
+    [
+      1,
+      436
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/ModDownloadScreen.cs": [
+    [
+      1,
+      426
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/GUI/LoadingScreen.cs": [
+    [
+      1,
+      423
+    ]
   ]
 }

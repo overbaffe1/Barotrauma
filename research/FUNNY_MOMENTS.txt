@@ -723,3 +723,17 @@
 3) Перлин-тряска ветки при уроне (ShakeAmount = PerlinNoise ×10) — флора
    дрожит органически, не по синусоиде. Перлин повсюду: свечение гэпов,
    дрожь флоры, фоны уровня.
+
+[WAVE 390]
+- LoadingScreen.cs: «//SCP-CB reference» — в Баротрауме на экране загрузки при слабом
+  шуме проскакивают строки консоли SCP: Containment Breach, включая
+  «Sometimes we would have had time to scream». Разрабы — фанаты SCP, офоциально.
+- FileReceiver.cs: GetMaxFileSizeInBytes → «500 MiB should be good enough, right?» —
+  «должно же хватить, да?» (спойлер: кому-то не хватило).
+- FileReceiver.cs: Find(t => t.Connection.EndpointMatches(t.Connection.Endpoint)) —
+  эндпоинт сравнивается сам с собой, всегда true. Проверка, которая проверяет.
+- GameMain (server): «TODO: figure out how consent is supposed to work for servers» —
+  девы сдались и просто закомментировали аналитику на сервере.
+- LoadingScreen.cs: комментарий про tips: «store the string value ... to prevent the
+  text from changing if/when new text packs are loaded during the loading screen» —
+  текстпаки могут ПЕРЕГРУЗИТЬСЯ, пока ты смотришь на экран загрузки.
