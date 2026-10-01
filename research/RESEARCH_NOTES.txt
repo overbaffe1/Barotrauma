@@ -16219,3 +16219,37 @@ Barotrauma разложен по винтикам от handshake до титро
   врача невозможна, но и штраф за гриф-снятие баффов пати через клинику
   НЕ ПРИМЕНЯЕТСЯ (клиника не зовёт OnCharacterHealthChanged) → 453 остаётся
   безнаказанным по карме. Карма не видит клинику вообще.
+===============================================================================
+[WAVE 460 — TRAITOR/ENTITYSPAWNER СВИТ + ИЗГОТОВЛЕН FreeHealModule.cs]
+===============================================================================
+
+--- ✅ TraitorManager — клиентского входа нет (кроме "голоса-обвинения") ---
+  Предатель выбирается СЕРВЕРОМ (TraitorEvent), TraitorResults
+  ([NetworkSerialize]) = server→client summary. Обвинение = VoteType.Traitor
+  (Voting, 455): `sender.SetVote(voteType, client)` из СЕРВЕРНОГО списка
+  ConnectedClients — garbage sessionId → FirstOrDefault = null → просто нет
+  голоса. Деньги: MoneyPenaltyForUnfoundedTraitorAccusation — из ПРЕФАБА
+  ивента (XML), не из пакета. Чисто.
+
+--- ✅ EntitySpawnerComponent — vanilla-спавнер, чисто ---
+  trigger_in → Spawn() (ТОЛЬКО на сервере: "when !isClient") — спавнит
+  ИСКЛЮЧИТЕЛЬНО зашитые в XML суба префабы (SpeciesName/ItemNames), позиции
+  из конфига, лимит CanSpawnMore (MaxAmountFactor). Это механика «кнопка
+  выпускает молотхедов», произвольного спавна клиент сделать не может.
+  set_state/toggle — CanSpawn флаг. Квирк: isClient-гейт на Spawn значит
+  клиент-симуляция спавна локальная — рассинхрон косметический.
+
+--- ✅ TriggerComponent.ReceiveSignal — base + свои кейсы, легковес.
+--- ✅ ClientPacketHeader енума зафиксирована (MEDICAL=17, SERVER_COMMAND=10,
+  UPDATE_INGAME=1, ENDROUND_SELF=11) — для мод-пакетов.
+
+--- ★★ ИЗГОТОВЛЕН: research/mods/FreeHealModule.cs (волна 453 в бою) ---
+  Два пакета: MEDICAL(17)+ADD_PENDING(4)+WriteNetSerializableStruct(
+  NetCrewMember{CharacterInfoID=цель, Afflictions=[...Price=0]}) затем
+  MEDICAL(17)+HEAL_PENDING(7). Использует НАСТОЯЩИЕ структуры игры
+  (WriteNetSerializableStruct — extension на IWriteMessage,
+  NetworkExtensions.cs:22) → не нужно реплицировать бит-сериализацию.
+  Режимы: HealSelf / HealFocused (Free Medic, Team1-цель) / StripFocused
+  (снятие ПОЗИТИВНЫХ аффликций = гриф, кармой невидим). Кулдаун 1с
+  (лимит клиники 20req/5s). Рефлексия Send — тот же паттерн, что SellById.
+  Прим.: хедер-комментарий модуля содержит полный анализ вектора.
