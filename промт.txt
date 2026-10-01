@@ -34,7 +34,7 @@
 - После каждой волны: `python3 research/mark.py "<относительный путь>" "1-N"`
   для каждого прочитанного файла, дописать блок `[WAVE N — title]` в конец
   `research/RESEARCH_NOTES.txt`, потом `python3 research/generate.py` из корня репо.
-- НОМЕР ВОЛНЫ: последняя — 437 (волны ~0.2-2K строк). СЛЕДУЮЩАЯ — 438. АРХИВ обновлён на волне 435 (835K) — следующий ~445. РАЗМЕР ВОЛНЫ ~800-1500 строк.
+- НОМЕР ВОЛНЫ: последняя — 438 (МАССОВАЯ волна 21 файл ~2900 строк!). СЛЕДУЮЩАЯ — 439. АРХИВ обновлён на волне 435 (835K) — следующий ~445. ★400K СТРОК ВЗЯТО! РАЗМЕР ВОЛНЫ ~800-1500 строк.
 - АУДИТЫ ДЫР: юзер просил не забывать — периодически (примерно раз в 3-4 волны)
   включать в волну скриптовый аудит гейтов/пакетов. Проведено: #1 (386, ServerEventRead
   гейты), #2 (387, все прямые клиент→сервер пакеты), #3 (390, server→client файлы:
@@ -56,9 +56,9 @@
   репозиторий https://github.com/overbaffe1/BarotraumaMod (клонится через git;
   raw.githubusercontent заблокирован, используй api.github.com).
 
-## СТАТУС (после волны 437)
-- ГОТОВО файлов: 960 (~402,161 строк). ЧАСТИЧНЫХ: 0. Не начато: 1558.
-- Охват: 58.31% (402.2K/689.7K) — ★400K СТРОК ВЗЯТО!
+## СТАТУС (после волны 438)
+- ГОТОВО файлов: 980 (~404,972 строк). ЧАСТИЧНЫХ: 0. Не начато: 1538.
+- Охват: 58.72% (405.0K/689.7K) — ★400K СТРОК ВЗЯТО!
 - Архив barotrauma_research.zip обновлён на волне 435 (835K) — следующий ~445.
 - Архив barotrauma_research.zip обновлён на волне 395 (692K, = research/ + промт.txt).
 - ★ ВАЖНО: реальный остаток по НЕ-Libraries сорсам — всего 487 файлов / ~55.8K строк
@@ -397,3 +397,4 @@
 - Волна 435 (2 файла 237): CharacterFile 118 (★ClearCaches Ragdoll+AnimationParams при load/unload (оверрайды требуют сброса, «play safe»); ★Preload: сбор ВСЕХ texture-путей рэгдолла (normal/deform/damaged/декор) + [GENDER]-пути ПРОПУСКАЮТСЯ «don't know which gender yet»!; ErrorCatcher-отклонение из 421) + VideoSound 119 (Queue<short[]> под mutex, FillStreamBuffer копит до заполнения, категория «video», Play пересоздаёт канал). Кандидаты 436: следующая пачка.
 - Волна 436 (2 файла 234): EosSession 117 (EOS-сервер-лист: сессии ТОЛЬКО публичные (!IsPublic → Leave); ★race-гвард TaskPool.IsTaskRunning + SessionAlreadyExists = НЕ ошибка (идемпотентность!); Attributes = сервер-лист: HostAddress (EosP2P по PUID!), Port, SteamP2PEndpoint (кросс-стор!), contentpackage{i} ПО ОДНОМУ (лимиты EOS)) + GUICanvas 117 (★★дети как WeakReference — канвас НЕ держит живые UI, GC решает!; RecalculateSize: RelativeSize ≥1 растягивается по оси (Both/X/Y) — ультравайд-фикс; Size = Width/GUI.UIWidth виртуальная ширина). Кандидаты 437: следующая пачка.
 - Волна 437 (2 файла 231): Oscillator 115 (КЛАСТЕР финал: 5 волн Pulse/Saw/Sine/Square/Triangle; ★Frequency кламп 240 Гц «prevent players from wrecking the performance» — анти-DDoS!; Saw/Sine шлют каждый кадр float) + ButtonTerminal client 116 (кнопки из XML-стилей, ★Inventory.RectTransform ПЕРЕНАЗНАЧАЕТСЯ в контейнер терминала (AllowUIOverlap!); индикатор зел/красн/Selected; ClientEventRead → SendSignal ignoreState:true — серверное эхо срабатывает всегда). Кандидаты 438: следующая пачка.
+- Волна 438 (★МАССОВАЯ: 21 файл 2926 строк, вернулись к жирным волнам): Terminal 184 + SlideshowPlayer 177 (стейт-машина слайдов: AnyKey ДО фейда = skip, ПОСЛЕ = next) + BackgroundCreaturePrefab+Manager 177+130 (★фоновая живность: FadeOutDepth 10000 «fade to background color» = ПАРАЛЛАКС, свои стайки SwarmMin/Max/Cohesion, LightSprite светящиеся версии, WanderZ Z-слои) + EpicFriendProvider 173 (★★EGS НЕ ИМЕЕТ АВАТАРОК — цвет профиля = «educated guess of how Epic picks that color, and is likely incorrect» через BigInteger-хеш accountId!) + WikiImage 169 (загрузка картинок С ВИКИ прямо в UI тултипов!) + SteamDedicatedServerProvider 162 + EosServerProvider 139 (query-протокол Valve + EOS-атрибуты → единый ServerListScreen) + SteamManager client 160 (★★«Steamworks is completely insane» — OnItemInstalled И OnDownloadItemResult ОБА = «мод скачан» в разных фазах луны, «Maybe I'm completely wrong!»; InitRelayNetworkAccess поллит 25мс; ListenForFriendsMessages инвайты; OverlayCustomUrl веб-оверлей!) + Util/EgsAssistant/DotnetCmd 155+143+123 (деплой: EGS через внешний процесс с env-creds!) + SteamConnectSocket 123 (клиентская пара 415-й, без DoS-гейта) + StructurePrefab client 117 (тяни-стена: мин GridSize, StoreCommand undo, zoomInvariant рамки!) + Propulsion 114 (джетпак: dir=курсор кламп 200, ApplyToHands, ★использование = AiTarget MAX SoundRange) + AfflictionsFile 114 (★рефлексия типа: элемент «Husk»→AfflictionHusk; damageoverlay = клиентский оверлей тяжести урона!; дубль = «adjust the mod load order») + GeneticMaterial client 114 (★тултипы РЕКУРСИВНЫ по содержимым; Tainted→префикс; ★ценность генов = Lerp(min,max,condition%) в тултипе!; Refine с вероятностью порчи в тексте кнопки) + Quad2D 113 (record 4-угольник: Rotated вокруг центроида, FromSubmarineRectangle Y-флип) + MultiplayerPreferences 112 (MP-дефолт персонаж: JobPreferences+внешность = тот же набор что IdCard) + PanelAnimator 112. Остаток не-Libraries: 288 файлов / 13,806 строк. Кандидаты 439: следующая МАССОВАЯ пачка ~2900 строк.

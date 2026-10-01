@@ -5778,5 +5778,125 @@
       1,
       116
     ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Terminal.cs": [
+    [
+      1,
+      184
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/SlideshowPlayer.cs": [
+    [
+      1,
+      177
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreaturePrefab.cs": [
+    [
+      1,
+      177
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/EpicFriendProvider.cs": [
+    [
+      1,
+      173
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Utils/WikiImage.cs": [
+    [
+      1,
+      169
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamDedicatedServerProvider.cs": [
+    [
+      1,
+      162
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Steam/SteamManager.cs": [
+    [
+      1,
+      160
+    ]
+  ],
+  "Deploy/DeployAll/Util.cs": [
+    [
+      1,
+      155
+    ]
+  ],
+  "Deploy/DeployAll/EgsAssistant.cs": [
+    [
+      1,
+      143
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/EosServerProvider.cs": [
+    [
+      1,
+      139
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreatureManager.cs": [
+    [
+      1,
+      130
+    ]
+  ],
+  "Deploy/DeployAll/DotnetCmd.cs": [
+    [
+      1,
+      123
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamConnectSocket.cs": [
+    [
+      1,
+      123
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Map/StructurePrefab.cs": [
+    [
+      1,
+      117
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Propulsion.cs": [
+    [
+      1,
+      114
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/AfflictionsFile.cs": [
+    [
+      1,
+      114
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/GeneticMaterial.cs": [
+    [
+      1,
+      114
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Utils/Shapes/Quad2D.cs": [
+    [
+      1,
+      113
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Settings/MultiplayerPreferences.cs": [
+    [
+      1,
+      112
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/PanelAnimator.cs": [
+    [
+      1,
+      112
+    ]
   ]
 }

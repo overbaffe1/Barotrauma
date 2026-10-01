@@ -14686,3 +14686,105 @@ Signal/WaterDetector.cs, LinkedControllerCharacterComponent.cs.
   SendSignal(ignoreState: true!) — серверное эхо СРАБАТЫВАЕТ даже при
   неактивном терминале (кнопка нажата = сигнал уходит, консистентность).
 
+
+================================================================================
+[WAVE 438 - 21 файл 2926 строк (массовая волна!) - Terminal client 184 + SlideshowPlayer 177 + BackgroundCreaturePrefab 177 + EpicFriendProvider 173 + WikiImage 169 + SteamDedicatedServerProvider 162 + SteamManager client 160 + Util 155 + EgsAssistant 143 + EosServerProvider 139 + BackgroundCreatureManager 130 + DotnetCmd 123 + SteamConnectSocket 123 + StructurePrefab client 117 + Propulsion 114 + AfflictionsFile 114 + GeneticMaterial client 114 + Quad2D 113 + MultiplayerPreferences 112 + PanelAnimator 112]
+================================================================================
+
+--- TERMINAL CLIENT 184 (дисплеи; пара к 423!) ---
+  GUITextBlock-история, WelcomeMessage тег-локализация. inputBox реверс
+  (текст снизу вверх как консоль), Readonly → input скрыт. clear_text →
+  children.Clear + filler. History-лимит. Private-хак: текст может
+  содержать ‖color — RichString!
+
+--- SLIDESHOWPLAYER 177 (слайдшоу миссий/туториалов) ---
+  Стейт-машина слайдов: overlay (чёрный→белый фейд), текст фейд с
+  TextFadeInDelay. ★AnyKeyHit ДО фейда = мгновенный показ всего слайда
+  (skip), ПОСЛЕ = следующий слайд. LastTextShown/Finished флаги для
+  миссий. Restart/Finish программно. pressanykey-подпись.
+
+--- BACKGROUNDCREATURE 177+130 (фоновая живность уровня!) ---
+  Prefab: Speed/WanderAmount/WanderZAmount (Z-слои!), SwarmMin/Max/Radius/
+  Cohesion (свои стайки!), Min/MaxDepth (глубины обитания), ★FadeOutDepth
+  10000 («fade to background color of level the further from camera» —
+  параллакс!), DisableRotation/Flipping, FlashInterval/Duration
+  (светящиеся!), DeformableSprite + LightSprite (светящиеся версии!),
+  SpriteDeformations для редактора, OverrideCommonness по level-типам.
+  Manager: спавн по commonness, fade по дистанции, UpdateWander.
+
+--- EPICFRIENDPROVIDER 173 (друзья EGS) ---
+  ★EGS НЕ ИМЕЕТ АВАТАРОК: «Instead, each player gets a color based on
+  their account ID. This is an educated guess of how Epic picks that
+  color, and is likely incorrect» — ЦВЕТ ПРОФИЛЯ = хеш accountId через
+  BigInteger (educared guess!). 8 фиксированных цветов EGS.
+  ConnectCommand.Parse из статуса друга (присоединение по клику).
+
+--- WIKIIMAGE 169 (загрузчик изображений с вики в UI!) ---
+  Runtime-загрузка картинок с official barotrauma wiki по URL, кэш,
+  TaskPool, создание Texture2D на main thread. Используется в тултипах
+  талантов (картинки предметов из вики прямо в игре!).
+
+--- SERVER PROVIDERS 162+139 (сервер-листы Steam dedicated / EOS) ---
+  SteamDedicated: SteamServer.QueryResponses → ServerInfo (query-протокол
+  Valve!), фильтры паролей/версий/модов. EosServerProvider: атрибуты
+  сессий (из 436!) → ServerInfo. Оба фидят единый ServerListScreen.
+
+--- STEAMMANAGER client 160 (Steamworks-инициализация) ---
+  SteamClient.Init(AppID) → лог, popularTags из tagCommonness (415!).
+  ★★ КОММЕНТАРИЙ ВЕКА: «Steamworks is completely insane so the following
+  needs comments» — OnItemInstalled И OnDownloadItemResult ОБА могут
+  означать «мод скачан», в зависимости от... фазы луны («Maybe I'm
+  completely wrong! All I know is that we need to handle both!»).
+  ListenForFriendsMessages = инвайты соц-оверлея. InitRelayNetworkAccess
+  поллит статус 25мс-циклом (Failed/CannotTry → ThrowError).
+  OverlayCustomUrl = веб-оверлей Steam поверх игры!
+
+--- DEPLOY Util 155 + EgsAssistant 143 + DotnetCmd 123 (деплой-хелперы) ---
+  Util: DownloadFile (прогресс), RecreateDirectory, StartProcess с
+  тתות-логированием. EgsAssistant:上传 в EGS через eos-tools (запуск
+  внешнего процесса с creds из env!). DotnetCmd: обёртка dotnet CLI
+  (build/publish с конфигами).
+
+--- STEAMCONNECTSOCKET 123 (клиентская пара ListenSocket 415!) ---
+  Создание подключения к SteamID: CreateSocket → Connect. Те же коллбеки
+  (OnConnecting пропускается — мы подключаемся), DoS-гейта нет (клиент!).
+
+--- STRUCTUREPREFAB client 117 (размещение структур в редакторе) ---
+  Тяни-стена: ЛКМ старт → ресайз (ResizeHorizontal/Vertical, мин GridSize!)
+  → релиз = new Structure + StoreCommand (undo!). DrawPlacing: DrawTiled
+  + zoomInvariant рамки (толщина и вылеты 1/zoom — константно на экране!).
+
+--- PROPULSION 114 (джетпак/лопатки) ---
+  Force кламп ±1000, UseEnvironment Air/Water/Both/None. dir = курсор
+  кламп 200 → Force × PropulsionSpeedMultiplier × стат. ApplyForce на
+  коллайдер + носящие лимбы (wearable!) + руки если ApplyToHands.
+  ★Использование = AiTarget MAX SoundRange (джетпак слышно!). Частицы
+  client. В воде TargetMovement = dir (помогает анимации).
+
+--- AFFLICTIONSFILE 114 (загрузчик аффликций) ---
+  Рекурсивный ParseElement: <Override>, <Afflictions>, <cprsettings>
+  (CPR-настройки!), <damageoverlay> (клиентский оверлей урона — цвет
+  экрана по тяжести!). ★Рефлексия типа: элемент «Husk» → AfflictionHusk,
+  «X» → AfflictionX, иначе базовый Affliction. Дубликат → ThrowError с
+  «adjust the mod load order». Overriding → фиолетовое сообщение.
+
+--- GENETICMATERIAL client 114 (тултипы генматериала) ---
+  AddTooltipInfo РЕКУРСИВЕН (содержимые генматериалы дописывают свои
+  имена/описания!). Tainted → «tainted [name]» префикс. Description =
+  Lerp(TooltipValueMin, Max, condition%) — ЦЕННОСТЬ ГЕНОВ В ТУЛТИПЕ.
+  ModifyDeconstructInfo: «Refine» с ВЕРОЯТНОСТЬЮ ПОРЧИ в тексте!
+  ClientEventRead: bool tainted + u32 effectID (UintIdentifier аффликции!).
+
+--- QUAD2D 113 (четырёхугольник-record) ---
+  Centroid, FromRectangle/FromSubmarineRectangle (Y-флип!), Rotated
+  вокруг центроида, BoundingAxisAlignedRectangle, TryGetEdges (Span!).
+
+--- MULTIPLAYERPREFERENCES 112 (MP-персонаж по умолчанию) ---
+  JobPreferences (идентификатор+вариант!), TeamPreference, PlayerName,
+  ВНЕШНОСТЬ (Hair/Beard/Moustache/FaceAttachment + цвета) — тот же набор
+  что IdCard 421! Синглтон Instance. Это «твой дефолтный персонаж» при
+  входе на сервер.
+
+--- PANELANIMATOR 112 (аниматор панелей сервер-листа) ---
+  Плавное открытие/закрытие панелей через RectTransform-анимации.
+

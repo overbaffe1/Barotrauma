@@ -149,7 +149,7 @@ Barotrauma/BarotraumaClient/ClientSource/Items/CharacterInventory.cs,1262,done,1
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Door.cs,380,done,380
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/ElectricalDischarger.cs,102,done,102
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/EntitySpawnerComponent.cs,61,new,0
-Barotrauma/BarotraumaClient/ClientSource/Items/Components/GeneticMaterial.cs,114,new,0
+Barotrauma/BarotraumaClient/ClientSource/Items/Components/GeneticMaterial.cs,114,done,114
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Growable.cs,357,done,357
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Holdable/Holdable.cs,149,done,149
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Holdable/IdCard.cs,128,done,128
@@ -191,7 +191,7 @@ Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ConnectionSelec
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/CustomInterface.cs,513,done,513
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/MemoryComponent.cs,12,new,0
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/MotionSensor.cs,25,done,25
-Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Terminal.cs,184,new,0
+Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Terminal.cs,184,done,184
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/WifiComponent.cs,34,done,36
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Wire.cs,740,done,740
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/StatusHUD.cs,382,done,382
@@ -211,8 +211,8 @@ Barotrauma/BarotraumaClient/ClientSource/Map/Gap.cs,371,done,371
 Barotrauma/BarotraumaClient/ClientSource/Map/Hull.cs,852,done,853
 Barotrauma/BarotraumaClient/ClientSource/Map/ItemAssemblyPrefab.cs,119,done,119
 Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreature.cs,431,done,431
-Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreatureManager.cs,130,new,0
-Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreaturePrefab.cs,177,new,0
+Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreatureManager.cs,130,done,130
+Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreaturePrefab.cs,177,done,177
 Barotrauma/BarotraumaClient/ClientSource/Map/Levels/CaveGenerator.cs,273,done,273
 Barotrauma/BarotraumaClient/ClientSource/Map/Levels/DestructibleLevelWall.cs,66,new,0
 Barotrauma/BarotraumaClient/ClientSource/Map/Levels/Level.cs,184,done,184
@@ -235,7 +235,7 @@ Barotrauma/BarotraumaClient/ClientSource/Map/MapEntity.cs,1388,done,1388
 Barotrauma/BarotraumaClient/ClientSource/Map/MapEntityPrefab.cs,121,done,121
 Barotrauma/BarotraumaClient/ClientSource/Map/RoundSound.cs,171,done,171
 Barotrauma/BarotraumaClient/ClientSource/Map/Structure.cs,719,done,722
-Barotrauma/BarotraumaClient/ClientSource/Map/StructurePrefab.cs,117,new,0
+Barotrauma/BarotraumaClient/ClientSource/Map/StructurePrefab.cs,117,done,117
 Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs,851,done,851
 Barotrauma/BarotraumaClient/ClientSource/Map/SubmarineBody.cs,140,done,140
 Barotrauma/BarotraumaClient/ClientSource/Map/SubmarineInfo.cs,303,done,303
@@ -260,7 +260,7 @@ Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs,16,done,
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs,83,new,0
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs,106,new,0
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/P2PSocket.cs,69,new,0
-Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamConnectSocket.cs,123,new,0
+Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamConnectSocket.cs,123,done,123
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamListenSocket.cs,178,done,178
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/Peers/ClientPeer.cs,256,done,256
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/Peers/LidgrenClientPeer.cs,305,done,305
@@ -270,9 +270,9 @@ Barotrauma/BarotraumaClient/ClientSource/Networking/RespawnManager.cs,116,done,1
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/PingUtils.cs,228,done,229
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerInfo.cs,704,done,705
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/CompositeServerProvider.cs,35,new,0
-Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/EosServerProvider.cs,139,new,0
+Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/EosServerProvider.cs,139,done,139
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/ServerProvider.cs,17,new,0
-Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamDedicatedServerProvider.cs,162,new,0
+Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamDedicatedServerProvider.cs,162,done,162
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamP2PServerProvider.cs,115,new,0
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerLog.cs,329,done,329
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerSettings.cs,315,done,315
@@ -311,9 +311,9 @@ Barotrauma/BarotraumaClient/ClientSource/Screens/NetLobbyScreen.cs,5812,done,581
 Barotrauma/BarotraumaClient/ClientSource/Screens/ParticleEditorScreen.cs,388,done,388
 Barotrauma/BarotraumaClient/ClientSource/Screens/RoundSummaryScreen.cs,68,done,68
 Barotrauma/BarotraumaClient/ClientSource/Screens/Screen.cs,69,new,0
-Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/PanelAnimator.cs,112,new,0
+Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/PanelAnimator.cs,112,done,112
 Barotrauma/BarotraumaClient/ClientSource/Screens/ServerListScreen/ServerListScreen.cs,1924,done,1925
-Barotrauma/BarotraumaClient/ClientSource/Screens/SlideshowPlayer.cs,177,new,0
+Barotrauma/BarotraumaClient/ClientSource/Screens/SlideshowPlayer.cs,177,done,177
 Barotrauma/BarotraumaClient/ClientSource/Screens/SpriteEditorScreen.cs,1142,done,1142
 Barotrauma/BarotraumaClient/ClientSource/Screens/SubEditorScreen.cs,6903,done,6903
 Barotrauma/BarotraumaClient/ClientSource/Screens/TestScreen.cs,130,done,130
@@ -321,12 +321,12 @@ Barotrauma/BarotraumaClient/ClientSource/Serialization/SerializableEntityEditor.
 Barotrauma/BarotraumaClient/ClientSource/Settings/CompletedTutorials.cs,44,new,0
 Barotrauma/BarotraumaClient/ClientSource/Settings/DebugConsoleMapping.cs,58,new,0
 Barotrauma/BarotraumaClient/ClientSource/Settings/IgnoredHints.cs,44,new,0
-Barotrauma/BarotraumaClient/ClientSource/Settings/MultiplayerPreferences.cs,112,new,0
+Barotrauma/BarotraumaClient/ClientSource/Settings/MultiplayerPreferences.cs,112,done,112
 Barotrauma/BarotraumaClient/ClientSource/Settings/ServerListFilters.cs,72,new,0
 Barotrauma/BarotraumaClient/ClientSource/Settings/SettingsMenu.cs,1009,done,1009
 Barotrauma/BarotraumaClient/ClientSource/Social/FriendInfo.cs,73,new,0
 Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/CompositeFriendProvider.cs,46,new,0
-Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/EpicFriendProvider.cs,173,new,0
+Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/EpicFriendProvider.cs,173,done,173
 Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/FriendProvider.cs,25,new,0
 Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/SteamFriendProvider.cs,69,new,0
 Barotrauma/BarotraumaClient/ClientSource/Social/SocialExtensions.cs,34,new,0
@@ -360,7 +360,7 @@ Barotrauma/BarotraumaClient/ClientSource/Steam/BulkDownloader.cs,176,done,176
 Barotrauma/BarotraumaClient/ClientSource/Steam/Lobby.cs,157,done,157
 Barotrauma/BarotraumaClient/ClientSource/Steam/RemoteStorageHelper.cs,34,new,0
 Barotrauma/BarotraumaClient/ClientSource/Steam/SteamIcons.cs,87,new,0
-Barotrauma/BarotraumaClient/ClientSource/Steam/SteamManager.cs,160,new,0
+Barotrauma/BarotraumaClient/ClientSource/Steam/SteamManager.cs,160,done,160
 Barotrauma/BarotraumaClient/ClientSource/Steam/SteamTimelineManager.cs,345,done,345
 Barotrauma/BarotraumaClient/ClientSource/Steam/Workshop.cs,356,done,356
 Barotrauma/BarotraumaClient/ClientSource/Steam/WorkshopMenu/BBCode.cs,210,done,210
@@ -390,7 +390,7 @@ Barotrauma/BarotraumaClient/ClientSource/Utils/SpreadsheetExport.cs,261,done,261
 Barotrauma/BarotraumaClient/ClientSource/Utils/SpriteRecorder.cs,352,done,352
 Barotrauma/BarotraumaClient/ClientSource/Utils/TextureLoader.cs,207,done,207
 Barotrauma/BarotraumaClient/ClientSource/Utils/ToolBox.cs,585,done,585
-Barotrauma/BarotraumaClient/ClientSource/Utils/WikiImage.cs,169,new,0
+Barotrauma/BarotraumaClient/ClientSource/Utils/WikiImage.cs,169,done,169
 Barotrauma/BarotraumaClient/GlobalSuppressions.cs,10,new,0
 Barotrauma/BarotraumaServer/ServerSource/Camera.cs,204,done,204
 Barotrauma/BarotraumaServer/ServerSource/Characters/Character.cs,101,done,101
@@ -730,7 +730,7 @@ Barotrauma/BarotraumaShared/SharedSource/CircuitBox/CircuitBoxWire.cs,195,done,1
 Barotrauma/BarotraumaShared/SharedSource/CircuitBox/ICircuitBoxIdentifiable.cs,28,new,0
 Barotrauma/BarotraumaShared/SharedSource/CircuitBox/ItemSlotIndexPair.cs,61,new,0
 Barotrauma/BarotraumaShared/SharedSource/CommandPattern.cs,35,new,0
-Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/AfflictionsFile.cs,114,new,0
+Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/AfflictionsFile.cs,114,done,114
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/BackgroundCreaturePrefabsFile.cs,28,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/BallastFloraFile.cs,19,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/BeaconStationFile.cs,8,new,0
@@ -940,7 +940,7 @@ Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/IdCard.cs,146
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/LevelResource.cs,167,done,167
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/MeleeWeapon.cs,542,done,542
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Pickable.cs,352,done,352
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Propulsion.cs,114,new,0
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Propulsion.cs,114,done,114
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RangedWeapon.cs,398,done,398
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs,964,done,964
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Sprayer.cs,64,new,0
@@ -1225,7 +1225,7 @@ Barotrauma/BarotraumaShared/SharedSource/Utils/SafeIO.cs,861,done,861
 Barotrauma/BarotraumaShared/SharedSource/Utils/SaveUtil.cs,1044,done,1044
 Barotrauma/BarotraumaShared/SharedSource/Utils/SegmentTable.cs,330,done,330
 Barotrauma/BarotraumaShared/SharedSource/Utils/SerializableDateTime.cs,265,done,265
-Barotrauma/BarotraumaShared/SharedSource/Utils/Shapes/Quad2D.cs,113,new,0
+Barotrauma/BarotraumaShared/SharedSource/Utils/Shapes/Quad2D.cs,113,done,113
 Barotrauma/BarotraumaShared/SharedSource/Utils/Shapes/Triangle2D.cs,21,new,0
 Barotrauma/BarotraumaShared/SharedSource/Utils/TaskExtensions.cs,20,new,0
 Barotrauma/BarotraumaShared/SharedSource/Utils/ToolBox.cs,941,done,941
@@ -1248,12 +1248,12 @@ Barotrauma/BarotraumaTest/SplitEscapedTest.cs,63,done,63
 Barotrauma/BarotraumaTest/TestExample.cs,122,done,122
 Barotrauma/BarotraumaTest/TestProject.cs,40,done,40
 Deploy/DeployAll/Deployables.cs,111,new,0
-Deploy/DeployAll/DotnetCmd.cs,123,new,0
-Deploy/DeployAll/EgsAssistant.cs,143,new,0
+Deploy/DeployAll/DotnetCmd.cs,123,done,123
+Deploy/DeployAll/EgsAssistant.cs,143,done,143
 Deploy/DeployAll/GitCmd.cs,86,new,0
 Deploy/DeployAll/Program.cs,67,new,0
 Deploy/DeployAll/SteamPipeAssistant.cs,248,done,248
-Deploy/DeployAll/Util.cs,155,new,0
+Deploy/DeployAll/Util.cs,155,done,155
 Libraries/BarotraumaLibs/BarotraumaCore/Achievements/AchievementStats.cs,59,new,0
 Libraries/BarotraumaLibs/BarotraumaCore/Debugging/DebugConsoleCore.cs,26,new,0
 Libraries/BarotraumaLibs/BarotraumaCore/Extensions/ColorExtensions.cs,59,new,0

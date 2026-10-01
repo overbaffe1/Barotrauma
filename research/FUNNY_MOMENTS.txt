@@ -1109,3 +1109,12 @@
 - OscillatorComponent.cs: Frequency клампится 240 Гц «to prevent players
   from wrecking the performance» — генератор тактовых импульсов официально
   ограничен, чтобы игроки не устроили DDoS собственной подводной лодке.
+- SteamManager client: «Steamworks is completely insane so the following
+  needs comments» + «Maybe I'm completely wrong! All I know is that we
+  need to handle both!» — ДВА разных коллбека скачки мода, и девы не
+  уверены, когда какой срабатывает. Обрабатывают оба. Молятся.
+- EpicFriendProvider.cs: у EGS нет аватарок, поэтому цвет профиля —
+  «educated guess of how Epic picks that color, and is likely incorrect».
+  Образовательная догадка о внутренностях чужого сервиса.
+- AfflictionsFile.cs: «You may need to adjust the mod load order to make
+  sure X is loaded first» — ошибка загрузки как туториал по мод-порядку.
