@@ -947,7 +947,7 @@ Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Sprayer.cs,64
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Throwable.cs,239,done,239
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/ItemComponent.cs,1248,done,1248
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/ItemContainer.cs,1308,done,1308
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/ItemLabel.cs,37,done,41
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/ItemLabel.cs,37,done,60
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Ladder.cs,36,done,36
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/LinkedControllerCharacterComponent.cs,136,done,136
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Controller.cs,1107,done,1107

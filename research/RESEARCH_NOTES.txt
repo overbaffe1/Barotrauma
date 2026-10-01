@@ -15886,3 +15886,68 @@ Barotrauma разложен по винтикам от handshake до титро
   местах (продажа 452, лечение 453, [цены закупок серверные]) берёт деньги
   из пакетов, а не из расчётов сервера. Ремедиум: пересчитывать стоимость
   сервером по идентификаторам, принимать от клиента ТОЛЬКО «что», не «сколько».
+===============================================================================
+[WAVE 454 — СВИТ «КЛИЕНТСКИХ ЦЕННОСТЕЙ»: экономика аудита ЗАВЕРШЕНА, вне 452/453 всё чисто]
+===============================================================================
+
+--- ★ ПЕРЕПРОВЕРКА TRANSFER_MONEY (подтверждён чистым, теперь построчно) ---
+  MultiPlayerCampaign.cs:1180: `if (transfer.Amount <= 0) { return; }` —
+  отрицательные/нулевые отсечены. `id != sender.CharacterID &&
+  !AllowedToManageWallets` — чужой кошелёк только с ManageMoney. Отправка
+  `from.TryDeduct(amount)` — честный фейл при нехватке. Банк-трансфер без
+  перма → VOTE с потолком MaximumMoneyTransferRequest. ЗАКРЫТО.
+
+--- ★ HIRING (ServerReadCrew → TryHireCharacter) — ЧИСТО ---
+  CampaignMode.cs:1137: цена = HireManager.GetSalaryFor(characterInfo) —
+  СЕРВЕРНЫЙ расчёт (клиент шлёт только WHO, не HOW MUCH); репутационный
+  чек MinReputationToHire сервером; TryPurchase фейлится честно;
+  pendingHires матчятся СТРОГО по location.GetHireableCharacters() (серверный
+  список); MaxCrewSize-чек на active-service. Клиент управляет только ВЫБОРОМ.
+  FireCharacter — без рефанда (лупа нет, 453).
+
+--- ★ RefundTalents — анти-фарм by design ---
+  CharacterInfo.cs:1542: гейт TalentRefundPoints (ограниченный ресурс),
+  каждый сброс СЖИРАЕТ очко И increment talentResetCount → следующий сброс
+  отнимает БОЛЬШЕ очков (ResetTalents(talentPointReduction: count)).
+  Эскалация = фарм невозможен. Единственная дыра очков остаётся
+  TalentOverspend (447, бюджет по «всего заработано»).
+
+--- ★ ОСТАЛЬНАЯ ЭКОНОМИКА/ЦЕННОСТИ — сервер-авторитарна ---
+  - NetIncrementedStat (ачивки): сервер ВЫДАёт клиентам (GameServer:4283),
+    инкременты считаются сервером из игровых событий (убийства, км). Клиент
+    не шлёт. Чисто.
+  - TraitorResults: server→client summary. Чисто.
+  - GeneticMaterial: ServerEventRead НЕТ вообще (только Write);
+    комбинирование генов через ItemContainer.Combine ЯВНО исключено
+    («genetic materials use special logic») — машинное, серверное. Чисто.
+  - ItemContainer.Combine: AllowDragAndDrop + slotRestrictions +
+    CanAccessInventory — гейты на месте.
+  - NetWalletSetSalaryUpdate: [NetworkSerialize(MinValueInt=0, MaxValueInt=100)]
+    — кламп на УРОВНЕ СЕРИАЛИЗАЦИИ (вот где надо было клампить цену клиники!).
+  - Покупки: deliverImmediately за пермом/сеттингом; hull/shuttle-флаги
+    предотвращают повторные списания; upgrade/swaps — серверная цена.
+
+--- ★ IdCard / метки / доки (хвосты списка 447) ---
+  - IdCard: чистый data-холдер; TeamID ставится ТОЛЬКО сервером при спавне
+    (Initialize); ServerEventRead нет; ChangeProperty не достанет (нет
+    [InGameEditable]). Спуф пермиссий карточкой невозможен.
+  - ItemLabel (Labeller): Text/TextColor — только отображение, теги не трогает.
+    set_text по сигналу — vanilla (текст вывесок). Чисто.
+  - DockingPort.ReceiveSignal: toggle/set_active — vanilla-проводка (JAMMED
+    на обломках фиксирован ранее); аутпост-автодок prompting — клиентский UX.
+  - MarkerTransponder/SonarTransducer — хардкод-сигналы (волна ранее).
+
+--- ★ Planter cross-sub — закрываю как валидированный случай дыры #1 ---
+  Planter НАСЛЕДУЕТ Holdable → вектор 150x-unit-mismatch применим полностью:
+  аттач за 17,100 px сквозь стены + AttachToWall(item снаружи) цепляет к
+  ЧУЖОЙ субе/аутпосту; OwnInventory (РАСТЕНИЯ с генами!) телепортируется
+  вместе. Доп. ценность жертвы: украсть грядку с прокачанными растениями.
+
+--- ВЕРДИКТ ВОЛНЫ: семья «клиентские ценные значения» исчерпана.
+  Сломаны: продажа (452 — без владения), клиника (453 — цена из пакета).
+  Чистые: transfer, hiring, salaries (кламп сериализации), refunds, ачивки,
+  гены, swap-цены. Модель «клиент шлёт WHAT, сервер считает HOW MUCH»
+  соблюдена ВЕЗДЕ кроме 452/453 — поэтому они и флагманы.
+  Побочный инсайт: NetWalletSetSalaryUpdate показывает, что девы умеют
+  клампить на уровне [NetworkSerialize(MinValueInt=...)] — в 453 просто
+  забыли применить к NetAffliction.Price (ushort вообще без атрибута).
