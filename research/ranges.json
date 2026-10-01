@@ -6348,5 +6348,371 @@
       1,
       70
     ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerOperateWeapons.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/StoreIntegration/StoreIntegration.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Epic/EosEpicPrimaryLogin.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Utils/AssemblyInfo.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/SteamFriendProvider.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/Screen.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/P2PSocket.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/LevelGenerationParametersFile.cs": [
+    [
+      1,
+      68
+    ]
+  ],
+  "Deploy/DeployAll/Program.cs": [
+    [
+      1,
+      67
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Utils/GraphicsQuad.cs": [
+    [
+      1,
+      67
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Map/HullEventData.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/NoiseDeformation.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Map/Levels/DestructibleLevelWall.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Events/EventLog.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Map/FireSource.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/Sprayer.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Settings/ServerLanguageOptions.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Prefabs/Prefab.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Serialization/Editable/Editable.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Memento.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Events/EventLog.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/ContentManagement/ContentPackageManager.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/FallbackLString.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/SubItemSwapPerk.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/CircuitBox/ItemSlotIndexPair.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/EntitySpawnerComponent.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Timing.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Sprite/SpriteSheet.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/GameSession/SlideshowPrefab.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameModePreset.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplexerComponent.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/TextFile.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Buffs/BuffDurationIncrease.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFires.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Media/Video.Internal.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/DisembarkPerkPrefab.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Settings/DebugConsoleMapping.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Utils/HttpUtility.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DemultiplexerComponent.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Events/EventManagerSettings.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/UpgradeSubmarinePerk.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Screens/Screen.cs": [
+    [
+      1,
+      56
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/JobsFile.cs": [
+    [
+      1,
+      56
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Utils/ListDictionary.cs": [
+    [
+      1,
+      55
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Map/Map/RadiationParams.cs": [
+    [
+      1,
+      53
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/GreaterComponent.cs": [
+    [
+      1,
+      53
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/Planter.cs": [
+    [
+      1,
+      53
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/Jobs/SkillPrefab.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Utils/LeakyBucket.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/Ladder.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Decals/DecalPrefab.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentPackage/CorePackage.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/NPCPersonalityTrait.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/CorpsePrefab.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConcatComponent.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/InheritConditionFromLinkedWall.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/CompositeFriendProvider.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/InputTypeLString.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Sprite/ConditionalSprite.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCConversationsFile.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Map/DummyFireSource.cs": [
+    [
+      1,
+      44
+    ]
   ]
 }

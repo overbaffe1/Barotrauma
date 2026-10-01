@@ -1131,3 +1131,7 @@
   Дым-детектор с рентгеном.
 - XnaToConsoleColor.cs: словарь цветов + GetClosestConsoleColor через HLS —
   попытка красиво раскрасить консоль выделенного сервера.
+- StoreIntegration.cs: DEBUG-хак опрашивает localhost:8730 за Epic exchange
+  code — дев-тул Epic как главный распределитель кодов. «localdev» креды.
+- ShipIssueWorkerOperateWeapons.cs: бот-стрелок проверяет dot-продуктом,
+  на той ли стороне суба турель. Геометрическое понимание собственного корабля.

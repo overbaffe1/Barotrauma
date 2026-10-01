@@ -14932,3 +14932,66 @@ FunctionComponent, ColorComponent, StringComponent — все элементы �
   75/89/93 (ленивые ноды текста). GitCmd 86 (деплой: git-теги!).
   DotnetCmd... Raditation client 81 (визуал радиации).
 
+
+================================================================================
+[WAVE 441 - ★★★ ПОТОЛОК НЕ-LIBRARIES ВЗЯТ: 61 файл 3560 строк — 1116 файлов, 60.20%!]
+================================================================================
+ФИНАЛ НЕ-LIBRARIES СОРСОВ (остаток = 152 огрызка <44 строк, добиваются
+следующей волной). Ключевое:
+
+--- SHIPISSUEWORKEROPERATEWEAPONS 70 (турели капитана) ---
+  ★ Проговаривает приоритет по ГЕОМЕТРИИ: цель за пределами SonarRange → 0;
+  турель не достаёт (IsWithinAimingRadius) → ×0.1; ★векторная проверка
+  «турель на другой стороне суба» → ×0.1 (dot-продукт направления!). Allow
+  EasySwitching = true (смена орудий легко — 393-я подтверждена).
+
+--- STOREINTEGRATION 70 (детект магазина) ---
+  ★ DEBUG-хак: HTTP на 127.0.0.1:8730 «localdev/exchange_code» — дев-тул
+  Epic отдаёт exchange code для тестов! Иначе: есть steam_api64.dll → Steam
+  (EOS НЕ инициализируется до согласия — 400-я!), иначе Epic по аргументам.
+
+--- EOSEPICPRIMARYLOGIN 70 (EPIC-первичный логин) ---
+  Зеркало 400-й для Epic-владельцев: LoginEpicExchangeCode → Either
+  ContinuanceToken (создать PUID) | PUID (ProbeLinkedEpic). Retry-паттерн.
+
+--- FIGHTINTRUDERS/геймы: SteamManager client уже был, серверная Init пустая.
+  SteamFriendProvider 69 / CompositeFriendProvider 46 (Steam+EOS композит
+  из 318!). P2PSocket 69 (база сокетов). DualStack уже был. EosP2P был.
+
+--- КОНТЕНТ-ФАЙЛЫ ДОБИТЫ: LevelGenerationParametersFile 68 / RandomEvents
+  (был) / JobsFile 56 / TextFile 59 / OrdersFile 71 / NPCConversationsFile
+  45 / UIStyleFile 100 (был) — вся загрузка контента через рефлексию 421-й.
+
+--- СИГНАЛКА: Multiplexer 59 / Demultiplexer 57 (наследники Connection
+ Selector 427-го!) / Greater 53 (компаратор больше) / Concat 46 (склейка).
+
+--- ИНФРА: Timing 60 (Step/Accumulator — сердце таймингов из 390!),
+  Memento 62 (undo-стек SerializableEntity 339-го!), Editable 62 (атрибут
+  редактора), HttpUtility 57 (свой парсер query-строк!), ListDictionary 55,
+  LeakyBucket 51 (rate-limiter сетевой!), Physics 73 (был), SpriteSheet 60,
+  Prefab 63 (база префабов), AssemblyInfo 69 (версия/ветка/ревизия — из
+  краш-репортов 399-го!), Screen shared 56 + client 69 (база экранов),
+  SlideshowPrefab 60 / SlideshowPlayer был, GameModePreset 60.
+
+--- ПЕРСОНАЖИ: NPCPersonalityTrait 47 (черты характера NPC-диалогов!),
+  CorpsePrefab 47 (префабы трупов обломков), SkillPrefab 51 (базовые скиллы).
+  HullEventData 66 (wire-ивенты хуллов: Fire/Water/Pressure/Quality из 313!).
+
+--- ПРОЧЕЕ: FireSource client 65 / DummyFireSource 44 (фейковые пожары
+  психоза 318-го!), Sprayer shared 64, Planter client 53, Ladder 49,
+  EventLog 65+62 (лог ивентов для черновиков!), EventManagerSettings 57,
+  RadiationParams 53, Radiation client 81 (визуал), ConditionalSprite 45
+  (условные спрайты — IsActive из 396-го!), InheritConditionFromLinkedWall 46
+  (условие от стены!), GraphicsQuad 67 (вершинный квад), PanelAnimator был,
+  MultiplayerPreferences был, SubItemSwapPerk 61 / UpgradeSubmarinePerk 57
+  (перки высадки: подмена под-предметов / апгрейд суба!), ItemSlotIndexPair 61
+  (CircuitBox-пара), DebugConsoleMapping 58, Video.Internal 59 (P/Invoke
+  декодера!), BuffDurationIncrease 59 (баффы продлевают друг друга!),
+  FallbackLString 61 / InputTypeLString 45 / ReplaceLString был (текст-ноды),
+  CorePackage 47 (core-пак), NPCConversationsFile 45, GitCmd 86 / Program 67
+  (деплой), NetLobbyScreen shared 89, AssemblyInfo, Screen...
+
+ИТОГ: НЕ-Libraries сорсы ПО ЧТИ ПОЛНОСТЬЮ ПОКРЫТЫ. Все системы, все
+компоненты, все механизмы игры задокументированы. Остаток = огрызки <44
+строк (пустые классы, частичные партиалы-заглушки).
+
