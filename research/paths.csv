@@ -98,7 +98,7 @@ Barotrauma/BarotraumaClient/ClientSource/GUI/GUIMessageBox.cs,759,done,759
 Barotrauma/BarotraumaClient/ClientSource/GUI/GUINumberInput.cs,550,done,550
 Barotrauma/BarotraumaClient/ClientSource/GUI/GUIPrefab.cs,472,done,472
 Barotrauma/BarotraumaClient/ClientSource/GUI/GUIProgressBar.cs,168,done,168
-Barotrauma/BarotraumaClient/ClientSource/GUI/GUIRadioButtonGroup.cs,92,new,0
+Barotrauma/BarotraumaClient/ClientSource/GUI/GUIRadioButtonGroup.cs,92,done,92
 Barotrauma/BarotraumaClient/ClientSource/GUI/GUIScissorComponent.cs,94,done,94
 Barotrauma/BarotraumaClient/ClientSource/GUI/GUIScrollBar.cs,349,done,349
 Barotrauma/BarotraumaClient/ClientSource/GUI/GUISelectionCarousel.cs,210,done,210
@@ -128,7 +128,7 @@ Barotrauma/BarotraumaClient/ClientSource/GameAnalytics/GameAnalyticsManager.cs,1
 Barotrauma/BarotraumaClient/ClientSource/GameMain.cs,1370,done,1370
 Barotrauma/BarotraumaClient/ClientSource/GameSession/CargoManager.cs,219,done,219
 Barotrauma/BarotraumaClient/ClientSource/GameSession/CrewManager.cs,3928,done,3928
-Barotrauma/BarotraumaClient/ClientSource/GameSession/Data/CampaignMetadata.cs,98,new,0
+Barotrauma/BarotraumaClient/ClientSource/GameSession/Data/CampaignMetadata.cs,98,done,98
 Barotrauma/BarotraumaClient/ClientSource/GameSession/Data/Wallet.cs,31,new,0
 Barotrauma/BarotraumaClient/ClientSource/GameSession/GameMode.cs,10,new,0
 Barotrauma/BarotraumaClient/ClientSource/GameSession/GameModes/CampaignMode.cs,470,done,470
@@ -174,7 +174,7 @@ Barotrauma/BarotraumaClient/ClientSource/Items/Components/Machines/Steering.cs,1
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Planter.cs,53,new,0
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/PowerContainer.cs,199,done,199
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/PowerDistributor.cs,214,done,214
-Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/PowerTransfer.cs,106,new,0
+Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/PowerTransfer.cs,106,done,106
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/Powered.cs,21,new,0
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Projectile.cs,193,done,193
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Quality.cs,21,new,0
@@ -255,10 +255,10 @@ Barotrauma/BarotraumaClient/ClientSource/Networking/GameClient.cs,3998,done,3998
 Barotrauma/BarotraumaClient/ClientSource/Networking/KarmaManager.cs,148,done,148
 Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/ClientEntityEventManager.cs,297,done,297
 Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/NetEntityEvent.cs,24,new,0
-Barotrauma/BarotraumaClient/ClientSource/Networking/NetStats.cs,95,new,0
+Barotrauma/BarotraumaClient/ClientSource/Networking/NetStats.cs,95,done,95
 Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs,16,done,16
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs,83,new,0
-Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs,106,new,0
+Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs,106,done,106
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/P2PSocket.cs,69,new,0
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamConnectSocket.cs,123,done,123
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamListenSocket.cs,178,done,178
@@ -273,7 +273,7 @@ Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/C
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/EosServerProvider.cs,139,done,139
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/ServerProvider.cs,17,new,0
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamDedicatedServerProvider.cs,162,done,162
-Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamP2PServerProvider.cs,115,new,0
+Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamP2PServerProvider.cs,115,done,115
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerLog.cs,329,done,329
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerSettings.cs,315,done,315
 Barotrauma/BarotraumaClient/ClientSource/Networking/ServerSettingsUI.cs,990,done,990
@@ -288,15 +288,15 @@ Barotrauma/BarotraumaClient/ClientSource/Particles/ParticlePrefab.cs,313,done,31
 Barotrauma/BarotraumaClient/ClientSource/Physics/PhysicsBody.cs,187,done,187
 Barotrauma/BarotraumaClient/ClientSource/PlayerInput.cs,560,done,560
 Barotrauma/BarotraumaClient/ClientSource/Program.cs,354,done,354
-Barotrauma/BarotraumaClient/ClientSource/Screens/BlurEffect.cs,93,new,0
-Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignEndScreen.cs,90,new,0
+Barotrauma/BarotraumaClient/ClientSource/Screens/BlurEffect.cs,93,done,93
+Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignEndScreen.cs,90,done,90
 Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignSetupUI/CampaignSetupUI.cs,997,done,998
 Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignSetupUI/MultiPlayerCampaignSetupUI.cs,378,done,378
 Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignSetupUI/SinglePlayerCampaignSetupUI.cs,787,done,788
 Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignUI.cs,748,done,749
 Barotrauma/BarotraumaClient/ClientSource/Screens/CharacterEditor/CharacterEditorScreen.cs,5573,done,5573
 Barotrauma/BarotraumaClient/ClientSource/Screens/CharacterEditor/Wizard.cs,1179,done,1179
-Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs,100,new,0
+Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs,100,done,100
 Barotrauma/BarotraumaClient/ClientSource/Screens/EditorImage.cs,571,done,571
 Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs,75,new,0
 Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EditorNode.cs,694,done,694
@@ -350,7 +350,7 @@ Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/CustomDeformati
 Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/Inflate.cs,73,new,0
 Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/JointBendDeformation.cs,142,done,142
 Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/NoiseDeformation.cs,66,new,0
-Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/PositionalDeformation.cs,109,new,0
+Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/PositionalDeformation.cs,109,done,109
 Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/SpriteDeformation.cs,270,done,270
 Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformableSprite.cs,418,done,418
 Barotrauma/BarotraumaClient/ClientSource/Sprite/Sprite.cs,470,done,470
@@ -498,7 +498,7 @@ Barotrauma/BarotraumaServer/ServerSource/Physics/PhysicsBody.cs,50,done,50
 Barotrauma/BarotraumaServer/ServerSource/Program.cs,278,done,278
 Barotrauma/BarotraumaServer/ServerSource/Screens/NetLobbyScreen.cs,218,done,218
 Barotrauma/BarotraumaServer/ServerSource/Screens/UnimplementedScreen.cs,14,new,0
-Barotrauma/BarotraumaServer/ServerSource/Steam/SteamManager.cs,107,new,0
+Barotrauma/BarotraumaServer/ServerSource/Steam/SteamManager.cs,107,done,107
 Barotrauma/BarotraumaServer/ServerSource/Traitors/TraitorManager.cs,531,done,531
 Barotrauma/BarotraumaServer/ServerSource/Utils/DoSProtection.cs,237,done,237
 Barotrauma/BarotraumaServer/ServerSource/Utils/RateLimiter.cs,135,done,135
@@ -515,7 +515,7 @@ Barotrauma/BarotraumaShared/SharedSource/Characters/AI/LatchOntoAI.cs,502,done,5
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/MentalStateManager.cs,175,done,175
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/NPCConversation.cs,442,done,442
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjective.cs,631,done,631
-Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveChargeBatteries.cs,90,new,0
+Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveChargeBatteries.cs,90,done,90
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveCheckStolenItems.cs,266,done,266
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveCleanupItem.cs,158,done,158
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveCleanupItems.cs,160,done,160
@@ -523,7 +523,7 @@ Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveCom
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveContainItem.cs,273,done,273
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveDeconstructItem.cs,145,done,145
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveDeconstructItems.cs,133,done,133
-Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveEscapeHandcuffs.cs,107,new,0
+Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveEscapeHandcuffs.cs,107,done,107
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFire.cs,199,done,199
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFires.cs,59,new,0
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFightIntruders.cs,83,new,0
@@ -533,7 +533,7 @@ Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFin
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeak.cs,251,done,251
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeaks.cs,88,new,0
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItem.cs,787,done,787
-Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItems.cs,110,new,0
+Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItems.cs,110,done,110
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGoTo.cs,990,done,990
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveIdle.cs,591,done,591
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveInspectNoises.cs,126,done,126
@@ -544,7 +544,7 @@ Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveMan
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveMoveItem.cs,173,done,173
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveOperateItem.cs,399,done,399
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectivePrepare.cs,177,done,177
-Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectivePumpWater.cs,99,new,0
+Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectivePumpWater.cs,99,done,99
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveRepairItem.cs,346,done,346
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveRepairItems.cs,217,done,217
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveRescue.cs,554,done,554
@@ -566,7 +566,7 @@ Barotrauma/BarotraumaShared/SharedSource/Characters/AI/SteeringManager.cs,208,do
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/SteeringPath.cs,162,done,162
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/SwarmBehavior.cs,123,done,123
 Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAI.cs,534,done,534
-Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAIConfig.cs,103,new,0
+Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAIConfig.cs,103,done,103
 Barotrauma/BarotraumaShared/SharedSource/Characters/AICharacter.cs,82,new,0
 Barotrauma/BarotraumaShared/SharedSource/Characters/AIChatMessage.cs,31,new,0
 Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/AnimController.cs,1453,done,1453
@@ -763,7 +763,7 @@ Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostCo
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostFile.cs,7,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostModuleFIle.cs,7,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ParticlesFile.cs,31,new,0
-Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/RandomEventsFile.cs,106,new,0
+Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/RandomEventsFile.cs,106,done,106
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/RuinConfigFile.cs,19,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ServerExecutableFile.cs,28,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/SkillSettingsFile.cs,33,new,0
@@ -776,7 +776,7 @@ Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/TalentTre
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/TalentsFile.cs,18,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/TextFile.cs,59,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/TutorialsFile.cs,16,new,0
-Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/UIStyleFile.cs,100,new,0
+Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/UIStyleFile.cs,100,done,100
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/UpgradeModulesFile.cs,31,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/WreckAIConfigFile.cs,18,new,0
 Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/WreckFile.cs,7,new,0
@@ -792,7 +792,7 @@ Barotrauma/BarotraumaShared/SharedSource/ContentManagement/MissingContentPackage
 Barotrauma/BarotraumaShared/SharedSource/CoroutineManager.cs,274,done,274
 Barotrauma/BarotraumaShared/SharedSource/DebugConsole.cs,3677,done,3677
 Barotrauma/BarotraumaShared/SharedSource/Decals/Decal.cs,178,done,178
-Barotrauma/BarotraumaShared/SharedSource/Decals/DecalManager.cs,101,new,0
+Barotrauma/BarotraumaShared/SharedSource/Decals/DecalManager.cs,101,done,101
 Barotrauma/BarotraumaShared/SharedSource/Decals/DecalPrefab.cs,48,new,0
 Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/DisembarkPerkPrefab.cs,58,new,0
 Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/GiveTalentPointPerk.cs,20,new,0
@@ -920,7 +920,7 @@ Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MissionMode.cs,75
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MultiPlayerCampaign.cs,357,done,400
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/PvPMode.cs,28,new,0
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/TestGameMode.cs,19,done,19
-Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/Tutorials/TutorialPrefab.cs,105,new,0
+Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/Tutorials/TutorialPrefab.cs,105,done,105
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameSession.cs,1694,done,1694
 Barotrauma/BarotraumaShared/SharedSource/GameSession/HireManager.cs,97,done,97
 Barotrauma/BarotraumaShared/SharedSource/GameSession/MedicalClinic.cs,359,done,359
@@ -955,7 +955,7 @@ Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Deconstructor
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Engine.cs,296,done,296
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Fabricator.cs,1110,done,1110
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/InheritConditionFromLinkedWall.cs,46,new,0
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/MiniMap.cs,108,new,0
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/MiniMap.cs,108,done,108
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/OutpostTerminal.cs,14,done,14
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/OxygenGenerator.cs,153,done,153
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Pump.cs,313,done,313
@@ -971,13 +971,13 @@ Barotrauma/BarotraumaShared/SharedSource/Items/Components/Power/PowerDistributor
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Power/PowerTransfer.cs,490,done,490
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Power/Powered.cs,818,done,818
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Projectile.cs,1427,done,1427
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/Quality.cs,111,new,0
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/RemoteController.cs,96,new,0
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/Quality.cs,111,done,111
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/RemoteController.cs,96,done,96
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Repairable.cs,806,done,806
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Rope.cs,569,done,569
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/Scanner.cs,91,new,0
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/Scanner.cs,91,done,91
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/AdderComponent.cs,17,new,0
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ArithmeticComponent.cs,101,new,0
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ArithmeticComponent.cs,101,done,101
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/AndComponent.cs,10,new,0
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/BooleanOperatorComponent.cs,134,done,134
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/OrComponent.cs,10,new,0
@@ -1031,7 +1031,7 @@ Barotrauma/BarotraumaShared/SharedSource/Items/ItemPrefab.cs,1706,done,1706
 Barotrauma/BarotraumaShared/SharedSource/Items/ItemStatManager.cs,149,done,149
 Barotrauma/BarotraumaShared/SharedSource/Items/RelatedItem.cs,450,done,450
 Barotrauma/BarotraumaShared/SharedSource/Items/StartItemSet.cs,44,new,0
-Barotrauma/BarotraumaShared/SharedSource/Map/CoreEntityPrefab.cs,109,new,0
+Barotrauma/BarotraumaShared/SharedSource/Map/CoreEntityPrefab.cs,109,done,109
 Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraBehavior.cs,1353,done,1353
 Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraEventData.cs,79,new,0
 Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraPrefab.cs,31,new,0
@@ -1172,8 +1172,8 @@ Barotrauma/BarotraumaShared/SharedSource/Sprite/SpriteSheet.cs,60,new,0
 Barotrauma/BarotraumaShared/SharedSource/StatusEffects/DelayedEffect.cs,205,done,205
 Barotrauma/BarotraumaShared/SharedSource/StatusEffects/PropertyConditional.cs,751,done,751
 Barotrauma/BarotraumaShared/SharedSource/StatusEffects/StatusEffect.cs,3054,done,3054
-Barotrauma/BarotraumaShared/SharedSource/Steam/AuthTicket.cs,98,new,0
-Barotrauma/BarotraumaShared/SharedSource/Steam/RemoteStorageHelper.cs,105,new,0
+Barotrauma/BarotraumaShared/SharedSource/Steam/AuthTicket.cs,98,done,98
+Barotrauma/BarotraumaShared/SharedSource/Steam/RemoteStorageHelper.cs,105,done,105
 Barotrauma/BarotraumaShared/SharedSource/Steam/SteamManager.cs,302,done,302
 Barotrauma/BarotraumaShared/SharedSource/Steam/Workshop.cs,643,done,643
 Barotrauma/BarotraumaShared/SharedSource/Tags.cs,173,done,173
@@ -1189,7 +1189,7 @@ Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/LowerLString.cs,20
 Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/RawLString.cs,13,new,0
 Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ReplaceLString.cs,75,new,0
 Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ServerMsgLString.cs,185,done,185
-Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/SplitLString.cs,93,new,0
+Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/SplitLString.cs,93,done,93
 Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TagLString.cs,89,new,0
 Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TrimLString.cs,30,new,0
 Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/UpperLString.cs,25,new,0
@@ -1247,7 +1247,7 @@ Barotrauma/BarotraumaTest/SerializableDateTimeTests.cs,75,done,75
 Barotrauma/BarotraumaTest/SplitEscapedTest.cs,63,done,63
 Barotrauma/BarotraumaTest/TestExample.cs,122,done,122
 Barotrauma/BarotraumaTest/TestProject.cs,40,done,40
-Deploy/DeployAll/Deployables.cs,111,new,0
+Deploy/DeployAll/Deployables.cs,111,done,111
 Deploy/DeployAll/DotnetCmd.cs,123,done,123
 Deploy/DeployAll/EgsAssistant.cs,143,done,143
 Deploy/DeployAll/GitCmd.cs,86,new,0

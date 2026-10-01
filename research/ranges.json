@@ -5898,5 +5898,185 @@
       1,
       112
     ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/SteamP2PServerProvider.cs": [
+    [
+      1,
+      115
+    ]
+  ],
+  "Deploy/DeployAll/Deployables.cs": [
+    [
+      1,
+      111
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Quality.cs": [
+    [
+      1,
+      111
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItems.cs": [
+    [
+      1,
+      110
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Map/CoreEntityPrefab.cs": [
+    [
+      1,
+      109
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/PositionalDeformation.cs": [
+    [
+      1,
+      109
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/MiniMap.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveEscapeHandcuffs.cs": [
+    [
+      1,
+      107
+    ]
+  ],
+  "Barotrauma/BarotraumaServer/ServerSource/Steam/SteamManager.cs": [
+    [
+      1,
+      107
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/RandomEventsFile.cs": [
+    [
+      1,
+      106
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs": [
+    [
+      1,
+      106
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/PowerTransfer.cs": [
+    [
+      1,
+      106
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Steam/RemoteStorageHelper.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/Tutorials/TutorialPrefab.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAIConfig.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ArithmeticComponent.cs": [
+    [
+      1,
+      101
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Decals/DecalManager.cs": [
+    [
+      1,
+      101
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/UIStyleFile.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectivePumpWater.cs": [
+    [
+      1,
+      99
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Steam/AuthTicket.cs": [
+    [
+      1,
+      98
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/GameSession/Data/CampaignMetadata.cs": [
+    [
+      1,
+      98
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/RemoteController.cs": [
+    [
+      1,
+      96
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Networking/NetStats.cs": [
+    [
+      1,
+      95
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/SplitLString.cs": [
+    [
+      1,
+      93
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/BlurEffect.cs": [
+    [
+      1,
+      93
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/GUI/GUIRadioButtonGroup.cs": [
+    [
+      1,
+      92
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Scanner.cs": [
+    [
+      1,
+      91
+    ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveChargeBatteries.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Screens/CampaignEndScreen.cs": [
+    [
+      1,
+      90
+    ]
   ]
 }

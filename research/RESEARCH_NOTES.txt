@@ -14788,3 +14788,86 @@ Signal/WaterDetector.cs, LinkedControllerCharacterComponent.cs.
 --- PANELANIMATOR 112 (аниматор панелей сервер-листа) ---
   Плавное открытие/закрытие панелей через RectTransform-анимации.
 
+
+================================================================================
+[WAVE 439 - 30 файлов 3055 строк (ОГРОМНАЯ): Quality + MiniMap + EscapeHandcuffs + Arithmetic + CoreEntityPrefab + GetItems + PositionalDeformation + SteamManager server + providers + мелочь]
+================================================================================
+
+--- QUALITY 111 (качество предметов; полный кластер!) ---
+  MaxQuality 3, StatType 11 шт (Condition/ExplosionRadius/RepairSpeed/
+  Firepower/Striking.../FiringRate). GetValue = statValue × qualityLevel.
+  ★ Сеттер: был полный → новый макс = Condition = MaxCondition (полное
+  остаётся полным при апгрейде!).
+  ★★ SPAWN-РАСПРЕДЕЛЕНИЕ: difficultyFactor кламп уровнем биома (ActualMax
+  из 434!); дружественные аутпосты = 0 (никакого лута в гавани!); commonness:
+  q0=1, q1=lerp(0,1,f), q2=lerp(0,1,f−0.15) («15 difficulty transition —
+  unlock Excellent»), q3=lerp(0,1,f−0.35) («35 — Masterwork»). Masterwork
+  = глубже 35% сложности биома. Synced RNG — лут одинаков у всех!
+
+--- MINIMAP 108 (карта корпуса; Powered) ---
+  RequireWaterDetectors/RequireOxygenDetectors (детекторы ОБЯЗАТЕЛЬНЫ для
+  показа уровней — реалистичный режим!), ShowHullIntegrity, EnableHull
+  Status/ElectricalView/ItemFinder (3 режима карты). HullData: Received
+  Oxygen/Water + LastDataTime (детекторы шлют данные!), Cards set
+  (id-карты в отсеке = данные персонажей!), Distort + DistortionTimer
+  (помехи от... чего-то). Потребление ×Lerp(1.5, 1.0, condition) — битая
+  жрёт в полтора раза больше!
+
+--- ESCAPEHANDCUFFS 107 (бот-пленник; ★★СОЦИАЛЬНАЯ СТЕАЛХ!) ---
+  Пленник (prisoner escort) НАРУЧНИКИ: escapeTimer 60с дефолт («allow
+  players to locate prisoners in time» — успей найти!), тик 7.5с ±25%,
+  escapeProgress += Rand(2..5), >15 → сбрасывает HandLockerItem!
+  ★★ isBeingWatched: игрокова команда (Team1) в видимых хуллах →
+  «act casual» — прогресс СБРАСЫВАЕТСЯ в ноль пока смотрят! Пленник
+  изображает смирение при свидетелях.
+  shouldSwitchTeams: сбежал → TeamChange «escape» (Willful приоритет!)
+  в None — «перебежчик» из плена.
+
+--- ARITHMETICCOMPONENT 101 (база сумматоров/умножителей) ---
+  sealed Update: оба таймаута → IsActive=false (сон); ЛЮБОЙ таймаут →
+  early return; иначе Calculate(a,b) → IsValid-гард → КЛАМП ClampMin/Max
+  (±999999 дефолт) → SendSignal. Тот же TimeFrame×2 паттерн. Наследники:
+  Adder/Multiplier/Subtract/Divide/Modulo/Exponent...
+
+--- COREENTITYPREFAB 109 (хулл/гэп/вейпоинт/спавнпоинт — «ненастоящие» префабы) ---
+  4 core-сущности создаются КОДОМ (не XML!): рефлексия конструктора
+  typeof(Hull).GetConstructor(Rectangle)! linkable Hull→Hull, resize
+  флаги. Имена из EntityName.{id} текстов.
+
+--- GETITEMS 110 (мульти-сбор; строительный блок Prepare 415-й) ---
+  gearTags с повторами = ItemCount (тег дважды = взять 2!).
+  CheckInventory && count <= 1 (несколько = не чекать инвентарь —
+  бот не знает сколько у него). RequireAllItems → abandon при провале.
+  achievedItems HashSet трекинг.
+
+--- POSITIONALDEFORMATION 109 (вмятины-реакция; финал 404) ---
+  Falloff 0..1 (0 = весь спрайт тянется), MaxDeformation (1 = размер
+  спрайта!), ReactionSpeed 10 / RecoverSpeed 0.05 (быстро вминается,
+  МЕДЛЕННО выпрямляется — вмятины от теннисных мячей живут!). Update:
+  мелкие (<0.001²) деформации → Zero (анти-мусор).
+
+--- STEAMMANAGER SERVER 107 (SteamGameServer) ---
+  SteamServerInit(GamePort, QueryPort ТОЛЬКО при isPublic, Mode =
+  Authentication / NoAuthentication (!) — пиратские сервера = NoAuth).
+  LogOnAnonymous. MapName из выбранного суба. RefreshServerDetails
+  обновляет сервер-лист.
+
+--- ПРОВАЙДЕРЫ/СОКЕТЫ: SteamP2PServerProvider 115 (лобби-серверы
+  Steam → ServerInfo), EosP2PSocket 106 (клиентский EOS-сокет, пара
+  к 415-му, тот же паттерн коллбеков), Deployables 111 (список
+  деплой-артефактов: Windows/Mac/Linux × Client/Server).
+
+--- RandomEventsFile 106 / TutorialPrefab 105 / WreckAIConfig 103
+  (загрузчики: случайные ивенты, туториалы (SlideshowPrefab-связь!),
+  конфиги тухлых-ИИ (thalamus-цели)). PowerTransfer client 106 (визуал
+  джанкшена). RemoteStorageHelper 105 (Steam Cloud!). AuthTicket 98
+  (Steam/EOS тикеты — оттуда P2P-аутентификация 341!). RemoteController
+  96 (дистанционные пульты!). NetStats 95 (сетевая статистика).
+  Scanner 91 (сканеры уровня). DecalManager 101 (менеджер декалей —
+  лимиты, очистка). UIStyleFile 100 (загрузчик тем — GUIStyle.Apply
+  питается отсюда). SplitLString 93 (ленивый Split). BlurEffect 93
+  (блюр экрана). GUIRadioButtonGroup 92 (радио-кнопки). CreditsPlayer 100
+  (титры). CampaignEndScreen 90 (конец кампании). PumpWater 99 /
+  ChargeBatteries 90 (AIObjectiveLoop-наследники, «не умеют репортиться»
+  из 404!). CampaignMetadata 98 (метаданные кампании: ключ-значение).
+

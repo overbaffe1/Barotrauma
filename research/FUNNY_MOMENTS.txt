@@ -1118,3 +1118,10 @@
   Образовательная догадка о внутренностях чужого сервиса.
 - AfflictionsFile.cs: «You may need to adjust the mod load order to make
   sure X is loaded first» — ошибка загрузки как туториал по мод-порядку.
+- EscapeHandcuffs.cs: бот-пленник «act casual when player characters are
+  around» — изображает смирение при свидетелях и прогресс побега
+  СБРАСЫВАЕТСЯ. ИИ осваивает социальную инженерию.
+- SteamManager server: Mode = NoAuthentication для непубличных серверов —
+  официальный пиратский режим в Steamworks API.
+- Quality.cs: «15 difficulty transition to next biome - unlock Excellent
+  loot» — лут-тиры привязаны к порогам сложности биома с комментариями-гайдами.
