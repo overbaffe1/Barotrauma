@@ -15038,3 +15038,50 @@ Farseer/Lidgren/SharpFont/CSCore/NAudio/Vorbis/Concentus/Facepunch...).
 + кастомный OpenAL Soft), моды (весь ContentPackage-пайплайн), крипто
 (SRP), деплой. Найдено: 2 флагманских вектора (TalentOverspend, SellById),
 CAMPAIGN_STATE, десятки квирков, 5+ аудитов дыр, сотни дев-признаний.
+
+================================================================================
+[WAVE 443 - ★ПЕРЕСМОТР: BarotraumaLibs = СОБСТВЕННЫЙ КОД! 84 файла 9284 строки добиты — 1352 файла 62.07%]
+================================================================================
+ЮЗЕР ПРАВ, ЗАСТАВИВ ПЕРЕПРОВЕРИТЬ! «Libraries» — не весь сторонний код:
+BarotraumaLibs (84 файла) = СОБСТВЕННАЯ EOS-обёртка и утилиты, Hyper
+ComponentModel = их PropertySync-движок! Всё добито.
+
+--- BAROTRAUMACORE (утилиты, юзавшиеся весь год!) ---
+  MathUtils 1218 (!): PositiveModulo (настоящий мод для отрицательных!),
+  SmoothStep/InverseLerp, Range-структура, Alignment-флаги. ВСЕ вызовы
+  MathUtils из игровых волн — отсюда (шарится между клиентом/сервером
+  через BarotraumaCore-проект!).
+  TaskPool 111: MaxTasks 5000 (анти-утечка!), ListTasks для консоли,
+  IsTaskRunning (race-гварды 436-го отсюда!), addIfFound-флаг.
+  Identifier 184: интернированные строки-идентификаторы (хеш-таблица —
+  все Identifier. ToIdentifier() игры!). Result/Either/Option —
+  функциональные типы для EOS-обёртки. StringFormatter, ReflectionUtils,
+  JsonWebToken 74 (парсер JWT для EOS-токенов!), CollectionConcat,
+  Janitor 49 (IDisposable-агрегатор — из 411-го!), NamedEvent, OneOf,
+  AccountId-иерархия (SteamId/EpicAccountId/Unauthenticated...),
+  Address-иерархия (Lidgren/SteamP2P/EosP2P/Pipe/Unknown!), ToolBoxCore.
+  DebugConsoleCore (серверная консоль-колбэки из 399-го!).
+
+--- EOSINTERFACEPRIVATE (реализация EOS; интерфейс/имплементация РАЗДЕЛЕНЫ!) ---
+  LoginPrivate 708: Steamworks AuthTicket (GetAuthSessionTicket!),
+  EOS-нотификации экспирации (AddNotifyAuthExpiration/ LoginStatusChanged),
+  PuidToPrimaryExternalId ConcurrentDictionary, LoginParams-регекс!
+  IdQueriesPrivate 222, FriendsPrivate 249, PresencePrivate 465,
+  SessionsPrivate 319 (Owned/Remote), AchievementsPrivate 266,
+  P2PSocketPrivate 252, CorePrivate 176, CustomTaskScheduler 67
+  (кастомный шедулер EOS-коллбеков!), EgsIdTokenPrivate 119.
+  EosInterface (публичный): Login 206, Sessions 167, Core 258,
+  Friends 62, IdQueries 64...
+
+--- HYPER.COMPONENTMODEL 536 (PropertySync-движок!) ---
+  HyperTypeDescriptionProvider 125 + HyperTypeDescriptor 265 +
+  ChainingPropertyDescriptor 146 — динамические TypeDescriptor'ы для
+  БЫСТРОЙ рефлексии свойств. Регистрировался в GameMain server 390-м
+  (Character/Item/ItemComponent/Hull)! Это движок SerializableProperty —
+  все [Serialize]-свойства игры читаются через него.
+
+ИТОГ: собственный код = ~424K строк (1268 + 84 + 3 файла Hyper).
+Libraries остаток = ТОЛЬКО настоящий сторонний код: MonoGame 84K,
+Concentus 46K, SharpFont 27K, Facepunch 27K, Farseer 51K, Lidgren 11K,
+GameAnalytics 9K, XNATypes 13K — 1216 файлов ~262K строк.
+

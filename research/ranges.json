@@ -7626,5 +7626,509 @@
       1,
       20
     ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Achievements/AchievementStats.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Debugging/DebugConsoleCore.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/ColorExtensions.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/EnumExtensions.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/EnumerableExtensionsCore.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/PointExtensions.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/RectangleExtensions.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/RngExtensions.cs": [
+    [
+      1,
+      11
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/StringExtensions.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/StringFormatter.cs": [
+    [
+      1,
+      179
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/StructExtensions.cs": [
+    [
+      1,
+      16
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Extensions/VectorExtensions.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/AccountId/AccountId.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/AccountId/EpicAccountId.cs": [
+    [
+      1,
+      35
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/AccountId/SteamId.cs": [
+    [
+      1,
+      124
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/AccountId/UnauthenticatedAccountId.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/Address.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/EosP2PAddress.cs": [
+    [
+      1,
+      38
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/LidgrenAddress.cs": [
+    [
+      1,
+      79
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/P2PAddress.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/PipeAddress.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/SteamP2PAddress.cs": [
+    [
+      1,
+      33
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/Address/UnknownAddress.cs": [
+    [
+      1,
+      16
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/NetworkEnums.cs": [
+    [
+      1,
+      71
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Social/FriendStatus.cs": [
+    [
+      1,
+      9
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/CollectionConcat.cs": [
+    [
+      1,
+      124
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Either.cs": [
+    [
+      1,
+      113
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/GameVersion.cs": [
+    [
+      1,
+      9
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/IEnumerableExtensionsCore.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Identifier.cs": [
+    [
+      1,
+      184
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Janitor.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/JsonWebToken.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/MathUtils.cs": [
+    [
+      1,
+      1218
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/NamedEvent.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/OneOf.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Option/Option.cs": [
+    [
+      1,
+      129
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Range.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/ReflectionUtils.cs": [
+    [
+      1,
+      160
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Result.cs": [
+    [
+      1,
+      120
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/TaskExtensions.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/TaskPool.cs": [
+    [
+      1,
+      111
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Threading.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/ToolBoxCore.cs": [
+    [
+      1,
+      102
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/TypePreviouslyKnownAs.cs": [
+    [
+      1,
+      24
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/Unit.cs": [
+    [
+      1,
+      8
+    ]
+  ],
+  "Libraries/BarotraumaLibs/BarotraumaCore/Utils/UnreachableCodeException.cs": [
+    [
+      1,
+      8
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Achievements/AchievementErrors.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Achievements/Achievements.cs": [
+    [
+      1,
+      55
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Core/ApplicationCredentials.cs": [
+    [
+      1,
+      10
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Core/AssemblyInfo.cs": [
+    [
+      1,
+      5
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Core/Core.cs": [
+    [
+      1,
+      258
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Core/StatusExtensions.cs": [
+    [
+      1,
+      13
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Friends/EgsFriend.cs": [
+    [
+      1,
+      13
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Friends/Friends.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Friends/Presence.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/EgsAuthContinuanceToken.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/EgsIdToken.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/EosConnectContinuanceToken.cs": [
+    [
+      1,
+      37
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/EosIdToken.cs": [
+    [
+      1,
+      114
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/IdQueries.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/Login.cs": [
+    [
+      1,
+      206
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/Ownership.cs": [
+    [
+      1,
+      32
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/IdAndAuth/ProductUserId.cs": [
+    [
+      1,
+      13
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/P2P/P2PSocket.cs": [
+    [
+      1,
+      95
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/P2P/SocketId.cs": [
+    [
+      1,
+      6
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterface/Sessions/Sessions.cs": [
+    [
+      1,
+      167
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Achievements/AchievementsPrivate.cs": [
+    [
+      1,
+      266
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Core/CorePrivate.cs": [
+    [
+      1,
+      176
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Core/CustomTaskScheduler.cs": [
+    [
+      1,
+      67
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Friends/FriendsPrivate.cs": [
+    [
+      1,
+      249
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Friends/PresencePrivate.cs": [
+    [
+      1,
+      465
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/IdAndAuth/EgsIdTokenPrivate.cs": [
+    [
+      1,
+      119
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/IdAndAuth/EosIdTokenPrivate.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/IdAndAuth/IdQueriesPrivate.cs": [
+    [
+      1,
+      222
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/IdAndAuth/LoginPrivate.cs": [
+    [
+      1,
+      708
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/IdAndAuth/OwnershipPrivate.cs": [
+    [
+      1,
+      158
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/P2P/P2PSocketPrivate.cs": [
+    [
+      1,
+      252
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Sessions/OwnedSessionsPrivate.cs": [
+    [
+      1,
+      319
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Sessions/RemoteSessionsPrivate.cs": [
+    [
+      1,
+      159
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Util/CallbackWaiter.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/BarotraumaLibs/EosInterfacePrivate/InterfaceImpl/Util/ResultExtension.cs": [
+    [
+      1,
+      14
+    ]
+  ],
+  "Libraries/Hyper.ComponentModel/ChainingPropertyDescriptor.cs": [
+    [
+      1,
+      146
+    ]
+  ],
+  "Libraries/Hyper.ComponentModel/HyperTypeDescriptionProvider.cs": [
+    [
+      1,
+      125
+    ]
+  ],
+  "Libraries/Hyper.ComponentModel/HyperTypeDescriptor.cs": [
+    [
+      1,
+      265
+    ]
   ]
 }
