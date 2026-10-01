@@ -15951,3 +15951,54 @@ Barotrauma разложен по винтикам от handshake до титро
   Побочный инсайт: NetWalletSetSalaryUpdate показывает, что девы умеют
   клампить на уровне [NetworkSerialize(MinValueInt=...)] — в 453 просто
   забыли применить к NetAffliction.Price (ushort вообще без атрибута).
+===============================================================================
+[WAVE 455 — ГОЛОСОВАНИЯ: ОТРИЦАТЕЛЬНЫЙ ПЕРЕВОД + КОНСОЛЬ/АЧИВКИ ЧИСТЫ]
+===============================================================================
+
+--- ★★★ НОВАЯ: Voting.TransferMoney — amount БЕЗ <= 0-чека → wallet-гриф в минус ---
+  Voting.ServerRead (server, case VoteType.TransferMoney, startVote=true):
+    int amount = inc.ReadInt32();          ← СЫРОЙ int32, НЕТ amount<=0 чека!
+    fromClientId = ReadByte(); toClientId = ReadByte();
+    pendingVotes.Enqueue(new TransferVote(sender, from, amount, to));
+  СРАВНИ с ServerReadMoney (MultiPlayerCampaign.cs:1181):
+    if (transfer.Amount <= 0) { return; }  ← тут ЕСТЬ. В вот-пути ПРОПУЩЕН.
+  TransferVote.Finish (Voting.cs:53):
+    fromWallet.TryDeduct(TransferAmount) → CanAfford: Balance >= price
+    → price = -50000: Balance >= -50000 ВСЕГДА true → Deduct(-50000)
+      → from.Balance += 50000 (!)
+    toWallet.Give(-50000) → to.Balance -= 50000 → УХОДИТ В МИНУС
+  Атака: атакующий стартует вот "перевести -50000 от меня к жертве",
+  жертва жмёт Yes (соц-инжиниринг / не читает знак) → у атакующего +50k,
+  у жертвы -50k, СОХРАНЯЕТСЯ в кампейн-сейве. From/To могут быть null
+  (byte sessionId без матча) → From=null = БАНК (TryDeduct(-X) банк += X).
+  Вариант INT_MIN → int overflow в Deduct. Печать денег требует yes-голос,
+  так что ★★★ (гриф) а не ★★★★★; фикс для девов — одна строка
+  `if (amount <= 0) return;` в vote-ветке.
+
+--- ★ pendingVotes — очередь БЕЗ ЛИМИТА ---
+  StartOrEnqueueVote: if (ActiveVote != null) pendingVotes.Enqueue(vote).
+  ShouldRejectVote (60s cooldown) применяется только ПОСЛЕ первого
+  отклонённого голосования → бёрст до рейт-лимита пакетов может энкуитить
+  N голосов → последовательная обработка после каждого Finish. ★, мусор.
+
+--- ★★★ DebugConsole.ServerRead — ЗАГЕЙЧЕН ХОРОШО (проверено построчно) ---
+  ServerRead: rateLimiter → ExecuteClientCommand:
+  1) ConsoleCommands-перм ИЛИ ownerConnection — иначе отказ+лог.
+  2) commands.Find по имени; found && !PermittedConsoleCommands.Contains &&
+     !owner → ОТКАЗ (whitelist конкретных команд, не только общий перм!).
+  3) unknown command → отказ.
+  4) MathUtils.IsValid(cursorWorldPos) — NaN-курсор отсечён.
+  5) try/catch вокруг ServerExecuteOnClientRequest.
+  Консоль = не путь. (Девы знают: это же RCE-поверхность.)
+
+--- ★ ItemStatManager / TalentStatIdentifier — server→client only ---
+  INetSerializableStruct используется только для синка маркеров статов
+  талантов КЛИЕНТАМ. Клиент статов не шлёт. Чисто.
+
+--- ★ Прочие Voting-ветки чисты ---
+  Sub-выбор: матчинг по EqualityCheckVal/MD5 против СЕРВЕРНОГО списка
+  SavedSubmarines (клиент выбирает из существующих). Mode: только Votable.
+  EndRound: HasSpawned. Kick: AllowVoteKick + JoinTime-гард + per-pair дедуп
+  + owner-защита. StartRound/Traitor: SetVote своего состояния.
+  Счёт голосов: только из серверного SetVote, стартующий исключён из
+  eligible, total=0 → не проходит. Форж каунтов невозможен.
