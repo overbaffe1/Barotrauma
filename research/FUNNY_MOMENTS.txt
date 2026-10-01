@@ -1,0 +1,1108 @@
+# СМЕШНЫЕ / КОЛУМБКИЕ МОМЕНТЫ ИЗ КОДА BAROTRAUMA
+# Собирается параллельно с волнами (волны 300+). Формат: волна | файл | цитата | пояснение.
+# Всё найдено grep'ом по сорсам (нечаянные признания девов в комментариях).
+
+════════════════════════════════════════════════════════════════
+## ЛЕГЕНДАРНЫЕ ПРИЗНАНИЯ
+════════════════════════════════════════════════════════════════
+
+[343] TalentTree.cs:74-75 — ДУЭТ ДЕВОВ
+  // i hate this function - markus
+  // me too - joonas
+  (речь о 50-строчном расчёте стейтов таланта GetTalentOptionStageState)
+
+[341->] TestScreen.cs:9-12 — Markus о собственном экране:
+  * This screen only exists because I'm going mental without access to EnC on Linux.
+  * This is fucking stupid and horrible.
+  * Remember to remove this crap eventually.
+  * - Markus
+  (экран живёт в релизе до сих пор; EnC = Edit and Continue, которого нет на Linux)
+
+[341->] SubEditorScreen.cs:6778 — легендарный зум-делитель:
+  float zoom = cam.Zoom / 2f; // Don't ask
+  («Не спрашивай» — единственный комментарий к магической /2)
+
+[331->] CustomInterface.cs:160 — о разделителе сигналов ';':
+  //kind of hacky, we should probably add support for (string) arrays to
+  //SerializableEntityEditor so this wouldn't be needed
+  (запятая занята цветами/векторами, точка с запятой — «костыль, надо бы массивы строк»)
+
+[315->] ServerList/SteamP2PServerProvider.cs:48:
+  #warning TODO: do something less horrible here?
+  («сделать что-нибудь менее ужасное?»)
+
+[333->] CharacterInfo.cs:363:
+  //TODO: I hate this so much :(
+  (рядом с headEffectParameters — шейдерные параметры головы)
+
+[341->] CircuitBoxWireRenderer.cs:85:
+  // ok I don't know why this needs to be one quad less, maybe we are drawing
+  // with only 9 quads lol
+  («хз почему на квад меньше, может рисуем только 9 квадов lol»)
+
+════════════════════════════════════════════════════════════════
+## КЛАССИКА ЖАНРА «ДОК-КОММЕНТ КАК ПРИЗНАНИЕ»
+════════════════════════════════════════════════════════════════
+
+[333->] MapEntity.cs (InsertToList) — о InsertToList-переборе:
+  //sort damageable walls by sprite depth: ... insertion sort
+  (O(n²) сортировка вставками при каждой загрузке)
+
+[317->] PhysicsBody smooth rotation — SuppressSmoothRotationCalls:
+  «Automatically disabled after that. Used for temporarily suppressing the
+  SmoothRotate calls to prevent conflicting or unitentionally amplified rotations»
+  (способности могут усиливать вращение друг друга — нужен специальный гаситель)
+
+[320->] GUITextBlock.cs:85:
+  #warning TODO: Remove this eventually. Nobody should want to pass null.
+  (value ??= "" — «никто не должен хотеть передать null», но приходится)
+
+[326->] HealthParams (AllowSeveringLegs):
+  «Severing legs doesn't work with most characters, because we'd need to take
+  that into account with the walking animations... But there might be cases
+  where you'll want to override this default.»
+  («отрезание ног ломает анимации ходьбы, но вдруг кому-то надо»)
+
+[336->] Sonar.cs:311:
+  #warning This is not the best key for a dictionary.
+  (группировка целей сонара по СТРОКЕ-направлению «3 часа»)
+
+[339->] GUIComponent.cs:392:
+  #warning TODO: this is cursed, stop using this
+  («это проклято, перестаньте это использовать»)
+
+[331->] UpgradeStore.cs:607:
+  // Kinda hacky? idk, I don't see any other way to bring an Update() function
+  // to the campaign store.
+  («как-то костыльно? хз, другого способа запихнуть Update в магазин не вижу»)
+
+[328->] ToolBox.CorrectFilenameCase (rooted paths):
+  #warning TODO: incorrect assumption or...? Figure out what this was actually
+  supposed to fix, if anything. Might've been a perf thing.
+  («неправильное допущение или...? Разберись, что это вообще чинило. Может, перф»)
+
+[313->] Attack.cs — StickChance:
+  // TODO: disabled because not synced
+  // public float StickChance { get; set; }
+  public float StickChance => 0f;
+  (механика «прилипания» атак вырезана, потому что не синхронизировалась —
+  свойство осталось навсегда возвращать 0)
+
+════════════════════════════════════════════════════════════════
+## БЭККОМП-УЖАСЫ (совместимость важнее красоты)
+════════════════════════════════════════════════════════════════
+
+[323->] Structure.UpgradeTextureOffset — воспроизведение СЛОМАННОГО рендера:
+  «Tiled sprite rendering was significantly changed after v1.2.3.0: rendering
+  flipped, scaled and offset textures was completely broken, but some existing
+  community submarines depend on that old behavior, so let's redo some of the
+  broken logic here»
+  (~50 строк кода воспроизводят баг, потому что субы комьюнити на него завязаны)
+
+[312->] Killpoison-ачивка: TODO «Morbusine used to be the strongest poison.
+  Now Cyanide is strongest» — ачивка всё ещё на морбузине, цианид забыли.
+
+════════════════════════════════════════════════════════════════
+## МИЛОЕ / СТРАННОЕ
+════════════════════════════════════════════════════════════════
+
+[336->] DebugConsole.cs:3267 — о рандомных наградах:
+  //Dont do a thing, random is basically Human points anyways - its in the help
+  //description.
+  («ничего не делаем, рандом это по сути хуман-поинты — так и написано в помощи»)
+
+[336->] BallastFloraBehavior.cs:631:
+  #warning TODO: Parent needs a nullability sanity check
+  (у балластной флоры родитель может быть null)
+
+[328->] Sprite.cs:203:
+  /// ALSO TODO: delete :)
+  (задача «удалить» со смайликом)
+
+[333->] MedicalClinicUI.cs:1015:
+  #warning TODO: this doesn't seem like the right place for this, and it's not
+  clear from the method signature how this differs from ToolBox.LimitString
+  (EnsureTextDoesntOverflow: «непонятно, чем отличается от ToolBox.LimitString»)
+
+[316->] GameClient.cs:1218: #warning TODO: use store localization functionality
+[316->] BanList.cs:272: #warning TODO: stop writing binary DateTime representation
+  after this gets on main
+[316->] Workshop.cs:501: #warning TODO: stop writing Unix time after this gets on main
+  (два «починить после мержа в main» — оба живы)
+
+[336->] PerlinNoise.cs:157 — про оригинальный код Кена Перлина:
+  // In Ken Perlin's original implementation this was another conditional
+  // operator (?:). I...
+  (комментарий-байка об имплементации 2002 года)
+
+════════════════════════════════════════════════════════════════
+## СТАТИСТИКА ПРИЗНАНИЙ (grep по клиентским+shared сорсам, без Libraries)
+════════════════════════════════════════════════════════════════
+- "hacky" в комментариях: 14 мест
+- "#warning TODO": ~40 мест (самые частые: "revise", "refactor", "remove?")
+- Прямые "hate": 2 (TalentTree, CharacterInfo)
+- "stupid": 3 (TestScreen-шапка, Character.Speak, SinglePlayerCampaignSetup)
+- Подписи авторов в комментариях: Markus (2), joonas (1)
+
+[WAVE 350 - Steering.cs]
+1) Steering.cs (shared), строка 613:
+   "//clamp velocity magnitude to 100.0f (Is this required? The X and Y components are clamped in the property setter)"
+   Пятиминутка сомнений: дев сам не уверен, нужен ли кламп, но на всякий случай
+   оставил. (Спойлер: нужен — поле steeringInput в ServerEventRead кладётся
+   мимо сеттера, который клампит. Чуйка спасла.)
+2) Steering.cs (client), строка 361-364 — глубиномер в конце игры:
+   if (Level.Loaded is { IsEndBiome: true })
+       return Timing.TotalTime % 5.0f < 0.5f ? Rand.Range(-9000, 9000).ToString() : "ERROR";
+   Официальная пасхалка: в финальном биоме прибор показывает ERROR, а раз в 5
+   секунд — случайное число от -9000 до 9000. Электроника против Ктулху.
+3) Steering.cs (client), строка 553-563 — руль по научному:
+   "Map the rectangular steering vector to a circular area using FG-Squircular
+    Mapping which preserves the angle of the vector."
+   ...с сылкой на реальную научную статью с arXiv (1509.06344) в комменте кода
+   компьютерной игры про подлодки. Плюсик в карму математику, который это нашёл.
+
+[WAVE 351 - CircuitBox]
+1) CircuitBox.cs (client), ResizeNode:
+   "// TODO this needs to be refactored at some point, probably not now
+     the problem here is that the circuit box supports resizing all nodes
+     but we limit the resizing to only labels on the client"
+   "probably not now" — девиз поколения.
+2) CircuitBoxNetStructs.cs, шапка файла — TODO-список как искусство:
+   "// TODO this needs to be refactored at some point for reasons:
+     1. We need to send 4 different ImmutableArray<short> for some network packets
+     2. We have 3 identical remove events that are identical in signature
+     3. We have 3 different events for selecting. nodes, wires, and server broadcast"
+   Три разных remove-события с одинаковой сигнатурой. ТРИ. system32del.
+3) CircuitBox.cs (shared), строки 31-35 — честность в комментариях:
+   "// We don't want the components and wires to transfer between subs as it would cause issues."
+   "// We don't want to sell the components and wires inside the circuit box"
+   Никаких «для целостности экономики» — просто "would cause issues". knowing looks all around.
+4) CircuitBox.cs (server), RelayCursorState:
+   "// ReSharper disable once RedundantAssignment
+     bool isSender = client == sender;
+    #if DEBUG
+     // Shown own cursor in debug builds
+     isSender = false;
+    #endif"
+   Условная компиляция через переприсваивание переменной, помеченной как
+   избыточная. ReSharper смирился и был вознаграждён disable-комментарием.
+5) Ошибки загрузки крафт-бокса логируются В GOOGLE ANALYTICS:
+   DebugConsole.ThrowErrorAndLogToGA("CircuitBoxWire.TryLoadFromXML:PrefabNotFound", ...)
+   Каждый сломанный саб с анонимного воркшопа — телеметрия. Все ваши кривые
+   FPGA-боксы уже в облаке Daedalic.
+
+[WAVE 352 - CircuitBox UI/рендер]
+1) CircuitBoxWireRenderer.cs, строка 85:
+   "// ok I don't know why this needs to be one quad less,
+      maybe we are drawing with only 9 quads lol"
+   Рендерер проводов на Безье. Автор не знает, почему работает. Работает. lol
+2) CircuitBoxMouseDragSnapshotHandler.cs, строки 213-216:
+   "/// Stores all nodes that are currently selected when dragging starts.
+     There's no real way to change your selection while dragging so this is
+     kinda pointless but we snapshot it anyway just in case."
+   «бессмысленно, но делаем на всякий случай» — принцип паранойи в чистом виде.
+3) CircuitBoxUI.cs, строки 172-173:
+   "// Vector2.One because Vector2.Zero means no value
+     camera.TargetPos = Vector2.One;"
+   Сентинел для «нет цели камеры» — magic vector (1,1). Просто Vector2.One.
+   Потому что ноль занят. Почему ноль занят? Ну... это долго рассказывать.
+4) CircuitBoxUI.cs, GetSelectionColor — #if !DEBUG: своя селекция всегда жёлтая.
+   В дебаге — цвет автора селекции. Дебажные сборки буквально видят «кто это
+   выделил», релизные — нет. Цветовая социология по флагам компиляции.
+
+[WAVE 353 - CharacterInventory + Deconstructor]
+1) Deconstructor.cs (shared), строка 107:
+   "// doesn't quite work properly, remaining time changes if tinkering stops"
+   Комментарий-признание прямо над формулой скорости. Работает не совсем
+   правильно, но шип да. Оставили.
+2) Deconstructor.cs (client), строки 212-214:
+   "// TODO, This works fine as of now but if GUI.PreventElementOverlap ever
+     gets fixed this block of code may become obsolete or detrimental.
+     ...may GUI.PreventElementOverlap have mercy on your HUD layout"
+   Молитва багзилле: «если этот баг когда-нибудь починят, наш хак сломается».
+   Код, построенный на костыле и знающий о нём.
+3) CharacterInventory.cs (shared), строки 136-143 — DEBUG-проверка:
+   "is configured to spawn with so many items it will have less than 2 free
+    inventory slots. This can cause issues with talents that spawn extra loot
+    in monsters' inventories."
+   Таланты спавнят лут в трупах монстров. Монстры переполняются. Девы добавили
+   проверку «у монстра должно быть ≥2 свободных слота». Экосистема страдает.
+4) Deconstructor телеметрия: 5% всех разборок ванельных предметов летят
+   в Google Analytics как design event. Разобрал лазерку — Daedalic уже знает.
+
+[WAVE 354 - LightManager/ConvexHull]
+1) LightManager.cs, строки 183-184:
+   "//wrap around if the timer gets very large, otherwise we'd start running
+     into floating point accuracy issues
+     time = (time + deltaTime) % 100000.0f;"
+   Игра баночно боится, что ты не будешь выключать её 27 часов подряд. float
+   precision паранойя на уровне космических станций.
+2) LightManager.cs, строки 710-714 — школа математики:
+   "//the visible area stretches to the maximum when the cursor is this far
+     from the character
+     const float MaxOffset = 256.0f;
+     //the magic numbers here are just based on experimentation
+     float MinHorizontalScale = MathHelper.Lerp(3.5f, 1.5f, ObstructVisionAmount);"
+   «магические числа просто подобраны экспериментально». Наука!
+3) ConvexHull.cs DebugDraw — вижу вас:
+   DrawLine(cam.Position + Vector2.One * 1000, cam.Position - Vector2.One * 1000, Color.Magenta, ...)
+   Розовая диагональная линия через камеру в дебаг-режиме. Зачем? Не важно.
+   Зачем закомментированы RecalculateAll/RefreshWorldPositions выше? ТОЖЕ не важно.
+   Дебаг-рисовалка живёт своей жизнью с 2018-го.
+
+[WAVE 355 - SafeIO/GameSettings]
+1) GameSettings.cs, строка 71:
+   SubEditorBackground = new Color(13, 37, 69, 255)
+   RGB(13,37,69) = leet. Фон саб-редактора — 1337 в grayscale-среднем. Девы
+  Knowledge это. (Ну или случайность. Но мы-то знаем.)
+2) GameSettings DEBUG-флаги: ModBreakerMode. Режим под названием «Ломатель
+   Модов». Включаешь — и игра специально делает всё, чтобы сломать твои моды?
+   (На деле — агрессивные проверки. Но звучит как чит на разрушение.)
+3) SafeIO.cs, строки 269-279:
+   "// Intentionally crash with all exceptions, if this fails."
+   ×2 подряд. Никаких try-catch — пусть падает ГРОМКО. Редкий случай, когда
+   девы ПРОСЯТ краш.
+4) GameSettings.SaveCurrentConfig пишет конфиг ДВАЖДЫ: сначала SaveSafe, потом
+   XmlWriter'ом с NewLineOnAttributes. Вторая запись полностью затирает первую.
+   Ритуальный танец с файлом на удачу.
+5) SafeIO File.Open: просишь FileMode.Create на защищённом пути — получаешь
+   FileAccess.Read. «Хотел удалить файл? Держи чтение.» Молчаливое понижение
+   прав как философия дизайна.
+
+[WAVE 356 - AIObjectiveGetItem/TextManager]
+1) TextManager.cs, строка 190-191:
+   "// This is a local optimized version of HasFlag/HasAnyFlag, which makes
+     sense here because the loop using this is big enough to have made 8GB
+     worth of memory allocations with HasFlag and still several dozen MB
+     with the generic HasAnyFlag."
+   ВОСЕМЬ ГИГАБАЙТ аллокаций на Enum.HasFlag. Дженерик-версия всё равно жрала
+   десятки мегабайт. Написали свою на битовых операциях. Теперь спите спокойно.
+2) TextManager.cs, строка 571:
+   if (!(description is RawLString { Value: "" })) { description += "\n"; }
+   //TODO: this is cursed
+   «это проклято» — единственный комментарий, где дев честно признаёт, что
+   не понимает свой же код. Проклятие принято, колдунство работает.
+3) AIObjectiveGetItem: боты предпочитают небитые вещи (itemPriority ×=
+   Condition/MaxCondition), ленятся доставать предмет из предмета (×0.1 если
+   «танк внутри сварщика внутри шкафа»), но из целевого контейнера — почти
+   без штрафа (0.95, «взять кислород из другой маски можно»). Боты — упоротые
+   минималисты с нюансами.
+4) FindItemToSpawn: NPC аутпоста, если не нашёл предмет — получает НОВЫЙ,
+   выбирается самый ДЕШЁВЫЙ в магазине. Экономия бюджета аутпоста на уровне ИИ.
+
+[WAVE 357 - Growable]
+1) Growable.cs (client), строка 178:
+   "// is this even needed??"
+   ...и дальше код ЗАКЛЮЧЁН В ЭТОТ САМЫЙ lock. Нужен? Не нужен? А ВДРУГ.
+   Классический cargo cult вокруг mutex'а.
+2) Growable.cs (shared), строка 230:
+   "// I don't know how or why this works"
+   Анимация вытягивания стебля (offsetAmount = diameter×VineStep−diameter).
+   Работает. Не трогаем.
+3) Growable.cs (shared), строка 871:
+   "// ray casting a cross on the corners didn't seem to work so we are ray
+     casting along the perimeter"
+   Коллизии роста: сначала лучи крестом по углам — «не взлетело». Теперь 4
+   луча по периметру. Экспериментальная физика в действии.
+4) Growable.cs (shared), строка 370 — эпитафия свойству:
+   "MutationProbability ... Completely unused property that was added on the
+    first design pass but due to the first pass being too complex was never
+    used and now it is used by mods so it cannot be removed."
+   Свойство-зомби: мёртвое внутри игры, но живое из-за модов. Backwards
+   compatibility как пожизненный приговор.
+5) Growable.cs (client), строка 216: "// Huge bowl of spaghetti" — официальный
+   девиз DEBUG-HUD'а растения.
+
+[WAVE 358 - SoundManager/SoundChannel]
+1) SoundManager.cs, строка 574:
+   playingChannels[i][j].Gain = playingChannels[i][j].Gain;
+   //force all channels to recalculate their gain
+   Присваивание свойства самому себе как официальный механизм форс-обновления.
+   Сеттер с сайд-эффектами — юридически код, фактически заклинание.
+2) SoundChannel.cs, строки 98-130: ШЕСТЬ подряд ThrowError для проверки
+   NaN/Infinity на X, Y и Z по отдельности. Паранойя уровня «проверь каждый
+   бит трижды». Физика игры ломается — звук хотя бы честно ругнётся.
+3) SoundChannel.cs, строка 768:
+   if (decayTimer > 120) //TODO: replace magic number
+   Магическое число с TODO, которое точно старше половины кодовой базы.
+4) SoundChannel.cs, строки 506-600: try { ... } catch { throw; } finally { ... }
+   в DEBUG-сборке. Catch-and-rethrow — самый честный catch в истории: «поймал,
+   осознал, пробросил».
+5) SoundManager PlaybackAmplitude, комментарий:
+   "NOTE: this is obviously not entirely accurate; It assumes a linear falloff
+    model, and assumes that audio is simply added together..."
+   «очевидно не совсем точно» — так начинается каждая физика в каждой игре.
+
+[WAVE 359 - Steam Workshop]
+1) Workshop.cs (shared), строка 526:
+   "//Handle mods that have been mangled by pre-modding-refactor
+     copying of post-modding-refactor mods (what a clusterfuck)"
+   «what a clusterfuck» в официальном коде. Археология путей модов 2019 года
+   как отдельный вид искусства. CorrectPaths живёт только для версий < 0.18.3.
+2) Workshop.cs (shared), NukeDownload:
+   catch { //don't care in the slightest about what happens here }
+   Удаление папки мода. Ошибки? Какие ошибки. «в smallest slightest».
+3) Workshop.cs (shared), InstallMod — README для пользователей:
+   "DO NOT MODIFY THE CONTENTS OF THIS FOLDER, EVEN IF YOU ARE EDITING A MOD
+    YOU PUBLISHED YOURSELF."
+   КАПСОМ, потому что люди ВСЁ РАВНО лезут. И юзер наш туда же кладёт файлы :)
+4) InstallTaskCounter: семафор на 7 установок с poll'ом раз в 5 секунд —
+   не семафор, а очередь в психиатрической больнице: «жди, освободится место».
+5) Workshop.cs (client), WaitForInstall: while(Waiting) delay(500); delay(500);
+   Вторая задержка «на всякий случай». Двойной сон как гарантия.
+
+[WAVE 360 - Workshop UI]
+1) InstalledTab.cs, строки 223-224:
+   "//TODO: put stuff here
+     padTopRight(width: 3.0f);"
+   Пять лет в проде, тудушка нетронута. Пустота размером в 3 юнита — памятник
+   несбывшимся планам.
+2) InstalledTab.cs, строка 575-577:
+   "// Manually set dropdown text because
+     // adding buttons to the elements breaks
+     // this part of the dropdown code"
+   Задокументированная ломкость: кнопки в дропдауне ломают текст. Не чиним,
+   обходим. Классика выживания в legacy-UI.
+3) ModListPreset.cs, строка 83:
+   //TODO: we need a RichString builder
+   ‖color:gui.orange‖ ручными строками. Строитель нужен с тех времён, когда
+   этот тег только придумали.
+4) Фильтр Published/Downloaded определяется ПО СТИЛЮ ИКОНКИ КНОПКИ
+   (iconBtn?.Style?.Identifier == "WorkshopMenu.PublishedIcon"). UI-иконка как
+   база данных. Источник истины — пиксель.
+5) Обе галки фильтра сразу (subs+assemblies): мод показывается если «все файлы
+   совпадают хотя бы с одной из них». Спец-кейс с комментарием на 4 строки.
+   Юзеры реально так фильтруют. Кто-то. Наверное.
+
+[WAVE 361 - ItemList/PublishTab]
+1) ItemList.cs, строки 92-93:
+   "//Jank to fix mouserect not clamping properly
+     //when shifting all elements to the left"
+   Чиним джанк джанком: ручная расстановка ClampMouseRectToParent обходом всех
+   детей, кроме тех что в дропдаунах. UI-фреймворк против UI-фреймворка.
+2) ItemList.cs — звёзды рейтинга с градиентом:
+   starColor = Lerp(Lerp(White, Yellow, min(score×2,1)), Lime, max(0,(score−0.5)×2))
+   Двойной лерп для цвета звёзд. Пятизвёздочный рейтинг с трёхцветной шкалой.
+   Дизайнер уволен, лерп живёт.
+3) PublishTab.cs, строка 541:
+   "//there seems to sometimes be a brief delay between the download task and
+     the item being installed, wait a bit before deeming the install as failed"
+   Таймаут 30 секунд «на всякий случай» для гонки Steam'овского установщика.
+   Опыт, оплаченный часами дебага.
+4) ItemList.cs, throbber: randomThrobberOffset = Rand.Range(0, 10) — каждому
+   лоадеру СЛУЧАЙНАЯ фаза анимации, чтобы все крутились синхронно не выглядело
+   как армия клонов. Деталь уровня «никто не заметит, но все почувствуют».
+
+[WAVE 362 - ScalableFont/Voronoi]
+1) Voronoi.cs — вендорский код с арабскими комментариями Burhan Joukhadar:
+   строка 125: «تستدعى هذه العملية لإنشاء مخطط فورونوي» («эта операция
+   вызывается для создания диаграммы Вороного»), строка 312: «...less than the
+   square root of 2 عن جد؟» («...серьёзно?»), VoronoiElements: «للترتيب»
+   («для сортировки»). Цепочка миграции C→C++→Java→C# с тремя лицензиями
+   AT&T 1994 года и вопросом «seriously?» посреди геометрии.
+2) ScalableFont.cs, строка 574-577: курсив БЕЗ курсивного шрифта — вершины
+   квадов глифа вручную сдвигаются по X с коэффициентом 0.35. Дизайнер попросил
+   курсив, шрифтовик сказал «нет», программист сказал «смотрите».
+3) ScalableFont.cs, GetGlyphData: неизвестный символ = U+25A1 (□ белый квадрат).
+   Все ваши кракозябры становятся квадратиками с достоинством.
+4) ScalableFont.cs, строка 62: LineHeight = baseHeight × 1.8f. Просто 1.8.
+   Почему? Типографика. Не спрашивайте.
+
+[WAVE 363 - GameScreen/AIObjective]
+1) GameScreen.cs (shared), строка 1:
+   //#define RUN_PHYSICS_IN_SEPARATE_THREAD
+   Закомментированная мечта о физике в отдельном потоке. Код потока написан,
+   отлажен... и закомментирован навсегда. Могила амбиций прямо в первой строке.
+2) GameScreen.cs (client), PostProcess: техника постпроцесса собирается
+   КОНКАТЕНАЦИЕЙ СТРОК: "Blur" + "ChromaticAberration" + "Distort". Название
+   шейдерной техники как конструктор из кубиков. Работает, потому что в .fx
+   заведены все комбинации. Всех. Комбинации.
+3) AIObjective.cs, строка 298: «Never abandon objectives inside a friendly
+   outpost, because otherwise we'd have to reassign most orders every round» —
+   признание: иначе игроки бы страдали. UX-долг, запечённый в AI.
+4) GameScreen DEBUG: IJKL двигают ближайший саб силой Mass×100. Разработчики
+   гоняли сабы по уровню клавишами. Как в Sonic, только медленнее.
+5) LightManager.ObstructVisionAmount = 0 при взгляде ЧУЖИМИ глазами
+   (ViewTarget != self) — камера-наблюдение без туннельного зрения. Даже
+   призракам уважение к обзору.
+
+[WAVE 364 - ElectricalDischarger/UpgradePrefab]
+1) UpgradePrefab.cs, строка 335:
+   ?? throw new NullReferenceException("Honestly I have no clue why this could be null...")
+   «Честно, без понятия, почему это может быть null» — самая честная строка
+   исключения в кодовой базе. Дев vs статический анализатор: ничья.
+2) ElectricalDischarger: клиенты рисуют РАЗНЫЕ молнии (узлы с Rand.Range
+   считаются локально, синхронизируются только удары по персонажам). Художественный
+   разнобой как фича: у каждого свой электрический сюрреализм.
+3) UpgradePrefab.ParsePercentage: пустое значение = 1, а не 0. Единица! Потому что
+   проценты умножают, и ноль убил бы весь апгрейд. Незаметный выбор, спасший
+   тысячи модов.
+4) UpgradePrefab onAdd-warning: «Add the attribute suppresswarnings="true" to
+   your XML element to disable this warning if you know what you're doing» —
+   «если вы знаете, что делаете» — классическая ловушка для уверенных в себе.
+
+[WAVE 365 - ItemContainer/Particle]
+1) ItemContainer.cs (client), строка 520:
+   "// This code is aped based on above. Not tested."
+   «Код содран с верхнего. Не тестировано.» Официальное признание copy-paste
+   разработки в главном рендере содержимого контейнеров. Проще некуда.
+2) Particle.cs, строка 230:
+   "//over 3 times faster than position += velocity * deltatime"
+   Ручная распаковка вектора ради ×3 скорости. XNA Vector2 всё ещё плачет где-то.
+3) SortItems при переполнении просто ВЫБРАСЫВАЕТ предметы на пол. Сортировка
+   как метод доставки вещей на палубу.
+4) Particle: таймер коллизий = 0.5 − скорость×0.01. Быстрые частицы проверяются
+   чаще. Физика по-баротраумовски: «пуля летит — проверяй каждый кадр, дым —
+   раз в полсекунды».
+
+[WAVE 366 - Submarine client]
+1) Submarine.cs, CullEntities: коллапс-эффект конца игры двигает ВЕСЬ уровень
+   в одну точку — и culling'у сказано «в этот момент видимо ВСЁ». Лор побеждает
+   оптимизацию.
+2) CheckForErrors: сабы >80×32 метров получают предупреждение «TooLargeForEndGame»
+   — не влезет в финальные локации. Валидатор размеров как таможня.
+3) Сломанные моды с предметами за 20000 юнитов от саба: инвентарные ТИХО
+   телепортируются назад, остальные — с диалогом «телепортировать камеру туда?».
+   Санитайзинг с вежливым стуком.
+4) SubmarineBody.ClientUpdatePosition: при коррекции позиции камера И КУРСОР
+   мыши двигаются вместе с сабом. Иначе прицел уезжал бы — «двигаем мир под
+   мышкой» как фикс.
+
+[WAVE 367 - SubmarinePreview]
+1) SubmarinePreview.cs, строка 209:
+   "//hell"
+   Весь комментарий. Над пересчётом высоты списка спецификаций (двойной проход
+   CalculateHeightFromText + ресайз + recalculate). Одно слово говорит всё.
+2) RenderSubmarine: если задача загрузки упала с исключением — ТЕКСТ ИСКЛЮЧЕНИЯ
+   показывается вместо превью саба. «Task completed without marking as ready
+   to render» — stack trace как loading screen. Пользователь-разработчик оценит.
+3) Провода в превью саба рисуются ПОВЕРХ ВСЕГО (последними). Покупатель видит
+   разводку..? Нет: провода из ConnectionPanel — только внешние, контейнерные
+   предметы скрыты. Но мысль о «сабе с проводами снаружи» прекрасна.
+
+[WAVE 368 - HttpEncoder/AIObjectiveFindSafety]
+1) AIObjectiveFindSafety.cs, строки 64-66:
+   "//we have a suit that's not suitable for the pressure,
+     //but we've failed to find a better one
+     // shit, not much we can do here, let's just allow the bot to get on with their current objective"
+   Внутренний монолог бота в коде. «Ладно, похер, пусть работает». Экзистенциальный
+   кризис ИИ в трёх строках комментария.
+2) FindBestHull: руины скипаются целиком — «Ruins are mazes filled with water.
+   There's no safe hulls and we don't want to use the resources on it.» Боты
+   знают, что руины — это лабиринт боли, и экономят процессор.
+3) UpdateSimpleEscape: бот у края комнаты СТАНОВЛИТСЯ ЛИЦОМ К ОПАСНОСТИ и стоит.
+   Смелость бездействия: «убегать некуда, но смотреть буду героически».
+4) HttpEncoder: полноширинные ＜＞ (U+FF1C/FF1E) кодируются в &#65308;/&#65310;
+   отдельно от обычных <>. Наследие атак 2000-х через юникод-обход фильтров.
+
+[WAVE 369 - Idle/Rope]
+1) AIObjectiveIdle.CalculatePriority: 15 строк закомментированного механизма
+   «initiative» (навык инициативы должен был влиять на желание бездельничать).
+   Не взлетело. Priority = 1. Всегда. Навсегда.
+2) Wander: «if there are characters too close on both sides, don't try to steer
+   away from them because it'll cause the character to spaz out». Боты-физики
+   на собственном опыте: двое по бокам = дёргаться до бесконечности. Смирение.
+3) Rope.cs: «Initially tested playing the sound in the middle when the rope
+   snaps in the middle, but I think it's more important to ensure that the
+   players hear the sound.» Звук обрыва играет на ОБОИХ концах. Физика звука
+   проиграла геймдизайну слышимости.
+4) Rope тянет стрелка в воде полной силой, а на суше ×0.1 — «so that the
+   connection feels more real». Не физика — театр физики. И он работает.
+5) IncreaseForceForEscapingTargets: сила × log(масса/10). Логарифм массы в
+   игровом балансе. Кто-то проходил численные методы.
+
+[WAVE 370 - CampaignSetupUI]
+1) CreateSelectionCarousel: невидимый GUINumberInput используется как «хранилище
+   int» для карусели опций. GUI-компонент как переменная. var x = new GUI();
+2) Hellish-сложность (WorldHostility) скрыта isHidden:true — доступна ТОЛЬКО
+   удерживая Shift при перелистывании карусели. Секретная сложность через
+   модификатор клавиатуры, как чит-код 90-х.
+3) BackupMenu: «to my understanding, there's no way to unselect an item in a
+   GUIListBox so no need to check if selected is null» — знание о баге фреймворка,
+   превращённое в оптимизацию проверки.
+4) Ironman mode отключает бэкапы целиком — «железный человек не имеет права на
+   ошибку» реализовано буквально.
+
+[WAVE 371 - SinglePlayerCampaignSetupUI]
+1) StealRandomizeButton:
+   "//This is just stupid
+     var randomizeButton = menu.RandomizeButton;
+     var oldButton = parent.GetChild<GUIButton>();
+     parent.RemoveChild(oldButton);
+     randomizeButton.RectTransform.Parent = parent.RectTransform;
+     randomizeButton.RectTransform.RelativeSize = Vector2.One * 1.3f;"
+   Кнопка ВОРУЕТСЯ из одного меню и вставляется в другое с увеличением на 30%.
+   Автор сам назвал это «тупым». Работает. Не трогать.
+2) UpdateSubList: при каждом открытии меню НОВОЙ ИГРЫ выбирается СЛУЧАЙНЫЙ
+   доступный саб. «А какой сегодня суб? Утром не знаю сам».
+3) SortSubs: несовместимые сабы получают цену +100000 в сортировке. Не запрет —
+   просто «они в конце списка и их никто не увидит». Мягкая цензура по цене.
+
+[WAVE 372 - Тестовая инфраструктура]
+1) TestScreen — ПОЛНЫЙ монолог Маркуса (2018, жив до сих пор):
+   "This screen only exists because I'm going mental without access to EnC on
+    Linux. This is fucking stupid and horrible. Remember to remove this crap
+    eventually. - Markus"
+   «Remember to remove this crap eventually» — crap живёт 8+ лет и попал в
+   открытый сорс. Удалить забыли, а мы прочитали.
+2) Тестовый персонаж TestScreen'а зовут «Galldren» с 999999 опыта и circuit box
+   с ID 1337. Числа говорят сами за себя.
+3) ClientServerTests: «some data will make the client disconnect, for example,
+   if the generated data lands on a disconnect packet — so don't treat this as
+   failure, just reconnect». FsCheck шлёт серверу мусор, сервер должен выжить,
+   клиент иногда роняет сам себя — и это НОРМАЛЬНО.
+4) TestGameMode: кнопка «create» спавнит копию тестового ивента ещё раз.
+   Хочешь 5 молний за раунд? Жми пять раз. Девы играют в свои ивенты как в аркаду.
+5) HeadlessNetworkClient: «we only want to test if the server crashes or not» —
+   целая философия тестирования в одном предложении.
+
+[WAVE 373 - ContentPackage]
+1) WorkshopPackages.onLoadFail: кривой воркшоп-мод УДАЛЯЕТСЯ С ДИСКА чтобы
+   «force a reinstall on next launch». Авто-санитария: сам сломался — сам стёрся.
+2) SetRegular: «Refuse to enable packages with load errors so people are forced
+   away from broken mods» — педагогика силой: игрок не должен хотеть сломанное.
+3) SortContent Distinct ПО ТИПУ файла: два мода с одинаковым типом файла →
+   побеждает поздний в порядке загрузки. Вся система приоритетов модов —
+   просто порядок в Distinct().
+
+[WAVE 374 - GameAnalytics]
+1) GameAnalyticsManager.cs, строка ~283:
+   foreach (var me in mainClass.GetMethods())
+   {
+       var aksjdnakjsdnf = me;
+   }
+   Дебаг-переменная «aksjdnakjsdnf» (пробежка по клавиатуре) забыта в
+   продакшене открытого сорса. Бесполезная, но компилируется. Наследие.
+2) Телеметрия помечает баги как «[MODDED] ...» если включены моды. Девы
+   фильтруют ваши баг-репорты одной строкой в начале сообщения.
+3) Кнопки согласия телеметрии активируются через 0.3 секунды. Анти-«промахнулся
+   и согласился». EU privacy compliance через таймер.
+4) Пиратские копии: exe-хеш другой → DesignEvent «Executable:...:Unknown...»
+   и auth-тикет не получить → телеметрия сама выключается. Система честно
+   не собирает данные тех, кто не соглашался.
+
+[WAVE 375 - PlayerInput]
+1) KeyOrMouse.IsDown для колеса: «No real way of "holding" a mouse wheel key,
+   but then again it makes no sense to bind the key to this kind of task.»
+   Философский комментарий про колесо мыши. Кто-то всё же забиндил. Кто-то — это мы.
+2) IsCtrlDown на OSX = проверка WINDOWS-клавиш. Cmd на маке физически недостижим
+   из MonoGame — девы смирились и взяли Win-клавиши. Пользователи маков нажимают
+   Windows-кнопку для Ctrl+действий. 
+3) latestMouseState: «do NOT use for player interaction» — капсом, чтобы
+   будущий дев не взял самый свежий стейт (он для рендера курсора, там лаги
+   игрового цикла выглядят как тряска).
+
+[WAVE 376 - AIObjectiveRescue]
+1) Бот-медик грабит пациента: «allow taking items from the target's inventory
+   too if the target is unconscious». Без сознания = твои адреналин сейчас мои.
+2) После КАЖДОГО лечения пауза ×4: «wait a bit longer after applying a
+   treatment to wait for potential side-effects to manifest». Бот-медик ждёт
+   осложнений как настоящий врач. Может ещё и анамнез заведёт.
+3) Логика выбора лечения: «we don't want to give fentanyl for oxygen low just
+   because the character has burns on other limbs that would also be healed
+   by it!» — пример про фентанил прямо в комменте. Реальный кейс из плейтестов?
+
+[WAVE 377 - MeleeWeapon/FireSource]
+1) MeleeWeapon: тело оружия на время удара становится ПУЛЕЙ (IsBullet).
+   Меч = одноразовая пуля с холодным оружием. Физика Фарсира в чистом виде.
+2) ActivateNearbySleepingCharacters: спящие рагдоллы просыпаются перед ударом,
+   «otherwise the collision will not be registered». Бот нашёл безсознательного —
+   сначала разбудить, потом бить! Забота о качестве телепортации страданий.
+3) FireSource FlameHeight: «An arbitrary value chosen roughly based on how high
+   the flame particles seem to extend» — физика пламени по высоте партиклов.
+   Если художник сделает огонь выше — физика подтянется.
+4) FireSource.RemovalCondition: size.X < 1.0f и только на сервере. Клиент видит
+   огонь в 1 пиксель ещё кадр-другой. Мигающая смерть пламени.
+
+[WAVE 378 - WreckAI/PetBehavior]
+1) WreckAI дверей мозгового отсека: «Jam the doors, mainly to prevent any
+   mechanisms from opening them.» Девы знали, что игроки заклёпают двери
+   автодверями-схемами, и заминировали их ЖЕЛЕЗОБЕТОННО (IsJammed).
+2) Kill() агентов таламуса: «Not the ideal solution, but as long as spawning
+   is handled via status effects, I don't know if there is any better way.
+   In practice there shouldn't be terminal cells from different thalamus
+   organisms at the same time.» Молитва: «практически не должно случиться».
+3) SubmarineTurretAI патроны турелям руин: спавнятся СЛУЧАЙНЫЕ совместимые
+   с контейнером. Повезёт — ядерная торпеда в запасе, не повезёт — болты.
+4) PetBehavior production: HAPPY И СЫТЫЙ питомец производит предметы чаще.
+   Псайтоп — это неуплоченный сторож с системой KPI по счастью.
+
+[WAVE 379 - LatchOntoAI/AfflictionHusk]
+1) LatchOntoAI freezeWhenLatched: лимбы обнуляют скорости после 5с на стене
+   с комментарием «brief delay to let the ragdoll "settle"». Краб-присосок
+   реально ЗАМИРАЕТ на стене и притворяется декорацией. Скамейка с глазами.
+2) Анти-телепорт джоинта: лимб улетел >10 юнитов от якоря → принудительный
+   отцеп. Доверяй физике, но проверяй дистанцию.
+3) AfflictionHusk Strength-сеттер: «Don't allow to set the strength too high
+   (from outside) to avoid rapid transformation into husk when taking lots of
+   damage from husks.» Стадии вируса нельзя скипнуть уроном. Разработчики
+   подумали о «15 хасков сразу» ещё до того, как вы это попробовали.
+
+[WAVE 380 - LinkedSubmarine/PowerTransfer]
+1) LinkedSubmarine.Load: «don't load a sub that was left in this level if we
+   have a submarine switch pending... makes it not considered "left behind"».
+   Патч на манипуляцию свитчем сабов: игроки научились сохраняться в момент
+   свитча, чтобы сабы «не считались брошенными». Девы закрыли лазейку отдельным
+   if'ом.
+2) PowerTransfer.UpdateExtraLoad: ExtraLoad самозатухает к нулю, если его не
+   обновлять. Балласт-флора обязана «кормить» нагрузку каждый кадр. Ленивый
+   расход энергии подохнет сам.
+3) GetMethod-петля в WreckAI из 378 была забыта, а тут — 8 перегрузок == у
+   KeyOrMouse... Кстати, в PowerTransfer сигналы кешируются как строки только
+   при изменении int — минимизация мусора для GC. Оптимизация строк сигналов!
+
+[WAVE 381 - LightComponent/GeneticMaterial]
+1) LightComponent IsRed: «Returns true if the red component of the light is
+   twice as bright as the blue and green. Can be used by StatusEffects.»
+   Цвет лампы = логический сигнал. Красная лампа = красный код. Светофор
+   в Barotrauma — это буквально схемотехника.
+2) GeneticMaterial Equip: «force strength to the correct value to bypass any
+   clamping e.g. AfflictionHusk might be doing» — гены используют SetStrength,
+   чтобы обойти защиту хаска от скипа стадий. Иерархия читерства:
+   хаск защищается → гены обходят.
+3) SetTaintedOnDeath: ген портится, если носитель УМЕР. Наследственность
+   по-баротраумовски: «папа умер — ген испортился».
+
+[WAVE 382 - WayPoint/VoipCapture]
+1) WayPoint client: жёлтый вейпоинт = «connected to a hatch but not ladders,
+   something's probably off here». Редактор подозревает, что ты накосячил,
+   и подсвечивает жёлтым цветом сомнения.
+2) VoipCapture при полном провале микрофона САМ ВЫКЛЮЧАЕТ голосовой чат в
+   конфиге (VoiceSetting = Disabled). «Микрофон не работает? Значит, тебе
+   не надо.» Автоматизация отчаяния.
+
+[WAVE 383 - FileSelection/GUIPrefab/Sprite]
+1) FileSelection: свой файловый диалог с ЖИВЫМ FileSystemWatcher — файлы
+   появляются в списке в реальном времени, пока ты выбираешь. Как проводник,
+   только внутри игры про подлодки.
+2) ignoredDrivePrefixes: "/sys/", "/snap/" — линуксоиды не должны видеть
+   системные снапы в диалоге выбора картинки для турели.
+
+[WAVE 384 - LocalizationCSVtoXML/RelatedItem]
+1) LocalizationCSVtoXML [Obsolete]-метод выводит результаты конвертации
+   ПРЯМО НА РАБОЧИЙ СТОЛ (Environment.SpecialFolder.Desktop). «Куда скинуть?
+   На десктоп, куда ещё». Инструмент для переводчиков, не для игроков.
+2) Формат локализационного CSV — разделитель ПАЙП '|', не запятая. Потому что
+   в диалогах NPC запятые встречаются чаще, чем пайпы. Логично... но кто-то
+   всё равно сломает.
+
+[WAVE 385 - NPCConversation]
+1) Флаг PsychosisSelf vs Psychosis: NPC различают «психоз у меня» и «психоз у
+   того придурка за штурвалом». Боты обсуждают твоё безумие за спиной. В лицо
+   молчат, за спиной обсуждают.
+2) Aффликции имеют DialogFlag — NPC комментируют ВАШИ РАНЕНИЯ контекстными
+   репликами. «Ой, у Джейка ожог» — это флаг burn в действии.
+[WAVE 386 - Аудит гейтов / AnimationParams]
+1) Аудит ServerEventRead: единственный компонент без CanClientAccess —
+   DockingPort. Но там пермовый гейт ManageMap. Единственное исключение из
+   паттерна за 386 волн — аккуратность девов подтверждена скриптом.
+2) AnimationParams: лестницы имеют ОТДЕЛЬНЫЕ силы для рук (5.2), ног (10) и
+   тела (10.5). Слезание с лестницы физически честнее, чем кажется.
+3) Run-анимации без атрибутов получают хардкод-дефолты МУТАЦИЕЙ XML в памяти:
+   элемент.SetAttribute прямо при загрузке. Backwards compat, вживлённая в парсер.
+[WAVE 387 - DeathPrompt/Аудит]
+1) Смерть в Barotrauma имеет СОБСТВЕННЫЙ САУНДТРЕК (OverrideMusicType="crewdead")
+   длительностью ровно 25 секунд. Ровно столько, сколько нужно, чтобы решить
+   судьбу персонажа.
+2) Текст причины смерти — от первого лица (Self_CauseOfDeathDescription):
+   игра говорит ЗА тебя, как ты умер. «Я утонул» — спасибо, я в курсе.
+3) Аудит #2 подтверждил: все 20+ прямых каналов клиент→сервер либо разобраны
+   ранее, либо гейтятся. За 387 волн не осталось неисследованных дверей.
+[WAVE 388 - SoundFilters/DeformableSprite]
+1) SoundFilters: проверка Найквиста-Котельникова в конструкторе — «sample rate
+   has to be greater than or equal to 2 * frequency». DSP-теорема как исключение
+   ArgumentOutOfRangeException. Класс.
+2) Приглушение звука под водой: фильтруется ВЕСЬ OGG при загрузке и хранится
+   как вторая копия. Память < CPU. Два файла вместо одного фильтра в секунду.
+[WAVE 389 - BallastFlora/Al]
+1) CreateShapnel — опечатка (шрапнель = shrapnel) живёт в имени метода прода.
+   Копипаст-наследство, которое уже никто не исправит ради обратной совместимости.
+2) DebugDraw флоры показывает «Ignored "Target" for N steps» — дебаг-оверлей
+   честно сообщает, каких целей флора боится/игнорирует. Хантер и жертва
+   в одном оверлее.
+3) Перлин-тряска ветки при уроне (ShakeAmount = PerlinNoise ×10) — флора
+   дрожит органически, не по синусоиде. Перлин повсюду: свечение гэпов,
+   дрожь флоры, фоны уровня.
+
+[WAVE 390]
+- LoadingScreen.cs: «//SCP-CB reference» — в Баротрауме на экране загрузки при слабом
+  шуме проскакивают строки консоли SCP: Containment Breach, включая
+  «Sometimes we would have had time to scream». Разрабы — фанаты SCP, офоциально.
+- FileReceiver.cs: GetMaxFileSizeInBytes → «500 MiB should be good enough, right?» —
+  «должно же хватить, да?» (спойлер: кому-то не хватило).
+- FileReceiver.cs: Find(t => t.Connection.EndpointMatches(t.Connection.Endpoint)) —
+  эндпоинт сравнивается сам с собой, всегда true. Проверка, которая проверяет.
+- GameMain (server): «TODO: figure out how consent is supposed to work for servers» —
+  девы сдались и просто закомментировали аналитику на сервере.
+- LoadingScreen.cs: комментарий про tips: «store the string value ... to prevent the
+  text from changing if/when new text packs are loaded during the loading screen» —
+  текстпаки могут ПЕРЕГРУЗИТЬСЯ, пока ты смотришь на экран загрузки.
+- RelayComponent.cs: «special relay sauce» — секретный соус реле (буферная кривая
+  нагрузки). И тут же «Slight smoothing to load to minimise relay jank» —
+  «сглаживание, чтобы уменьшить джанку реле». Соус против джанки.
+- RelayComponent.cs: оптимизация формулы «0.2% error from original» — девы
+  честно признаются, что формула больше не оригинальная, но погрешность 0.2%
+  «и так сойдёт».
+- Engine.cs: «arbitrary multiplier that was added to changes in submarine mass
+  without having to readjust all engines» = 0.1 — магическая константа, добавленная
+  чтобы не перебалансировать все движки. Живёт в игре годами.
+- PowerContainer.cs: комментарии в коде батареи внезапно вежливые: «500 MiB should
+  be good enough, right?» — ой, это из FileReceiver. А тут просто kW·min.
+- MotionSensor.cs: описание MaxOutputLength — «Warning: Large values can lead to
+  large memory usage or networking issues» — девы прямо в XML-описании предупреждают
+  мододелов не спамить сигналами. Знали. Знают. Всё равно дают.
+- LidgrenServerPeer/ClientPeer: lenient handshake — «so the server would start even
+  without perfect conditions» — «чтобы сервер стартовал даже без идеальных условий».
+  Целая настройка ради кривого интернета девов.
+- WifiComponent.cs: CheckTransmit может быть прерван глушилкой, но HintManager
+  покажет игроку «радио глушится» — единственная игра, где глушение радио это
+  отдельный хинт с туториалом.
+- Upgrade.cs: CalculateUpgrade для нечисловых свойств — warning «did you forget
+  a Convert.ChangeType()?» и возврат 0. То есть забыл ChangeType — получи ноль,
+  штраф на месте.
+- StatusHUD.cs: комментарий про скрытые яды — «The solution is hacky, but didn't
+  want to introduce an extra property for this» — лень заводить одно свойство
+  родила целую ассассинскую механику скрытого отравления.
+- ShipCommandManager.cs: бот-капитан каждые ~18 секунд решает ТАРАНИТЬ врага
+  на 50 секунд (AIRamTimer). Девы написали ИИ-камикадзе и назвали это тактикой.
+- EntitySpawnerComponent.cs: метод DisabledByByPvPSpawnMonstersSetting — двойное
+  «By» в имени. Проверка проходит через это имя в двух местах. Опечатка вечна.
+- MapLocationTypeGenerator.cs: «blame the mod where one of the problematic location
+  types is defined in» — ванильный пакет исключается из обвинения. Встроенная
+  система поиска виноватого.
+- AIObjectiveOperateItem.cs: боты сравнивают HELM-СКИЛЛ за штурвал и DegreeOfSuccess
+  на приборах — экипаж сам решает, кто самый квалифицированный. Боты устроили
+  собеседование без тебя.
+- AITarget.cs: MaxSoundRange/MaxSightRange = 100000 ПО УМОЛЧАНИЮ — «слышно
+  из-под воды через полкарты» это не баг, это дефолт.
+- AIObjectiveRepairItem.cs: комментарий про анти-луп лестницы — «the character
+  can get stuck in a loop where the GoTo objective takes them close enough,
+  then the character shifts a bit downwards on the ladder and goes outside
+  interaction range, and the GoTo objective kicks in again» — боты катались
+  на лестнице, пока дев не написал против этого костыль.
+- HumanPrefab.cs: ReportRange и FindWeaponsRange = +∞ дефолт — охрана аутпоста
+  теоретически донесёт на тебя с другого конца карты.
+- Pump.cs: NaN-гард проверяет СТАРОЕ значение поля вместо входящего — защита,
+  которая защищает прошлое. К счастью, Hull.WaterVolume имеет свой честный гард
+  и спасает всю физику.
+- DecorativeSprite.cs: комментарий про шум-анимацию — «multiply speed by a magic
+  constant, because otherwise a speed of 1 would already be very fast» — магическая
+  константа ×0.1 ради интуитивности слайдеров.
+- SteamTimelineManager.cs: ошибки кода пишутся в Steam-таймлайн с приоритетом 3 —
+  ВЫШЕ СМЕРТИ ИГРОКА (prio 1). Геймдев расставил приоритеты честно.
+- SteamTimelineManager.cs: «these don't have localization support yet, use hardcoded
+  strings» ×4 — классика.
+- Gap.cs: «no dripping from large gaps between rooms (looks bad)» — девы
+  сами признают, что капающий из дверного проёма водопад выглядел плохо,
+  и вырезали его константой.
+- Gap.cs: burst-множитель ×(1 + openedTimer×10) — только что открытая дверь
+  фонтанирует в 10+ раз сильнее. Физика драмы.
+- ParticleEmitter.cs: amountMultiplier умножает НАКОПЛЕНИЕ таймера, а не
+  количество — «ускоряем время», чтобы получить больше партиклов. Элегантно
+  и немного жутко.
+- GUIContextMenu.cs: «it's better to overestimate the size since it's going
+  to be cropped anyways» — философия вёрстки: главное не недооценить.
+- Sprayer.cs: TimeSpentCleaning и TimeSpentPainting инкрементируются НАОБОРОТ
+  (покраска = cleaning, очистка этанолом = painting). Статистика «времени за
+  уборкой» в игре врёт с момента добавления покраски.
+- Sprayer.cs: для удалённых игроков курсор неточен, поэтому струя на 50% дальности
+  — «looks good enough». Философия неткода: если никто не заметит — это фича.
+- ItemLabel.cs: серверный дебаунс сетевых событий КОРУТИНОЙ с таймером 0.1с —
+  сигнальный спам склеивается в один пакет. Образцовый паттерн, который стоило
+  бы применить к FlowPercentage той самой помпы.
+- ParticleEditorScreen.cs: Save All пишет в XML-файлы ВСЕХ паков скопом.
+  Кнопка «испортить все моды разом» для девов.
+- LegacySteamUgcTransition.cs: XML-док класса — «transitioning away from the old,
+  shitty Mods + Submarines folders» — слово shitty В ДОКУМЕНТАЦИИ. Девы не любят
+  своё легаси, и не скрывают.
+- LegacySteamUgcTransition.cs: «can't do this because the old submarine discovery
+  code is borked» — причина, почему README не пишется в папку сабов: код настолько
+  borked, что даже маркер «миграция сделана» туда нельзя положить.
+- Program.cs: «This is not a method for getting optimus that is documented by
+  nvidia, but it works, so...» — недокументированный хак с nvapi64.dll ради
+  дискретной GPU на ноутбуках. Работает — не трогай.
+- Program.cs: FreeNvOptimus с #warning «TODO: determine if we can do this safely»
+  и закомменченным Free() — утечка хендла DLL осознанная и живёт с warning-ом.
+- Program.cs: если упал сам краш-хендлер: «exception handler is broken, we have
+  a serious problem here!!» с двумя восклицательными знаками и slim-логом.
+- EosSteamPrimaryLogin.cs: textSizeFixHack — метод-хак с названием «хак» прямо
+  в имени. Честность в коде.
+- SpriteRecorder.cs: упаковка команд по текстурам только если AABB не перекрываются
+  — «attempting to sift this one down would change the visual result». Оптимизация
+  с доказательством корректности в комментариях.
+- MapEntityPrefab.cs: комментарии о дизамбигуации — «hidden ones and variants are
+  often e.g. some kind of special ones used in an event or versions unlockable
+  with talents». Поиск по имени может найти ТРИ одинаковых «Пистолета».
+- Entity.cs: #warning «TODO: consider removing this mutex, entity creation
+  probably shouldn't be multithreaded» — дев сам не уверен, многопоточное ли
+  создание сущностей. Мьютекс решает.
+- Sprite.cs: двойное ТЗ в одном комментарии — «TODO: if there are multiple
+  elements with exactly the same data, the ids will fail» и сразу «ALSO TODO:
+  delete :)». Дев хочет удалить систему идентификаторов спрайтов смайликом.
+- Sprite.cs: «Server doesn't care about texture paths at all» — серверная
+  сборка воспринимает все спрайты как абстрактные заглушки. Сервер слеп.
+- Door.cs: дверь открывается «уезжанием в стену» через обрезку SourceRect.
+  Никакой анимации скольжения — просто рисуем меньше текстуры.
+- SteamManager.cs: GetOwnerSteamId() возвращает ровно то же, что GetSteamId() —
+  «владелец» это всегда ты сам. Family Sharing владельцы — фикция.
+- AIObjectiveLoadItem.cs: боты умнее списков — «placing welding fuel tanks inside
+  oxygen tank shelves» в комментарии как пример плохого результата. Бот, сующий
+  топливо в кислородную полку, теперь легенда.
+- StatusEffect.cs: ItemSpecific звуки = item.ID % count — предмет с ID 7 всегда
+  играет второй вариант звука. Каждый редуктор имеет свою «голосовую» судьбу.
+- Program.cs (server): args[i+2], args[i+1] для -pipes — аргументы в обратном
+  порядке. Пайпы P2P-хоста работают потому что ОБОИЕ так написали.
+- Alc.cs: «(Optimization: let's pin an integer on the stack instead of an array
+  on the heap, which previously allocated almost a GB of memory)» — ГИГАБАЙТ
+  памяти на массив int-ов. Та же школа оптимизаций, что и HasFlag на 8GB.
+- Alc.cs: девы форкнули сборку OpenAL Soft ради одного кастомного колбэка
+  ошибок. На Linux/macOS — «FIXME: not implemented» и пофиг.
+- CoroutineManager.cs: «Do not optimize this as a for loop directly over the
+  Coroutines list! Coroutines are able to spawn new coroutines!» — капсом,
+  для будущих оптимизаторов.
+- Sprite.cs vs CoroutineManager.cs: у одного «ALSO TODO: delete :)», у другого
+  капс-предупреждение. Спектр эмоций девов в TODO.
+- AIObjectiveFindDivingGear.cs: комментарий на пол-экрана про бота, который
+  надевает маску ПОВЕРХ скафандра, и математическое доказательство, почему
+  это плохо (маска жрёт O2 ×2). Девы профилировали дыхание ботов.
+- Job.cs: wearable.Variant = wearable.Variant; — самоприсваивание с комментарием
+  «//force server event». Классика сетевого кода: обмануть собственный детектор
+  изменений.
+- SpriteDeformation.cs: ошибка «All animations must have the same resolution!
+  Using the lowest resolution.» — ThrowError и тут же тихо чинит. Ошибка
+  как форма документации.
+- AIObjectiveLoop.cs: if (this is AIObjectiveChargeBatteries || this is
+  AIObjectivePumpWater || this is AIObjectiveFindThieves) — хардкод типов
+  наследников в абстрактном базовом классе. ООП-полиция стучится.
+- CombatMission.cs: боты в PvP получают AssaultEnemy ордер с HighestManualOrder
+  Priority КАЖДЫЙ ТИК пока не возьмут. Настойчивость уровня «ты понял или мне
+  повторить?».
+- SerializableDateTime.cs: «Let's go out of our way to tag the year, month and
+  day so nobody gets confused about the meaning of each number» — формат
+  «04Y 05M 20D» потому что кто-то однажды перепутал месяц и день в сейве.
+- AIObjectiveFixLeak.cs: «Found out that without any multiplier the value (209)
+  is often too short» — досягаемость сварки = Range + длина руки × 2. Математика
+  подобрана экспериментально, как и всё в геймдеве.
+- TextPack.cs: локализаторские CSV со звёздочкой-разделителем вместо запятой —
+  потому что в переводах запятых слишком много.
+- Throwable.cs: бросок коктейля = замах 1.2с + мах 0.6с с угловой скоростью
+  ПРАВОЙ РУКИ. Коктейль Молотова с механикой руки в симуляции.
+- GUIStyle.cs: документация цветов скопипащена — Orange описан как «General red
+  color used for elements whose colors are set from code». Оранжевый — тоже
+  красный, если не смотреть.
+- GUIStyle.cs: HealthBarColorHigh = new Color(78, 114, 88) — единственный цвет
+  БЕЗ явной альфы в списке. Зелёно-серый здоровьем имеет A=255 по умолчанию,
+  и это работает.
+- SteamPipeAssistant.cs: setlive в «experimental»/«development» — все релизы
+  Баротаумы автоматом на тестовые ветки, потом вручную в паблик. Даже у девов
+  есть «нажми кнопку ещё раз, чтобы выкатить по-настоящему».
+- CursedDictionary.cs: «Dictionary that's been deliberately designed to be a
+  piece of shit» — ПРОКЛЯТЫЙ СЛОВАРЬ, шафлящий данные при каждом чихе, чтобы
+  поймать код, зависящий от порядка. Девы написали артефакт проклятия для
+  отлова недетерминизма. Только DEBUG+MODBREAKER — проклятие не выпускают в
+  релиз.
+- AIObjectiveCheckStolenItems.cs: «under a threat, bots are allowed to wear
+  diving gear or hold fire extinguishers. Even if they are 'stolen'» — во
+  время тревоги охрана закрывает глаза на воровство противогазов. Военное
+  положение = амнистия.
+- PowerDistributor.cs: имена групп локализуются через TextManager — напиши
+  в имени группы текст-тег и получи перевод. Джанкшен-бокс с i18n.
+- CursedDictionary.cs follow-up (407): прочитан полный код — TryGetValue шафлит
+  ДАЖЕ ПРИ УСПЕШНОМ ПОИСКЕ. Получил значение? Получи и пересортировку.
+- Camera.cs (server): «TODO: this class still does things that the server
+  doesn't need, cleanup» — серверная камера, которая не нужна, но живёт.
+  MoveCamera() = { return; } — вся логика движения камеры сервера.
+- CameraTransition.cs: пауза-честность через DeltaTime = 0 при паузе — боты
+  корутины умеют то, чего не умеет WaitForSeconds по дефолту.
+- Client.cs: «Destroying voipsound» в лог при каждом удалении — войс-каналы
+  прощаются по имени.
+- RegExFindComponent.cs: девы нашли, что .NET 8 РАНДОМНО тормозит регэкспы
+  «every few minutes» и вместо починки сделали 3-страйковую систему: три
+  медленных раза подряд = считаем malicious, компонент умирает со словом
+  TIMEOUT. Обход бага платформы через подозрительность.
+- RichString.cs: закомменченный Debugger.Break() в implicit operator —
+  заготовка «отладить потом» осталась в релизном коде (if DEBUG).
+- AIObjectiveRescueAll.cs: бот откажется лечить того, кто РАНЕЛ его сам
+  (GetDamageDoneByAttacker > 0). Медики держат обиды.
+- CharacterCampaignData.cs: без AccountId игрок мэтчится по IP — два игрока
+  за одним NAT в кампании делят одного персонажа. Отсюда DEBUG-флаг
+  RequireClientNameMatch для локальных тестов.
+- TextureLoader.cs: девы написали свой DXT5-компрессор с Parallel.For —
+  потому что стандартный XNA не умел сжимать в фоновом потоке. Полный
+  S3TC-пайплайн вручную, лума-хеши, палитры, бит-пакер.
+- AIObjectiveExtinguishFire.cs: боты решают, тушить ли пожар, по ПОДСТРОКЕ
+  ИМЕНИ КОМНАТЫ: reactor/engine/command = «важно», остальное = «погорим».
+  Уровень ИИ-безопасности: substring matching.
+- WreckConverter.cs: конвертер обломков вырывает провода и схемотехнику
+  (circuitboxcomponent + wire в списке на удаление). Электрика обломков
+  = «уже сгнила».
+- FishAnimations.cs: TailTorqueMultiplier — «prevents snake-like characters
+  from getting tangled on themselves». Змеи запутывались в собственном
+  физическом теле, пока не добавили множитель хвостового торка.
+- Video.cs: «//TODO: reduce garbage?» на аллокации short[] КАЖДЫЙ аудио-
+  коллбек видео. Вопрос задан. Ответа нет. Мусор продолжает рождаться.
+- EosEpicSecondaryLogin.cs: «let's yank them apart» — разделение двух
+  аккаунтов на одном PUID описано как выдирание. EOS-линк = операция
+  на живом органе.
+- Widget.cs: Debug.WriteLine при deselect виджета остался в релизе. Каждый
+  отпускание ручки в редакторе пишет в Debug-вывод.
+- FindThieves.cs: «only player's crew can steal, ignore other teams» — воровство
+  в Баротрауме официально только для игроков. NPC-команды слишком честны.
+- FindThieves.cs: репутация управляет частотой патдаунов через lerp(Max, Min,
+  Normalized) — у shitty репутации тебя шмонают на каждом углу. Система
+  работает как в аэропорту.
+- MTRandom.cs: NextBytes() кидает NotImplementedException — генератор случайных
+  чисел, который не может сгенерить байты.
+- GUILayoutGroup.cs: «Note that stretching cannot be undone, because the previous
+  child sizes are not stored» — растянул лейаут = всё, обратной дороги нет.
+- WreckConverter follow-up: двери обломков специально целые — девы подумали
+  о том, что игроку надо куда-то залезть.
+- UISprite.cs: maxBorderScale читает АТРИБУТ «minborderscale» — копипаст-баг,
+  из-за которого максимум масштаба границ 9-slice нельзя настроить из XML.
+- ServerMsgLString.cs: эвристика «это серверное сообщение» = строка содержит
+  ВСЕ символы из "~[=" одновременно. Обнаружение протокола по характерным
+  закорючкам.
+- MapGenerationParams.cs: «Decreasing this value causes the number of sites
+  to increase exponentially - be careful when adjusting» — предупреждение
+  будущим балансерам прямо в XML-описании Voronoi-интервала.
+- Radiation.cs: «Don't advance on nearby locations to avoid buggy behavior» —
+  радиация не трогает соседние с игроком локации. Мягкий кримп против софтлока,
+  замаскированный под фикс бага.
+- PerlinNoise.cs: OctavePerlin стартует с amplitude = 3 вместо 1 — шум до
+  нормализации врёт в 3 раза, и это живёт годами в статик-кэше.
+- ButtonTerminal: ачивки за нажатие кнопок терминала (OnButtonTerminalSignal).
+  Даже кнопки участвуют в охоте за достижениями.
+- SteamListenSocket.cs: «could technically cause a stack overflow since the
+  call is recursive, use a while loop instead» — рекурсия В САМОМ STEAMWORKS
+  API, обходится капом в 100 итераций на кадр.
+- MTRandom follow-up: seed через Math.Abs — сиды −5 и 5 дают одинаковый
+  рандом. Два разных мира могут оказаться одним миром.
+- Decal.cs: кровью можно испачкать только фон внутри отсека — за стеной
+  обрезается SourceRect'ом. Кровобрызги соблюдают границы отсеков.
+- MentalStateManager.cs: психоз бота эскалирует с РАНДОМНЫМ множителем
+  1.0-1.2 на границах стадий — одинаковый уровень психоза может дать
+  разные выходки. Психоз сам по себе непредсказуем. Метой.
+- MentalStateManager.cs: «berserk is not removed unless we drop to normal»
+  — берсерк-бот не успокаивается частично. Либо норм, либо орёт.
+- Video.cs follow-up: «TODO: reduce garbage?» соседствует с OggSound, где
+  каждый кадр аудио тоже рождает мусор. Аудио-пайплайн Баротаумы —
+  коммьюнити-проект по сборке GC-мусора.
+- Md5Hash.cs: «thanks to Jlobblet for this regex» — дев публично благодарит
+  автора одной регулярки. Код-ревью с человеческим лицом.
+- AIObjectiveMoveItem.cs: for (int i...) itemIdentifiers[i] = itemIdentifiers[i];
+  — цикл самоприсваиваний массива. Мёртвый код, переживающий годы.
+- PrefabSelector.cs: ошибка дубликата буквально советует «try overriding» —
+  система переопределений учит мододелов правильному пути через исключения.
+- RoundSound.cs: «Large clips should generally be streamed, while small and
+  frequently played sounds should be loaded to memory» — целый абзац
+  документации аудио-оптимизации внутри warning'а.
+- DamageModifier.cs: валидация конфига с «Did you mean to use an affliction
+  identifier instead?» — каст сомнений в мододеле встроен в код. «Ты точно
+  хотел type? Может identifier?»
+- LevelResource.cs: «we don't need info of every collected resource, we can
+  get a good sample size just by logging a small sample» — аналитика сбора
+  ресурсов сэмплируется. Девы знают статистику лучше нас.
+- MoveItem follow-up: два мёртвых самоприсваивания в двух волнах подряд
+  (wearable.Variant = wearable.Variant «//force server event» и
+  itemIdentifiers[i] = itemIdentifiers[i] просто так).
+- ContentPath.cs: MissingContentPackageException при %ModDir:несуществующий% —
+  резолвер путей честно кричит, какой пак не найден. Подтверждает систему
+  вариантов из 414-й: пути между модами валидируются в рантайме.
+- SteeringPath.cs: узел без хулла = HasOutdoorsNodes. Бот знает, что его
+  маршрут ведёт на улицу, и заранее нервничает.
+- CleanupItem.cs: priority /= 2 пока не найден контейнер — уборка без
+  мешка для мусора вдвое менее важна. Житейская мудрость в ИИ.
+- Explosion.cs: sqrt(rand) для distFactor — «larger values more common»,
+  частицы огня ЧАЩЕ дальше от эпицентра. Взрывы Баротаумы разлетаются
+  вопреки интуиции и это выглядит правильно.
+- OxygenGenerator.cs: condition² — изношенный генератор кислорода падает
+  КВАДРАТИЧНО (50% износа = 25% кислорода). Химики дали физику, физики
+  дали квадрат.
+- Lobby.cs: MaxPlayers + 10 слотов лобби — запас на поздних друзей.
+  Steam-лобби щедрее сервера.
+- ContentFile.cs: ErrorCatcher — если при загрузке файла хоть одна ошибка
+  упала в консоль, файл отклоняется ЦЕЛИКОМ. «Errors were issued to the
+  debug console» = строгий контроль качества контента.
+- ShipIssueWorker.cs: капитан-бот проговаривает приказ голосом, бот-получатель
+  отвечает «DialogAffirmative» через секунду. Боты из autocomplete'а вежливы.
+- IdCard.cs: на id-карте хранится индекс усов и цвет бороды владельца.
+  Карта = мини-паспорт с портфолио растительности на лице.
+- AIObjectiveDeconstructItem.cs: «make sure the item gets moved to the main
+  sub if the crew leaves while a bot is deconstructing something in the
+  outpost» — боты разбирают вещи на аутпосте, и девы вручную переносят
+  выход деконструктора на суб, чтобы материалы не остались на станции.
+  Логистика уровня «не забыть сумку в автобусе».
+- ExtraSubmarineInfo.cs: «HashSet<Identifier> is not a supported type. We
+  need to manually serialize it as a comma-separated string» — сериализатор
+  не умеет HashSet, пишем ручками.
+- SoundBuffer.cs: MaxBuffers 32000 на Win/Linux, но 400 НА MAC с «TODO: check
+  that this value works for macOS». Apple-лимиты, проверьте кто-нибудь.
+- DelayComponent.cs: комментарий про сигнал, замкнутый на себя — «sending
+  the signal may empty the queue if this component is set to reset when it
+  receives a signal and the signal is routed back». Логики сами себя
+  ломали петлёй, пока не добавили двойную проверку очереди.
+- Rand.cs: целый абзац капсом в doc-комментарии: «DOES NOT guarantee that
+  the server and the client will generate the same values» — документация
+  честно предупреждает, что синхронный рандом не синхронен сам по себе.
+- TrigonometricFunctionComponent.cs: Asin/Acos вне [-1,1] не дают ошибку —
+  вход проходит НАСКВОЗЬ неизменным. Математика сломалась? Получи свои
+  данные обратно, разберёшься.
+- Tan-гвард: (π/2 + πk) не считается вовсе, значение проходит как есть.
+- CreatureMetrics.cs: SyncSets форсирует Killed ⊆ Encountered ⊆ Unlocked
+  при КАЖДОМ сохранении — «Otherwise we could permanently hide some
+  creatures by manually adding them to the encountered». Девы знают, что
+  игроки правят XML, и защищаются монотонностью множеств.
+- ArtifactEvent.cs: артефакт спавнится KINEMATIC — висит в воздухе, пока
+  не подберёшь. Магический парящий артефакт по канону.
+- AIObjectiveDeconstructItems.cs: бот не разбирает unidentified genetic
+  materials — «which we don't want to "deconstruct" anyway». Специальная
+  защита генматериала от глупости ботов, замаскированная под общий фильтр.
+- WaterDetector.cs: GetWaterPercentage — «treat less than one pixel of water
+  as no water». Меньше пикселя воды не существует. Официальная единица
+  измерения влаги — пиксель.
+- LinkedControllerCharacterComponent: спрайт иконки предмета меняется в
+  зависимости от ВИДА существа, которое его держит. Иконка подстраивается
+  под物种 — интернациональный предмет.
+- PerformanceCounter.cs: FPS в GA клампится 0..144 — «reduce the number of
+  distinct event IDs». Игроки с 240Гц мониторами статистически приравнены
+  к 144Гц. Страдают элитой.
+- ISpatialEntity.cs: боты видят людей по КОНЕЧНОСТЯМ — если торс за стеной,
+  но рука торчит, бот «видит». Левую и правую крайние конечности ищет
+  dot-продуктом. Скрывай руки!
+- CharacterPrefab.cs: name-атрибут DEPRECATED с оранжевым варнингом — «Use
+  speciesname instead». Миграция длиною в годы, предупреждение всё ещё живёт.
+- IdCard.cs: baldnessChance 0.1f — при генерации портрета на подделке есть
+  ШАНС ЛЫСИНЫ 10%. Рандомная лысина как антифрод-мера. Гениально.
+- CharacterPrefab.cs: name-атрибут DEPRECATED с оранжевым варнингом — «Use
+  speciesname instead». Миграция длиною в годы, предупреждение всё ещё живёт.
+- IdCard.cs: baldnessChance 0.1f — при генерации портрета на подделке есть
+  ШАНС ЛЫСИНЫ 10%. Рандомная лысина как антифрод-мера. Гениально.
+- InspectNoises.cs: «otherwise you could e.g. bounce an NPC back and forth
+  by firing guns at different sides of an outpost» — до фикса охранника
+  можно было гонять стрельбой по разным углам, как собакой с мячиком.
+  Ленивая собака: приоритет растёт, но цель не меняется.
+- Controller.cs: ForceUserToStayAttached — несознательный персонаж в кресле
+  принудительно «держит» предмет, потому что сервер перестал синкать
+  выделение. Держим мертвеца за штурвалом сетевой синхронизацией.
+- CustomDeformation.cs: деформация задаётся атрибутами row0="..." row1="..."
+  с векторами через пробел — авторская лепка спрайта прямо в XML.
+- SwarmBehavior.cs: полный boids (separation/cohesion/alignment) в карманном
+  классе на 123 строки. Craig Reynolds одобрил бы. Мудр/spider-рои
+  танцуют по учебнику 1987 года.
+- LoadItems.cs: «turretammo» ордер = TargetCondition.Empty — заряжаем турель
+  ПУСТЫМИ коробками. Логика: пустая коробка вставляется, содержимое
+  догружается само. Или девы просто хотели, чтобы боты таскали коробки.
+- EqualsComponent.cs vs BooleanOperatorComponent.cs: два класса на 95%
+  одинаковые (та же TimeFrame-логика, те же таймеры), отличаются только
+  условием выхода. Copy-paste-программирование силён.
+- Biome.cs: AdjustedMaxDifficulty = maxDifficulty − 0.1 — граница биомов
+  «уменьшается» на одну десятую. Вот почему глубиномер показывает ERROR
+  чуть раньше, чем кончается биом (волна 363 раскритикована на новом уровне).
+- CharacterFile.cs: «Variants should have their own params instances, but
+  let's keep it simple and play safe» — вместо правильной изоляции вариантов
+  просто сбрасываем ВСЕ кэши анимаций. Работает — и ладно.
+- GUICanvas.cs: дети канваса хранятся как WeakReference «to allow elements
+  that we no longer need to get garbage collected». UI-элементы держат
+  на честном слове, GC их забирает когда хочет.
+- EosSession.cs: SessionAlreadyExists = «this failure is not a problem» —
+  ошибка, которая не ошибка. Идемпотентность через философское отрицание.

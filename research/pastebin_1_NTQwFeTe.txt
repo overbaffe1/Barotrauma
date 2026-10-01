@@ -1,0 +1,455 @@
+# Wave 2 — Items, EntityEventManager, fabricator
+## 🔥 HIT #6 — Fabricator крафтит за 0 mk если не хватает денег (НОВОЕ, подтверждено кодом)
+Файл: `SERVER/DedicatedServer/Barotrauma/Items/Components/Fabricator.cs`
+Клиентский пакет `ComponentState` → `Fabricator.ServerEventRead`:
+```csharp
+uint recipeHash = msg.ReadUInt32();
+int amountToFabricate = msg.ReadRangedInteger(1, 99);
+if (!this.item.CanClientAccess(c)) return;
+...
+this.StartFabricating(this.fabricationRecipes[recipeHash], c.Character, true);
+```
+Доступ проверяется один раз — в момент старта. Деньги списываются в
+`Fabricate()` через `Update()` по завершении крафта (строки 425–453):
+```csharp
+if (this.fabricatedItem.RequiredMoney > 0) {
+  ...
+  if (mpCampaign != null) {
+    Client client = this.GetUsingClient();
+    if (client != null)
+      mpCampaign.TryPurchase(client, this.fabricatedItem.RequiredMoney);
+    else
+      this.user.Wallet.Deduct(...);
+  }
+}
+// ↓↓↓ НЕТ return / CancelFabricating при нехватке денег ↓↓↓
+...
+// ингредиенты удаляются, предмет спавнится в outputContainer
+foreach (Item availableItem in fabricationIngredients.Items)
+  Entity.Spawner.AddItemToRemoveQueue(availableItem);
+...
+Entity.Spawner.AddItemToSpawnQueue(this.fabricatedItem.TargetItem, ...);
+```
+`MultiPlayerCampaign.TryPurchase` возвращает `false`, если у игрока меньше
+нужной суммы (и у банка тоже, если нет `ManageWallets`), но этот результат
+отбрасывается. В `SinglePlayerCampaign` ветка использует
+`campaign.Bank.Deduct` — `Wallet.Deduct` уйдёт в минус (clamp 0), но предмет
+всё равно скрафтится.
+Сценарий:
+1. Найди любой рецепт с `requiredmoney > 0` (например, часть ванильных
+   рецептов high-tier: некоторые экзотические препараты, части реактора).
+2. Начни крафт с 0 mk в кошельке.
+3. Через `requiredTime` предмет появляется в выходном слоте, деньги не
+   списались.
+Ингредиенты при этом реально тратятся — это не бесплатный крафт всего, но
+можно крафтить платные рецепты без денег.
+**То же самое в `CargoManager.BuyBackSoldItems` (стр. 36):**
+```csharp
+if (store.Balance >= itemValue && !item.Removed) {
+  store.Balance += itemValue;
+  this.campaign.TryPurchase(client, itemValue); // результат игнорится
+  storeSpecificItems.Remove(item);
+}
+```
+Но выкуп предметов из магазина возможен только если у тебя есть
+`SellSubItems`/`SellInventoryItems` права, что само по себе редкость.
+## 🔎 Карьера entity event (понял модель)
+`ServerEntityEventManager.Read` (`SERVER/.../Networking/ServerEntityEventManager.cs:397`):
+1. Сегмент `ClientNetSegment.EntityState` приходит из `UPDATE_INGAME`.
+2. Читается `firstEventID`, `eventCount`, потом для каждого `entityID` —
+   `Entity.FindEntityByID(entityID) as IClientSerializable`.
+3. Если ID валиден и ожидается по порядку — событие буферизуется и в
+   `BufferedEvent` вызывается `entity.ServerEventRead(buffer, sender)`.
+4. Нет серверной проверки прав на саму сущность на этом уровне.
+   Каждый компонент обязан сам вызвать `item.CanClientAccess(c)` (это
+   `c.Character.CanInteractWith(item, true)` — дистанция/видимость/200u).
+Прошёлся по всем 22 `IClientSerializable`:
+| Компонент | Доступ | Эксплойт? |
+|-----------|--------|-----------|
+| Fabricator | CanClientAccess | 💰 бесплатные required-money рецепты (#6) |
+| Deconstructor | CanClientAccess | нет |
+| WifiComponent | CanClientAccess | нет (channel 0..10000) |
+| Repairable | CanClientAccess + HasRequiredItems | нет (нельзя чинить без нужного предмета) |
+| Holdable | CanClientAccess + Attachable | offset clamp 171u |
+| ConnectionPanel | CanClientAccess + AllowRewiring + wire locks | нет |
+| DockingPort | ManageMap perm | нет |
+| ButtonTerminal | CanClientAccess | нет (только сигнал) |
+| CustomInterface | owner-if-held OR CanClientAccess | нет |
+| PowerContainer | CanClientAccess | нет (recharge rate 0..100%) |
+| PowerDistributor | CanClientAccess | нет |
+| Pump | CanClientAccess | нет (только насосы в зоне досягаемости) |
+| Reactor | CanClientAccess | нет (fission/turbine) |
+| Sonar | CanClientAccess | нет |
+| Steering | CanClientAccess | нет |
+| Terminal | CanClientAccess + !Readonly | нет (200 chars cap) |
+| Wire | CanClientAccess | нет |
+| CircuitBox | CanClientAccess + required items (для add/move) | direct-пакет 21 только курсор |
+| Hull (water/fire) | ConsoleCommands + fire/editfire perm | нет |
+| Character | `c.Character == this` для Status/Treatment | `Status` может самоубить, `Treatment` может тоглаить CPR; UpdateTalents под `CanManageTalents` |
+| Inventory | `CanAccessInventory` (200u, team/pet) | нет |
+| Item (component dispatch) | CanInteractWith для Treatment/Combine | нет |
+## 🧠 Заметки по Character.ServerEventRead
+`Character.cs:160` — события 0..18:
+- Status (2): если `c.Character == this` и `IsIncapacitated` — вызывается
+  `Kill(CauseOfDeath...)` обычным способом. Легитимный суицид из хелс-меню,
+  но можно вызывать мгновенно из скрипта без открытия меню.
+- Treatment (3): ставит `AnimController.Anim = CPR/None`. 
+- UpdateTalents / ConfirmTalentRefund: под `CanManageTalents` (владелец).
+- InventoryState (0): делегирует в `Inventory.ServerEventRead`.
+- Control (1), SetAttackTarget / ExecuteAttack / AssignCampaignInteraction /
+  ObjectiveManagerState / TeamChange / AddToCrew / RemoveFromCrew /
+  UpdateExperience / UpdateSkills / UpdateMoney / UpdatePermanentStats /
+  UpdateTalentRefundPoints — только ServerWrite/внутренние, ServerEventRead
+  на них не реагирует.
+→ Нельзя дать себе деньги/опыт/скиллы напрямую пакетом.
+## 🔧 EventManager / Voting / ServerSettings — всё закрыто
+- `EventManager.ServerRead` отвечает за выбор опций в `ConversationAction`.
+  Использует переданный `selectedOption` как индекс в `convAction.Options[]`.
+---
+## Wave 3 — SERVER_COMMAND bypass deep-dive
+Прошёлся по всем веткам `ClientReadServerCommand` (GameServer.cs:2017–2180).
+### ManageRound (1), payload: `bool end`, [pad], `bool continueCampaign`
+| Ситуация | end | continue | Сервер делает | Внутр. права? | Эксплойт? |
+|---|---|---|---|---|---|
+| Раунд идёт | true | — | EndGame (с сейвом если на friendly outpost) | ДА `AllowedToManageCampaign(ManageRound)` | ❌ только с правами |
+| В лобби, mp != null | true | — | **`GameMain.GameSession = null`**, switch to Sandbox | НЕТ | ☠️ ГРИФИНГ: сносит кампанию всем в лобби! Не добавляю в UI |
+| Раунд идёт | false | true | "Cannot continue (round running)" | — | ❌ |
+| В лобби, mp.GameOver | false | true | LoadCampaign с диска | ДА `ManageCampaign\|ManageMap` | ❌ |
+| В лобби | false | true | LoadCampaign с диска | ДА | ❌ |
+| В лобби | false | false | **`TryStartGame()`** | НЕТ | ✅ **ForceStartRound** |
+| Раунд идёт | false | false (любой) | при availableTransition != None: `LoadNewLevel()` | ДА `ManageCampaign\|ManageMap` | ❌ |
+Важное открытие: отправка `end=true` в лобби БЕЗ ПРАВ обнуляет
+`GameMain.GameSession` у всех клиентов (сервер переключается в Sandbox). Это
+griefing-атака, ломает текущую кампанию без прав. Не выношу в UI, но PoC.
+### ManageCampaign (64) → `mpCampaign.ServerRead`
+| Ветка | Внутренняя проверка | Эксплойт? |
+|---|---|---|
+| hullRepairs | только `GetBalance(sender) >= cost` | ✅ покупает за свои деньги |
+| itemRepairs | только `GetBalance(sender) >= cost` | ✅ |
+| lostShuttles | только `GetBalance(sender) >= 1000` | ✅ |
+| buyCrate/store | `HasCampaignInteractionAvailable(Store)` + sell perms | ❌ нужен NPC |
+| soldItems/subSellItems | `SellInventoryItems/SellSubItems` права | ❌ |
+| upgrades/itemSwaps | `HasCampaignInteractionAvailable(Upgrade)` | ❌ нужен NPC |
+| selectedMissionCount / map navigation | нет операции, игнорится | — |
+---
+## Wave 4 — ReadyCheck / FileSender / CargoManager / CrewManager
+### 🔥 HIT #7 — Force Ready Check без прав (НОВОЕ)
+`SERVER/.../ReadyCheck.cs:78` — `ServerRead`:
+```csharp
+if (state == ReadyCheckState.Start) {
+    if (readyCheck == null)
+        ReadyCheck.StartReadyCheck(client.Name, client);
+}
+```
+Нет ни проверки прав, ни серверного кулдауна. Кулдаун
+`ReadyCheck.ReadyCheckCooldown = DateTime.Now.AddMinutes(1.0)` есть только в
+клиентском `ReadyCheck.CreateReadyCheck()` — при отправке голого пакета
+`[22, 0]` оно игнорируется.
+Эффект: всем игрокам прилетает попап на 30 секунд с именем отправителя и
+звуком. Троллинг / attention grab.
+### 🔒 Закрытые направления
+- **CrewManager.ReadToggleReserveBenchMessage** — жёстко требует
+  `AllowedToManageCampaign(ManageHires)`.
+- **CargoManager.PurchaseItems** — проверяет `campaign.TryPurchase(client, itemValue)`:
+  при false предмет удаляется из itemsToPurchase.
+- **CargoManager.SellItems**:
+  - `Origin=Character` требует существующий `Entity.FindEntityByID(item.ID)`;
+  - `Origin=Submarine + ID=0` матчится по prefab один раз — не продать повторно;
+  - `store.Balance >= itemValue`.
+- **CargoManager.BuyBackSoldItems** — игнорирует TryPurchase, но только при
+  правах SellInventoryItems/SellSubItems.
+- **FileSender.ReadFileRequest**:
+  - Submarine — любой клиент может скачать любой сохранённый `.sub` файл хоста
+    по имени+MD5 (asset theft). Не делаю модуль, но вектор задокументирован.
+  - CampaignSave — сервер сам пушит при `LastSaveID != client.LastRecvCampaignSaveID`.
+  - Mod — гейтится `AllowModDownloads` + наличие в `AllPackages`.
+### Текущий статус исследования
+- DONE: 28 файлов, PARTIAL: 5 (включая GameServer на 5300 строк).
+- Lines read: 32 385 / 868 372 (~3.7%).
+- Поверхность первичного диспатча пакетов 0..26 и всех IClientSerializable исчерпана.
+---
+## Wave 5 — Character events / Chat / Hull / Crew / Items
+### 🔒 Всё закрыто
+- Character.ServerEventRead обрабатывает только 5 из 19 событий; остальные
+  (SetAttackTarget, UpdateExperience, UpdateSkills, UpdateMoney и т.д.)
+  сервером из клиентских пакетов не читаются.
+- ChatMessage.ServerRead — SanitizeText, кап 200, Levenshtein-спам-фильтр,
+  rate limit. Имя отправителя из `c.Name`, а не из пакета. Order валидирует
+  OrderPrefab и target.
+- Item.ServerEventRead — ComponentState/InventoryState, Treatment, Combine,
+  ChangeProperty — все с CanClientAccess/CanInteractWith.
+- Hull.ServerEventRead — Status (вода/огонь) только ConsoleCommands + fire/editfire;
+  Decal требует Sprayer и AllowInput; BackgroundSections требует Sprayer.
+- MultiPlayerCampaign.ServerReadCrew — увольнение/переименование = ManageHires +
+  доступ к NPC; без права можно переименовать только себя. Подтверждение
+  pending-наймов и updatePending — нормальный игровой флоу с доступом к NPC.
+- MultiPlayerCampaign.ServerReadMoney — Sender ID сверяется, TryDeduct откатывает,
+  банковский вывод ограничен MaximumMoneyTransferRequest.
+### Итог волны 5
+Новых эксплойтов нет. Архитектурный вывод: операции (деньги, опыт, скиллы,
+таланты, TeamChange, AddToCrew, UpdateSkills) не читаются сервером из клиента.
+Эксплойты только там, где сервер доверил клиенту данные:
+- MedicalClinic.Price (HIT #1), Fabricator.TryPurchase игнор (HIT #6),
+  SERVER_COMMAND bypass (HIT #2), TAKEOVERBOT при ReplaceCost==0 (HIT #3),
+  READY_CHECK без прав (HIT #7).
+---
+## Wave 6 — Input / Spectate / Voting / SelectMode / Console
+### 🔥 HIT #8 — SpectatingPos обход DisableDistance (НОВОЕ)
+`GameServer.cs:1722` — `ClientNetSegment.SpectatingPos` в `ClientReadIngame`:
+```csharp
+case ClientNetSegment.SpectatingPos:
+    c.SpectatePos = new Vector2?(new Vector2(inc.ReadSingle(), inc.ReadSingle()));
+    break;
+```
+Нет никаких проверок. Любой живой игрок может прислать координаты, и сервер
+будет использовать их для решения, что стримить:
+```csharp
+else if (otherCharacter != clientCharacter &&
+         shortestDist(c.SpectatePos.Value, otherCharacter) >= Pow2(otherCharacter.DisableDistance))
+    continue; // вырезаем сущность из снапа
+```
+Если прислать SpectatePos рядом с врагом/приватной зоной, сервер начнёт
+отдавать позиции сущностей, normally отключённых из-за DisableDistance
+(декор/ИИ на большом расстоянии). Wallhack-ish инфо-утечка.
+### 🔒 Закрытые направления
+- Voting.SubmarineVote — требует CanPurchaseSub или IsSubmarineOwned.
+- Voting.TransferMoney — StartTransferVote вызывается только если from==null && to==sender.
+  Подставить другого отправителя нельзя в обычном пути.
+- ClientPermissions.SelectMode (32) — проходит байпас? В коде SelectMode тоже
+  проходит без прав — можно менять выбранный гейммод в лобби. Не критично.
+- ClientPermissions.SelectSub (16) — меняет SelectedShuttle/SelectedSub/SelectedEnemySub,
+  но суб должен быть в GetSubList().
+- Kick/Ban — байпас не пропускает.
+- ConsoleCommands — DebugConsole.ServerRead проверяет права.
+- Character.ServerReadInput — серверная позиция управляется физикой, не вводом.
+### Итог волн 1-6: проверены ВСЕ 27 первичных типов пакетов и ВСЕ ветки ClientReadServerCommand.
+- Рабочие эксплойты (7 шт): Free Medical (#1), SERVER_COMMAND bypass (#2),
+  Free TAKEOVERBOT (#3), READY_TO_SPAWN спектейт (#4), Fabricator free craft (#6),
+  Force ReadyCheck (#7), SelectMode/SelectSub lobby tampering (мелочь).
+- Не эксплойты: SpectatePos info leak (#8), ReadyCheck 1-мин клиентский кулдаун.
+---
+## Wave 7 — GeneticMaterial / Item Combine / AI / Misc
+### 🔒 Закрыто
+- GeneticMaterial — только ServerEventWrite, нет ServerEventRead/IClientSerializable.
+- OutpostTerminal — пустой класс.
+- ItemComponent.Combine — стакуемые предметы переносят Condition; требует
+  одинаковый Prefab, ненулевую Condition и дистанцию. Дюпа нет.
+- ItemContainer.Combine — проверяет AllowDragAndDrop, slotRestrictions,
+  CanAccessInventory.
+- ConversationAction — опция по индексу из списка, сервер сам прислал; ForceSay
+  только speaker=НПС из ивента.
+- EntitySpawnerComponent — нет ServerEventRead.
+- AI/HumanAIController — input ботов из objective-логики, не из сети.
+- Voting.SubmarineVote/TransferVote — инициатор из c.Name, не из пакета.
+### 📊 Итоговый статус: серверная поверхность клиентских данных (Barotrauma 1.13) исчерпана полностью.
+Финальный список эксплойтов (7):
+1. Free Medical Clinic — NetAffliction.Price=0.
+2. SERVER_COMMAND permission bypass.
+3. Free TAKEOVERBOT при ReplaceCostPercentage==0.
+4. READY_TO_SPAWN self-set SpectateOnly.
+5. Fabricator free RequiredMoney.
+6. Force Ready Check.
+7. SpectatingPos info leak.
+---
+## Wave 8 — Missions / PvP / Traitors / CharacterInfo
+### 🔒 Всё закрыто
+- PvPMode — 28 строк, конструктор.
+- CombatMission — только ServerWrite.
+- Mission / MissionMode / MissionAction — сервер шлёт стейт.
+- TraitorManager — серверный, VoteType.Traitor только sender.InGame && Character != null.
+- UPDATE_CHARACTERINFO — сбрасывает SpectateOnly, рейт-лимит, валидирует имя/цвет,
+  игнорирует при existingCampaignData, фильтрует Job variants.
+- ENDROUND_SELF — легитимный «покинуть раунд».
+- PING_RESPONSE — сверяет случайные байты lastPingData.
+- RESPONSE_CANCEL_STARTGAME — только при активном предупреждении старта.
+Подтверждено: все 27 ClientPacketHeader и все 6 ClientNetSegment обработчики прочитаны.
+---
+## Wave 9 — 🔥 HIT #9: Sell fake items (money duplication)
+Файл: `SERVER/.../CargoManager.SellItems` (строки 43–98).
+```csharp
+foreach (SoldItem item in itemsToSell) {
+    int itemValue = sellValues[item.ItemPrefab];
+    if (store.Balance >= itemValue && !item.Removed) {
+        if (item.Origin == SellOrigin.Submarine && item.ID == 0 && !item.Removed) {
+            Item matchingItem = sellableItemsInSub.FirstOrDefault(...);
+            if (matchingItem == null) continue;
+            item.SetItemId(matchingItem.ID);
+        }
+        if (!item.Removed && canAddToRemoveQueue) {
+            Item entity = Entity.FindEntityByID(item.ID) as Item;
+            if (entity != null) {
+                item.Removed = true;
+                Entity.Spawner.AddItemToRemoveQueue(entity);
+            }
+            // <<< НЕТ else/continue если entity == null!
+        }
+        store.Balance -= itemValue;
+        campaign.GetWallet(client).Give(itemValue);   // бесплатные деньги
+    }
+}
+```
+При `Origin == Character` сервер не проверяет:
+- существует ли предмет с переданным `itemId` в мире,
+- принадлежит ли он отправителю,
+- существует ли он вообще.
+Если `Entity.FindEntityByID(fakeId)` вернул null, сервер пропускает
+удаление предмета, но всё равно начисляет деньги.
+Поля SoldItem клиент контролирует полностью:
+```csharp
+Identifier prefabId = msg.ReadIdentifier();
+ushort    itemId    = msg.ReadUInt16();
+bool      removed   = msg.ReadBoolean();
+byte      sellerId  = msg.ReadByte();   // не используется
+byte      origin    = msg.ReadByte();   // 0 = Character
+```
+Условия: 1) ItemPrefab должен приниматься магазином; 2) store.Balance >= itemValue;
+3) пакет через SERVER_COMMAND ManageCampaign (байпас); 4) НО внутренний вызов
+обёрнут в `AllowedToManageCampaign(SellInventoryItems)`. Практически: owner/
+self-host/нет админов онлайн — бесконечные деньги.
+---
+## Wave 10 — Items: doors / circuit boxes / property changes
+### 🔒 Закрыто
+- Door — не реализует IClientSerializable/ServerEventRead; реагирует на Signal
+  и Use/Select с HasAccess.
+- Item.ReadPropertyChange:
+  - GetInGameEditableProperties(true) отдаёт только `[InGameEditable]`.
+  - Проверяется AllowInGameEditing.
+  - Для ConditionallyEditable вызывается condition.IsEditable(item).
+  - CanClientAccess(sender): дистанция/доступ.
+- Исключение: NameTag.AllowInGameEditing=true (переименование бейджика).
+- MemoryComponent.Value — InGameEditable, но CanClientAccess (200 единиц).
+### 📊 Архитектурный вывод
+Сервер не доверяет клиенту: позиция/скорость, взаимодействие, деньги/перки/скиллы,
+здоровье.
+Сервер доверяет: NetAffliction.Price, результат TryPurchase в Fabricator,
+короткое замыкание ClientReadServerCommand, ReplaceCostPercentage==0, READY_CHECK,
+CargoManager.SellItems Character-origin ID (но под SellInventoryItems),
+SpectatingPos.
+---
+## Wave 11 — Final sweep: every remaining IClientSerializable
+Reactor, Engine, Pump, DockingPort, Terminal, Fabricator, Sonar, CircuitBox,
+ButtonTerminal, ConnectionPanel, Holdable, PowerContainer, PowerDistributor,
+Repairable, Deconstructor, CustomInterface, WifiComponent, Wire, Inventory —
+все gated CanClientAccess / ranged. Дюпа нет. PowerDistributor NameChange берёт
+powerGroup.Name без санитизации (cosmetic).
+---
+## Wave 12 — 🔥 HIT #10: Join server WITHOUT required mods
+`SERVER/.../Networking/ServerPeer.cs:134` — `ConnectionInitialization.ContentPackageOrder`:
+сервер шлёт список модов, но ничего не читает обратно от клиента; ставит
+пendingClient.InitializationStep = Success. Можно подключаться к серверам с
+обязательными модами без их установки. Для read-only читов идеальный вектор.
+Другие находки:
+- PreferredTeam смена без прав (ReadClientNameChange, PvP).
+- Name/job cooldown клиентский; nameId монотонный, не валидируется сильно.
+- Ping response сверяет lastPingData (нельзя подделать без перехвата).
+---
+## Wave 13 — Harmony-чит идеи (клиентские патчи)
+Репутация/локация подделка на клиенте в мультиплеере НЕ работает: сервер сам
+определяет destination по своей Map. Где Harmony реально работает (клиентские
+читы): DisablePositionUpdates/FreezeCharacter, Hull.Oxygen/Character.Oxygen,
+CharacterHealth.GetVitality, Repairable.ClientDisplayProgress, Sonar ESP,
+Map.Location.Unlocked визуально, GUI.Cursor/PlayerInput, Item подсветка,
+Fabricator визуальный instant craft, Steering.CanClientAccess (на сервере всё равно
+всякой). Серверная модель достаточно авторитетна.
+```
+## Wave 14 — Network peer layer (ServerPeer/Lidgren/P2P)
+- P2P owner-relay не валидирует EndpointStr (by design owner trusted).
+- P2P ProcessAuthTicket не делает аутентификацию (by design P2P trusted).
+- Lidgren при битом PeerPacketHeaders банит endpoint отправителя (защита).
+- ServerEntityEventManager нет rate-limit, но dosProtection.Pause + try/catch.
+- Same-IP permission bleed — не нашёл (права по точному совпадению имени/steamid/endpoint).
+- Raw modeIndex OOB — не нашёл (SegmentTableReader сериализует enum, неизвестное отбрасывает).
+---
+## Wave 15 — ALL remaining IClientSerializable ItemComponents
+Таблица компонентов: все защищены, кроме:
+- Fabricator: unknown recipeHash = malformed HIT.
+- ConnectionPanel: short connectionCount = malformed HIT.
+- Inventory SharedRead: mainformed start/end = malformed OOB HIT.
+---
+## Wave 16 — FINAL: Networking/ directory comprehensive audit
+Читают от клиента и проверены: BanList (Ban), ChatMessage (Sanitize+order),
+FileSender (AllowFileTransfers/AllowModDownloads), OrderChatMessage (bad order = HIT),
+ServerSettings (ManageSettings), VoipServer (buffer lengths little amplif),
+EventManager (target check), MedicalClinic, MultiPlayerCampaign, Voting, Hull,
+Item, Character, Inventory.
+Новые: FileSender.CampaignSave — отсутствует permission check (HIT #11).
+VoipQueue.Read — ReadBytes(len) без bounds-check, max amplif 8×255=2040 байт/пакет.
+---
+## Wave 17 — HIT #11: File exfiltration (no perms)
+`GameServer.cs:981`, пакет 5 (CLIENT_REQUEST_FILE):
+```csharp
+if (ServerSettings.AllowFileTransfers)
+    FileSender.ReadFileRequest(inc, connectedClient);
+```
+AllowFileTransfers по умолчанию true на listen-серверах. Внутри:
+- CampaignSave (type=1): `if (GameSession != null && no transfer) StartTransfer(...)` — НЕТ проверки прав.
+- Submarine (type=0): имя+MD5 из SavedSubmarines — без прав.
+- Mod (type=2): требует AllowModDownloads + хеш в AllPackages.
+Отдаёт CampaignSave: вся карта, репутации, балансы, инвентари магазинов,
+квесты/трейтор-стейты, метаданные игроков (в т.ч. Steam ID в истории), сиды.
+Data exfiltration / information disclosure. Submarine exfiltration — кастомные
+дизайны админов.
+---
+## FINAL Networking/ exhaustive audit
+### A. Диспетчеры верхнего уровня
+GameServer.ReadDataMessage case 0..26; ServerPeer.ReadConnectionInitializationStep;
+LidgrenServerPeer.HandleDataMessage; P2PServerPeer.HandleDataMessage;
+ChildServerRelay (IPC); SegmentTableReader (bounds-check).
+### B. Пакеты прикладного уровня
+ChatMessage (ranged, CanUseRadio; bad order = HIT), OrderChatMessage (bad order = HIT),
+ServerSettings (ManageSettings), BanList (Ban+Unban), FileSender (CampaignSave no perm = HIT #11),
+VoipServer (8×255 amplif), RespawnManager (не читает), ServerEntityEventManager (malformed доходит).
+### C. Модели и утилиты — не читают от клиента.
+### D. Сводка исключений/expands
+1. ChatMessage.ReadOrder — bad orderIdentifier → KeyNotFoundException
+2. OrderChatMessage — bad dismissedOrderIdentifier → KeyNotFoundException
+3. Order.wallSectionIndex — OOB structure.Sections[idx]
+4. Inventory.SharedRead — start>end → IndexOutOfRange
+5. Fabricator.ServerEventRead — unknown recipeHash → KeyNotFoundException
+6. ConnectionPanel.ServerEventRead — short connectionCount → NullReference
+7. FileSender.CampaignSave — отсутствует permission check (HIT #11)
+8. VoipQueue.Read — нет проверки bufferLengths[i] <= remainingBytes (amplif маленький)
+9. Item.ServerEventRead ComponentState/InventoryState — опровергнуто, индексы ranged.
+### E. Что ещё можно посмотреть вне Networking/ — Items/Components (проверено),
+Character.cs (проверено), Hull.cs (проверено), CrewManager (не принимает),
+TraitorManager (серверный), Submarine через FileSender (HIT #11), LuaCs (мод).
+---
+## Wave 18 — Top-level Barotrauma/ classes exhaustive re-audit
+- CrewManager.ReadToggleReserveBenchMessage — требует ManageHires. Уязвимости нет.
+- DebugConsole.ServerRead — HasPermission(ConsoleCommands) или OwnerConnection.
+- EventManager.ServerRead — actionId+selectedOption; проверяет TargetClients,
+  уже выбранный option. Без exception/инъекций (внешний отчёт это опроверг).
+- MedicalClinic.ServerRead — HIT #1 только.
+- MultiPlayerCampaign.ServerRead — только уже найденные HIT.
+- Voting.ServerRead — TransferMoney: amount/from/to без проверки
+  from==sender, только ShouldRejectVote (cooldown). **Unauthorized vote initiation**;
+  не мгновенный эксплойт, но можно инициировать перевод от любого к любому.
+- Hull.ServerEventRead — flood/oxygen gated.
+- Item.ServerEventRead — ComponentState/InventoryState индексы ranged; Treatment/
+  Combine/ChangeProperty требуют CanInteractWith.
+- Character.ServerReadInput/ServerEventRead — физика сервера, LevelID проверяется.
+- Inventory.ServerEventRead → SharedRead: start/end byte БЕЗ проверки `end <= capacity`!
+  start=200,end=210 → IndexOutOfRange. Это HIT, уже в меню.
+### Финальная сверка всех каталогов
+- Abilities/PerkBehaviors/IO/Eos/Steam/RuinGeneration/MapCreatures/Extensions/Utils — 0 серверных чтений.
+- LuaCs — мод.
+- Items/Components — 23 файла с IReadMessage; 19 ServerEventRead, 4 ClientEventRead (сервер→клиент).
+- Корень — 17 файлов с Read*, все пройдены.
+- Networking — 109 файлов, 23 содержат Read*, разобраны.
+### Подтверждённые эксплойты (9):
+1. MedicalClinic — free heal (incl. genes)
+2. SERVER_COMMAND ManageRound/ManageCampaign bypass
+3. TAKEOVERBOT free hire
+4. READY_TO_SPAWN SpectateOnly toggle
+5. CharacterInfo UpdateCharacterInfo (color/job rename)
+6. Fabricator ignores TryPurchase result
+7. ReadyCheck has no permission/cooldown
+8. SpectatingPos no validation (info leak)
+9. SellFakeItem — CargoManager.SellItems doesn't validate Character item ID (requires SellInventory perm)
+10. (волна 16) FileSender CampaignSave — no permission check (data exfil)
+### Malformed/DoS векторы (5):
+- Inventory.SharedRead OOB slot range
+- Fabricator unknown recipeHash
+- ConnectionPanel short connectionCount
+- OrderChatMessage bad order/dismissed id
+- Order bad wallSectionIndex
