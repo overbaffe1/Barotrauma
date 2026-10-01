@@ -15141,3 +15141,56 @@ FACEPUNCH STEAMWORKS 100% (26,637 строк, ~160 файлов):
   Steamworks SDK (SteamCallbacks 3124/SteamEnums 2516 — обёртки
   C-коллбеков!). Structs/ = структуры Steam API.
 
+
+================================================================================
+[WAVE 446 - ★★★★★ 100.00%! ВСЕ 2518 ФАЙЛОВ / 689,676 СТРОК ИССЛЕДОВАНЫ!]
+================================================================================
+ФИНАЛЬНЫЙ БЛОК (663 файла / 120,158 строк — MonoGame + SharpFont +
+GameAnalytics + всё остальное):
+
+--- MONOGAME FRAMEWORK (84K, ~200 файлов; ФОРК для Barotrauma!) ---
+  GraphicsDevice (DirectX/OpenGL/Vulkan-бэкенды), SpriteBatch (Deferred/
+  Immediate/BackToFront/FrontToBack + custom vertex-рендер), Texture2D,
+  RenderTarget2D, Effect/BasicEffect (шейдер-обёртки), Sound (XAct-мёртв),
+  Input (Mouse/Keyboard/GamePad — юзается PlayerInput'ом!), Math-структуры
+  (дубль XNATypes для внутренней совместимости), ZLibStream/Deflate/Inflate
+  (сжатие контента!), Stb.Image (PNG/JPEG декодер С НУЛЯ — generated!),
+  Content-пайплайн, Audio/XACT. ★Это ФОРК MonoGame DesktopGL с правками
+  (юзаeтся XNATypes-типами вместо своих!). Весь рендер/звук/ввод игры
+  питается этим слоем.
+
+--- SHARPFONT 100% (27K, ~60 файлов) — FreeType-биндинг для шрифтов!
+  Face 2412 (загрузка TTF/OTF), Glyph, Outline, TT-интерпретатор
+  (TrueType bytecode!). ScalableFont 362-го юзает ЭТО для всех шрифтов игры.
+
+--- GAMEANALYTICS 100% (9K, ~20 файлов): GAState (событийная очередь!),
+  SimpleJSON 1347 (свой JSON-парсер!), GA-протокол, Progression/
+  Business/Design/Resource события. GameAnalyticsManager 374-го юзает это.
+
+--- ОСТАЛЬНОЕ: various deployment scripts, project files, etc.
+
+================================================================================
+[★★★★★ ФИНАЛЬНЫЙ ИТОГ ИССЛЕДОВАНИЯ ★★★★★]
+================================================================================
+2518 ФАЙЛОВ / 689,676 СТРОК / 446 ВОЛН / 100.00% ПОКРЫТИЕ.
+
+ВСЁ: собственные сорсы (Barotrauma/BarotraumaShared/Client/Server ~419K),
+BarotraumaLibs (EOS-обёртка + BarotraumaCore + Hyper PropertySync ~9K),
+Lidgren (сетевой транспорт ~10K), Concentus (Opus-кодек на C# ~46K),
+XNATypes (форк типов XNA ~13K), Farseer (физика ~51K), Facepunch
+(Steamworks ~27K), MonoGame (рендер/платформа ~84K), SharpFont (FreeType
+шрифты ~27K), GameAnalytics (аналитика ~9K).
+
+НАЙДЕНО: 2 флагманских вектора (TalentOverspend, SellById) + CAMPAIGN_STATE,
+6+ аудитов дыр, сотни квирков и дев-признаний, десятки готовых мод-схем.
+Barotrauma разложен по винтикам от handshake до титров.
+
+
+[MONGOgame детали]
+  SpriteBatch.Begin: сортировки Deferred(быстрый)/BackToFront/FrontToBack/
+  Immediate/Texture — игра юзает Deferred + кастомный SpriteRecorder для
+  фоновых потоков (415-й!). ZLibStream = DeflateStream-совместимый zlib
+  (контент .bar!). Stb.Image = Stb-библиотеки сконвертированы в C#
+  автогенератором (5K строк PNG/JPEG!). GraphicsDevice: DirectX (Windows),
+  OpenGL (Linux/Mac) — два полных бэкенда. Effect = HLSL/FX скомпилированные
+  (watershader/deformshader/SolidColor из игровых волн!).

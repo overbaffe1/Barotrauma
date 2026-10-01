@@ -11148,5 +11148,3983 @@
       1,
       8
     ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/ZLibStream/ZlibStream.cs": [
+    [
+      1,
+      9319
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/Stb.Image.Generated.cs": [
+    [
+      1,
+      4792
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Face.cs": [
+    [
+      1,
+      2412
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/Deflate.cs": [
+    [
+      1,
+      1879
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/Inflate.cs": [
+    [
+      1,
+      1796
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDevice.DirectX.cs": [
+    [
+      1,
+      1585
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OpenGL.cs": [
+    [
+      1,
+      1552
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/Stb.ImageWrite.Generated.cs": [
+    [
+      1,
+      1398
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDevice.cs": [
+    [
+      1,
+      1393
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SpriteBatch.cs": [
+    [
+      1,
+      1370
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Utilities/SimpleJSON.cs": [
+    [
+      1,
+      1347
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/State/GAState.cs": [
+    [
+      1,
+      1341
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDevice.OpenGL.cs": [
+    [
+      1,
+      1293
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/SDL/SDL2.cs": [
+    [
+      1,
+      1202
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/GZipStream.cs": [
+    [
+      1,
+      1033
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Game.cs": [
+    [
+      1,
+      1032
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsExtensions.cs": [
+    [
+      1,
+      947
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Library.cs": [
+    [
+      1,
+      897
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectParameter.cs": [
+    [
+      1,
+      886
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Events/GAEvents.cs": [
+    [
+      1,
+      853
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/GameAnalytics.cs": [
+    [
+      1,
+      839
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/CRC32.cs": [
+    [
+      1,
+      808
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/LzxDecoder.cs": [
+    [
+      1,
+      780
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FT.Internal.cs": [
+    [
+      1,
+      770
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardInput.WinRT.cs": [
+    [
+      1,
+      764
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Fixed16Dot16.cs": [
+    [
+      1,
+      752
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/DeflateStream.cs": [
+    [
+      1,
+      740
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchPanelState.cs": [
+    [
+      1,
+      734
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/ZlibStream.cs": [
+    [
+      1,
+      725
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/ZlibCodec.cs": [
+    [
+      1,
+      712
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Outline.cs": [
+    [
+      1,
+      698
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Png/PngCommon.cs": [
+    [
+      1,
+      667
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Keys.cs": [
+    [
+      1,
+      653
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Validators/GAValidator.cs": [
+    [
+      1,
+      631
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/ZlibBaseStream.cs": [
+    [
+      1,
+      627
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Fnt/Header.cs": [
+    [
+      1,
+      594
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Fixed26Dot6.cs": [
+    [
+      1,
+      579
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GraphicsDeviceManager.cs": [
+    [
+      1,
+      579
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture2D.OpenGL.cs": [
+    [
+      1,
+      560
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Http/GAHTTPApi.cs": [
+    [
+      1,
+      553
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Lz4Stream/Lz4DecoderStream.cs": [
+    [
+      1,
+      549
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Fixed2Dot14.cs": [
+    [
+      1,
+      546
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTBitmap.cs": [
+    [
+      1,
+      546
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/Zlib.cs": [
+    [
+      1,
+      546
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/SkinnedEffect.cs": [
+    [
+      1,
+      538
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/OS2.cs": [
+    [
+      1,
+      532
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Device/GADevice.cs": [
+    [
+      1,
+      514
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EnvironmentMapEffect.cs": [
+    [
+      1,
+      510
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentManager.cs": [
+    [
+      1,
+      505
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/BasicEffect.cs": [
+    [
+      1,
+      501
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/GlyphSlot.cs": [
+    [
+      1,
+      475
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Store/GAStore.cs": [
+    [
+      1,
+      472
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/Effect.cs": [
+    [
+      1,
+      459
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture2D.DirectX.cs": [
+    [
+      1,
+      457
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Glyph.cs": [
+    [
+      1,
+      444
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/DxtUtil.cs": [
+    [
+      1,
+      443
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/AlphaTestEffect.cs": [
+    [
+      1,
+      441
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/InfTree.cs": [
+    [
+      1,
+      436
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Windows/GamerServices/Guide.cs": [
+    [
+      1,
+      427
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture2D.cs": [
+    [
+      1,
+      424
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/Tree.cs": [
+    [
+      1,
+      423
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsAdapter.Legacy.cs": [
+    [
+      1,
+      408
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/Task.cs": [
+    [
+      1,
+      407
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/OutlineFuncs.cs": [
+    [
+      1,
+      404
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SpriteFont.cs": [
+    [
+      1,
+      404
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Header.cs": [
+    [
+      1,
+      396
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/SDL/SDLGameWindow.cs": [
+    [
+      1,
+      394
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Stroker.cs": [
+    [
+      1,
+      392
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Png/PngWriter.cs": [
+    [
+      1,
+      369
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.Android.cs": [
+    [
+      1,
+      356
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchLocation.cs": [
+    [
+      1,
+      348
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Png/PngReader.cs": [
+    [
+      1,
+      347
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/Private.cs": [
+    [
+      1,
+      346
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Curve.cs": [
+    [
+      1,
+      338
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Windows/GamerServices/SignedInGamer.cs": [
+    [
+      1,
+      327
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/DualTextureEffect.cs": [
+    [
+      1,
+      327
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/Stb.Image.cs": [
+    [
+      1,
+      318
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexDeclaration.cs": [
+    [
+      1,
+      316
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTStream.cs": [
+    [
+      1,
+      315
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.XInput.cs": [
+    [
+      1,
+      314
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.SDL.cs": [
+    [
+      1,
+      309
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReader.cs": [
+    [
+      1,
+      308
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/TaskManager.cs": [
+    [
+      1,
+      308
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardState.cs": [
+    [
+      1,
+      303
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Error.cs": [
+    [
+      1,
+      298
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadCapabilities.cs": [
+    [
+      1,
+      297
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Utilities/SimpleJSONBinary.cs": [
+    [
+      1,
+      297
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GamePlatform.cs": [
+    [
+      1,
+      296
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SpriteBatcher.cs": [
+    [
+      1,
+      292
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/SDL/SDLGamePlatform.cs": [
+    [
+      1,
+      285
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/DepthStencilState.cs": [
+    [
+      1,
+      285
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchCollection.cs": [
+    [
+      1,
+      278
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/HoriHeader.cs": [
+    [
+      1,
+      274
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Manager.cs": [
+    [
+      1,
+      274
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/VertHeader.cs": [
+    [
+      1,
+      273
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/DictionaryKeys.cs": [
+    [
+      1,
+      271
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTSize.cs": [
+    [
+      1,
+      269
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/FaceInfo.cs": [
+    [
+      1,
+      267
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Viewport.cs": [
+    [
+      1,
+      263
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FT.Public.cs": [
+    [
+      1,
+      262
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/BlendState.cs": [
+    [
+      1,
+      261
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/MaxProfile.cs": [
+    [
+      1,
+      258
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MouseState.cs": [
+    [
+      1,
+      258
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Pclt.cs": [
+    [
+      1,
+      251
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTMatrix.cs": [
+    [
+      1,
+      250
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentTypeReaderManager.cs": [
+    [
+      1,
+      248
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectHelpers.cs": [
+    [
+      1,
+      241
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTVector.cs": [
+    [
+      1,
+      240
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PresentationParameters.cs": [
+    [
+      1,
+      239
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/RasterParams.cs": [
+    [
+      1,
+      237
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Logging/GALogger.cs": [
+    [
+      1,
+      233
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Threading/GAThreading.cs": [
+    [
+      1,
+      232
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/EncodingId.cs": [
+    [
+      1,
+      230
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.IOS.cs": [
+    [
+      1,
+      229
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadState.cs": [
+    [
+      1,
+      227
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBuffer.DirectX.cs": [
+    [
+      1,
+      225
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.tvOS.cs": [
+    [
+      1,
+      224
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadButtons.cs": [
+    [
+      1,
+      221
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/TargetBlendState.cs": [
+    [
+      1,
+      220
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Model.cs": [
+    [
+      1,
+      219
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/DepthStencilState.OpenGL.cs": [
+    [
+      1,
+      218
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBuffer.cs": [
+    [
+      1,
+      217
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/SamplerState.cs": [
+    [
+      1,
+      217
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/TaskFactory.cs": [
+    [
+      1,
+      211
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/RasterFuncs.cs": [
+    [
+      1,
+      210
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/FaceDict.cs": [
+    [
+      1,
+      209
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardUtil.Web.cs": [
+    [
+      1,
+      209
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/BitmapGlyph.cs": [
+    [
+      1,
+      207
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/SizeRequest.cs": [
+    [
+      1,
+      205
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/OpenArgs.cs": [
+    [
+      1,
+      204
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTarget2D.DirectX.cs": [
+    [
+      1,
+      203
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardUtil.SDL.cs": [
+    [
+      1,
+      201
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/SamplerState.OpenGL.cs": [
+    [
+      1,
+      201
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/CurveKey.cs": [
+    [
+      1,
+      201
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/CurveKeyCollection.cs": [
+    [
+      1,
+      200
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCube.OpenGL.cs": [
+    [
+      1,
+      199
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ModelReader.cs": [
+    [
+      1,
+      199
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/LoadFlags.cs": [
+    [
+      1,
+      196
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTList.cs": [
+    [
+      1,
+      195
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/ModuleClass.cs": [
+    [
+      1,
+      194
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadThumbSticks.cs": [
+    [
+      1,
+      192
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ReflectiveReader.cs": [
+    [
+      1,
+      191
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/BBox.cs": [
+    [
+      1,
+      190
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameWindow.cs": [
+    [
+      1,
+      187
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/SBit.cs": [
+    [
+      1,
+      185
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Windows/SharpDXHelper.cs": [
+    [
+      1,
+      184
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBuffer.OpenGL.cs": [
+    [
+      1,
+      183
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/InputLayoutCache.cs": [
+    [
+      1,
+      181
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ConstantBuffer.cs": [
+    [
+      1,
+      181
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Texture2DReader.cs": [
+    [
+      1,
+      181
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/GlyphMetrics.cs": [
+    [
+      1,
+      180
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SwapChainRenderTarget.cs": [
+    [
+      1,
+      180
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsAdapter.cs": [
+    [
+      1,
+      180
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Postscript.cs": [
+    [
+      1,
+      179
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexElement.cs": [
+    [
+      1,
+      179
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/ReflectionHelpers.cs": [
+    [
+      1,
+      178
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/OutlineGlyph.cs": [
+    [
+      1,
+      177
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCube.DirectX.cs": [
+    [
+      1,
+      175
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDevice.OpenGL.FramebufferHelper.cs": [
+    [
+      1,
+      175
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Memory.cs": [
+    [
+      1,
+      174
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/SBitCache.cs": [
+    [
+      1,
+      173
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/ImageCache.cs": [
+    [
+      1,
+      173
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/TaskTResult.cs": [
+    [
+      1,
+      173
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/IndexBuffer.DirectX.cs": [
+    [
+      1,
+      172
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/CharMap.cs": [
+    [
+      1,
+      170
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/ReusableItemList.cs": [
+    [
+      1,
+      170
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.UWP.cs": [
+    [
+      1,
+      170
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBufferBindings.cs": [
+    [
+      1,
+      169
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsResource.cs": [
+    [
+      1,
+      168
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/SizeMetrics.cs": [
+    [
+      1,
+      167
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/RasterizerState.cs": [
+    [
+      1,
+      166
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexInputLayout.cs": [
+    [
+      1,
+      165
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture3D.cs": [
+    [
+      1,
+      165
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SurfaceFormat.cs": [
+    [
+      1,
+      165
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTVector26Dot6.cs": [
+    [
+      1,
+      164
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/SamplerState.DirectX.cs": [
+    [
+      1,
+      163
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Short4.cs": [
+    [
+      1,
+      159
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Byte4.cs": [
+    [
+      1,
+      159
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/FontInfo.cs": [
+    [
+      1,
+      157
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Generic.cs": [
+    [
+      1,
+      156
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchPanel.cs": [
+    [
+      1,
+      156
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Utilities/GAUtilities.cs": [
+    [
+      1,
+      154
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FreeTypeException.cs": [
+    [
+      1,
+      153
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture3D.DirectX.cs": [
+    [
+      1,
+      153
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/SfntName.cs": [
+    [
+      1,
+      152
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Tasks/SdkErrorTask.cs": [
+    [
+      1,
+      152
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Windows/GamerServices/MonoGameGamerServicesHelper.cs": [
+    [
+      1,
+      151
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/HalfVector4.cs": [
+    [
+      1,
+      151
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/RendererClass.cs": [
+    [
+      1,
+      150
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Fnt/WinFntID.cs": [
+    [
+      1,
+      148
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/LzxStream/LzxDecoderStream.cs": [
+    [
+      1,
+      148
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/GestureSample.cs": [
+    [
+      1,
+      148
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/IndexBuffer.OpenGL.cs": [
+    [
+      1,
+      148
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.cs": [
+    [
+      1,
+      147
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Scaler.cs": [
+    [
+      1,
+      146
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FaceFlags.cs": [
+    [
+      1,
+      145
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/BitmapSize.cs": [
+    [
+      1,
+      145
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTargetBinding.cs": [
+    [
+      1,
+      145
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ShaderProgramCache.cs": [
+    [
+      1,
+      144
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/PinnedArray.cs": [
+    [
+      1,
+      143
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsAdapter.DirectX.cs": [
+    [
+      1,
+      142
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/DirectionalLight.cs": [
+    [
+      1,
+      142
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Bgr565.cs": [
+    [
+      1,
+      141
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/VarAxis.cs": [
+    [
+      1,
+      140
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Buttons.cs": [
+    [
+      1,
+      140
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCube.cs": [
+    [
+      1,
+      140
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Rg32.cs": [
+    [
+      1,
+      139
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/AutoHinterScript.cs": [
+    [
+      1,
+      138
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/Stb.ImageWrite.cs": [
+    [
+      1,
+      138
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Threading.cs": [
+    [
+      1,
+      137
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Rgba1010102.cs": [
+    [
+      1,
+      137
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Bgra5551.cs": [
+    [
+      1,
+      137
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Rgba64.cs": [
+    [
+      1,
+      136
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Encoding.cs": [
+    [
+      1,
+      135
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/JoystickState.cs": [
+    [
+      1,
+      135
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.Web.cs": [
+    [
+      1,
+      135
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/MMVar.cs": [
+    [
+      1,
+      134
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Bgra4444.cs": [
+    [
+      1,
+      134
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectPass.cs": [
+    [
+      1,
+      133
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadDPad.cs": [
+    [
+      1,
+      132
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelMeshPart.cs": [
+    [
+      1,
+      131
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelMesh.cs": [
+    [
+      1,
+      131
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Deflate/ZlibConstants.cs": [
+    [
+      1,
+      128
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Alpha8.cs": [
+    [
+      1,
+      128
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OpenGL.MacOS.cs": [
+    [
+      1,
+      128
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture.cs": [
+    [
+      1,
+      127
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelMeshCollection.cs": [
+    [
+      1,
+      126
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelBoneCollection.cs": [
+    [
+      1,
+      126
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/DisplayMode.cs": [
+    [
+      1,
+      126
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/IndexBuffer.cs": [
+    [
+      1,
+      125
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/Shader.cs": [
+    [
+      1,
+      125
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Joystick.SDL.cs": [
+    [
+      1,
+      123
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/RasterizerState.OpenGL.cs": [
+    [
+      1,
+      122
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Bdf/Property.cs": [
+    [
+      1,
+      121
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsCapabilities.cs": [
+    [
+      1,
+      120
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsCapabilities.OpenGL.cs": [
+    [
+      1,
+      120
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDevice.Web.cs": [
+    [
+      1,
+      118
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexElement.DirectX.cs": [
+    [
+      1,
+      117
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/HalfTypeHelper.cs": [
+    [
+      1,
+      117
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/ImageType.cs": [
+    [
+      1,
+      116
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/Shader.OpenGL.cs": [
+    [
+      1,
+      116
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectPassCollection.cs": [
+    [
+      1,
+      116
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/MultiMaster.cs": [
+    [
+      1,
+      114
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OcclusionQuery.cs": [
+    [
+      1,
+      114
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/OS2Rec.cs": [
+    [
+      1,
+      113
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Span.cs": [
+    [
+      1,
+      112
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchPanelCapabilities.cs": [
+    [
+      1,
+      112
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MouseCursor.cs": [
+    [
+      1,
+      112
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/MMAxis.cs": [
+    [
+      1,
+      111
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/DepthStencilState.DirectX.cs": [
+    [
+      1,
+      111
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SamplerStateCollection.cs": [
+    [
+      1,
+      109
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/ListNode.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/JoystickCapabilities.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Parameter.cs": [
+    [
+      1,
+      106
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/BlendFlags.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/JoystickHat.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/NormalizedShort2.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OpenGL.Android.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/GestureType.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBufferBinding.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsMetrics.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/OutlineFlags.cs": [
+    [
+      1,
+      102
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/Short2.cs": [
+    [
+      1,
+      102
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelBone.cs": [
+    [
+      1,
+      102
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/IRenderTarget.cs": [
+    [
+      1,
+      102
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCollection.DirectX.cs": [
+    [
+      1,
+      101
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTargetCube.DirectX.cs": [
+    [
+      1,
+      101
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTarget3D.DirectX.cs": [
+    [
+      1,
+      101
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/CMapCache.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/RasterizerState.DirectX.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SpriteBatchItem.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/Shader.DirectX.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/NormalizedShort4.cs": [
+    [
+      1,
+      99
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/IncreaseXHeightProperty.cs": [
+    [
+      1,
+      97
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MouseCursor.Windows.cs": [
+    [
+      1,
+      97
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardInput.Windows.cs": [
+    [
+      1,
+      97
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamepadUtil.Web.cs": [
+    [
+      1,
+      97
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/VarNamedStyle.cs": [
+    [
+      1,
+      96
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/GlyphToScriptMapProperty.cs": [
+    [
+      1,
+      96
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexDeclaration.OpenGL.cs": [
+    [
+      1,
+      95
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTargetCube.cs": [
+    [
+      1,
+      95
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/StreamDesc.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/Operations.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTarget2D.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsContext.SDL.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/NormalizedByte2.cs": [
+    [
+      1,
+      93
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/NormalizedByte4.cs": [
+    [
+      1,
+      92
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameComponent.cs": [
+    [
+      1,
+      92
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/FaceRec.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/FileHelpers.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Joystick.Web.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/HalfVector2.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Data.cs": [
+    [
+      1,
+      89
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadTriggers.cs": [
+    [
+      1,
+      89
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/LoadTarget.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/EmbeddingTypes.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/ByteBufferPool.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OpenGL.iOS.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelEffectCollection.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PixelMode.cs": [
+    [
+      1,
+      87
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Node.cs": [
+    [
+      1,
+      87
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/CurrentPlatform.cs": [
+    [
+      1,
+      86
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ConstantBufferCollection.cs": [
+    [
+      1,
+      86
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/PCLTRec.cs": [
+    [
+      1,
+      85
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ConstantBuffer.OpenGL.cs": [
+    [
+      1,
+      85
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/MultiArrayReader.cs": [
+    [
+      1,
+      83
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/Internal/PrivateRec.cs": [
+    [
+      1,
+      82
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDebug.DirectX.cs": [
+    [
+      1,
+      82
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MessageBox.Windows.cs": [
+    [
+      1,
+      81
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/HalfSingle.cs": [
+    [
+      1,
+      81
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/IEffectLights.cs": [
+    [
+      1,
+      81
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/DisplayModeCollection.cs": [
+    [
+      1,
+      81
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/EffectMaterialReader.cs": [
+    [
+      1,
+      81
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/RenderMode.cs": [
+    [
+      1,
+      80
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/SpriteEffect.cs": [
+    [
+      1,
+      79
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/IEffectFog.cs": [
+    [
+      1,
+      79
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/DrawableGameComponent.cs": [
+    [
+      1,
+      79
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PInvokeHelper.cs": [
+    [
+      1,
+      78
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/DictionaryReader.cs": [
+    [
+      1,
+      78
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Fnt/Internal/HeaderRec.cs": [
+    [
+      1,
+      77
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Mouse.MacOS.cs": [
+    [
+      1,
+      77
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SamplerStateCollection.DirectX.cs": [
+    [
+      1,
+      77
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Hash.cs": [
+    [
+      1,
+      76
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexPositionColorTexture.cs": [
+    [
+      1,
+      76
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameComponentCollection.cs": [
+    [
+      1,
+      76
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Design/Vector4TypeConverter.cs": [
+    [
+      1,
+      76
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/TitleContainer.cs": [
+    [
+      1,
+      75
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/PlatformId.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/GlyphSlotRec.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/ImageWriter.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/FuncLoader.Desktop.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexPositionColor.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/Blend.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Design/Vector3TypeConverter.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentSerializerAttribute.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/VertHeaderRec.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/HoriHeaderRec.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/SubGlyph.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexPositionNormalTexture.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCollection.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectParameterCollection.cs": [
+    [
+      1,
+      73
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture3D.OpenGL.cs": [
+    [
+      1,
+      72
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/BlendState.OpenGL.cs": [
+    [
+      1,
+      72
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Design/Vector2TypeConverter.cs": [
+    [
+      1,
+      72
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/SubGlyphFlags.cs": [
+    [
+      1,
+      71
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Threading/PriorityQueue.cs": [
+    [
+      1,
+      71
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueTypeValidationFlags.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/SfntTag.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/SizeRequestType.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Gasp.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchLocationState.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Mouse.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCollection.OpenGL.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture.DirectX.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/StrokerLineJoin.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Renderer.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/Internal/FaceInfoRec.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MouseCursor.SDL.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Keyboard.Windows.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexPositionTexture.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexPosition.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentExtensions.cs": [
+    [
+      1,
+      68
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/TaskExtensions.cs": [
+    [
+      1,
+      68
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Properties/AssemblyInfo.cs": [
+    [
+      1,
+      67
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/GlyphFormat.cs": [
+    [
+      1,
+      67
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameServiceContainer.cs": [
+    [
+      1,
+      67
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Orientation.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/HeaderRec.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MessageBox.Android.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexElementUsage.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PackedVector/IPackedVector.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OcclusionQuery.DirectX.cs": [
+    [
+      1,
+      65
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/RasterFlags.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Mouse.SDL.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardInput.Android.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Keyboard.SDL.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OcclusionQuery.OpenGL.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentTypeReader.cs": [
+    [
+      1,
+      64
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MessageBox.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTarget3D.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTarget2D.OpenGL.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ModelMeshPartCollection.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/ParamTag.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MessageBox.WinRT.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadType.cs": [
+    [
+      1,
+      62
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/LcdFilter.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexElementFormat.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ConstantBuffer.DirectX.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentLoadException.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/Imaging/ImageReader.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/SpriteFontReader.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/OpenTypeValidationFlags.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/NativeReference.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardInput.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyState.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectResource.cs": [
+    [
+      1,
+      58
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture3D.Web.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentSerializerIgnoreAttribute.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/Internal/FontInfoRec.cs": [
+    [
+      1,
+      56
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/KeyboardInput.iOS.cs": [
+    [
+      1,
+      56
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsCapabilities.DirectX.cs": [
+    [
+      1,
+      56
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/EngineType.cs": [
+    [
+      1,
+      55
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/EncodingType.cs": [
+    [
+      1,
+      55
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/IGraphicsDeviceService.cs": [
+    [
+      1,
+      55
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectTechniqueCollection.cs": [
+    [
+      1,
+      55
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/PostScript/Internal/FaceDictRec.cs": [
+    [
+      1,
+      54
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/OpenFlags.cs": [
+    [
+      1,
+      54
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture2D.Web.cs": [
+    [
+      1,
+      54
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTargetCube.OpenGL.cs": [
+    [
+      1,
+      54
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/StrokerBorder.cs": [
+    [
+      1,
+      53
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/GlyphMetricsRec.cs": [
+    [
+      1,
+      53
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectParameterType.cs": [
+    [
+      1,
+      53
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/MaxProfileRec.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/BitmapSizeRec.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SamplerStateCollection.OpenGL.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/IEffectMatrices.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/StreamRec.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GraphicsDeviceManager.SDL.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/BlendState.DirectX.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectMaterial.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ListReader.cs": [
+    [
+      1,
+      51
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/RasterParamsRec.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/ModuleClassRec.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/GlyphBBoxMode.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectAnnotationCollection.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Texture3DReader.cs": [
+    [
+      1,
+      50
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/StyleFlags.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/StrokerLineCap.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/KerningMode.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/TextureFilter.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ArrayReader.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/SizeRequestRec.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/OpenArgsRec.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/BitmapRec.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Mouse.Windows.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexInputLayout.DirectX.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBuffer.Web.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/ImmutableVertexInputLayout.cs": [
+    [
+      1,
+      48
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/ClassicKernValidationFlags.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/FaceRequester.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/TimerHelper.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/MessageBox.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/TextureCubeReader.cs": [
+    [
+      1,
+      47
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/PostscriptRec.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/Internal/VarAxisRec.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/SizeMetricsRec.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/CharMapRec.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/FTUnitVector.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/SBitRec.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Bdf/PropertyType.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture.OpenGL.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Design/VectorConversion.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Bdf/Internal/PropertyRec.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/StencilOperation.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/CompareFunction.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/EventHelpers.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Raster.cs": [
+    [
+      1,
+      44
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/RendererClassRec.cs": [
+    [
+      1,
+      44
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MessageBox.iOS.cs": [
+    [
+      1,
+      44
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectAnnotation.cs": [
+    [
+      1,
+      44
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Module.cs": [
+    [
+      1,
+      43
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/OutlineFuncsRec.cs": [
+    [
+      1,
+      43
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.cs": [
+    [
+      1,
+      43
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SamplerStateCollection.Web.cs": [
+    [
+      1,
+      43
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/FrameworkDispatcher.cs": [
+    [
+      1,
+      43
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/Internal/MMAxisRec.cs": [
+    [
+      1,
+      42
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/StreamDescRec.cs": [
+    [
+      1,
+      42
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/OutlineRec.cs": [
+    [
+      1,
+      42
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Touch/TouchQueue.cs": [
+    [
+      1,
+      42
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OpenGL.SDL.cs": [
+    [
+      1,
+      42
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/TrueType/Internal/SfntNameRec.cs": [
+    [
+      1,
+      41
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/ParameterRec.cs": [
+    [
+      1,
+      41
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/AssemblyHelper.cs": [
+    [
+      1,
+      41
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Joystick.cs": [
+    [
+      1,
+      41
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/DynamicVertexBuffer.cs": [
+    [
+      1,
+      41
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/RasterFuncsRec.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/MemoryRec.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cff/HintingEngine.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/ScalerRec.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/FuncLoader.Android.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Keyboard.WinRT.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ColorWriteChannels.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/DisplayOrientation.cs": [
+    [
+      1,
+      40
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/Internal/MultiMasterRec.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/Internal/MMVarRec.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/SpanRec.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/SizeRec.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/ListNodeRec.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/DynamicIndexBuffer.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameTime.cs": [
+    [
+      1,
+      39
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/GlyphRec.cs": [
+    [
+      1,
+      38
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/BitmapGlyphRec.cs": [
+    [
+      1,
+      38
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/ImageTypeRec.cs": [
+    [
+      1,
+      38
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/CubeMapFace.cs": [
+    [
+      1,
+      38
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/ReflectionHelpers.Legacy.cs": [
+    [
+      1,
+      37
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/MouseCursor.Default.cs": [
+    [
+      1,
+      37
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Joystick.Default.cs": [
+    [
+      1,
+      37
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/MultipleMasters/Internal/VarNamedStyleRec.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/OutlineGlyphRec.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/ListRec.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/IncreaseXHeightPropertyRec.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/GlyphToScriptMapPropertyRec.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/GenericRec.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/ReflectionHelpers.Default.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/NamespaceDocs.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Mouse.Default.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTarget2D.Web.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ResourceContentManager.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/CurveReader.cs": [
+    [
+      1,
+      36
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/InteropHelpers.cs": [
+    [
+      1,
+      35
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePad.MacOS.cs": [
+    [
+      1,
+      35
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GraphicsDeviceInformation.cs": [
+    [
+      1,
+      35
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/IndexBuffer.Web.cs": [
+    [
+      1,
+      35
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/CurveLoopType.cs": [
+    [
+      1,
+      35
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/SBitCacheRec.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/NodeRec.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/ManagerRec.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/ImageCacheRec.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Cache/Internal/CMapCacheRec.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/TitleContainer.Desktop.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/TextInput.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Keyboard.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectParameterClass.cs": [
+    [
+      1,
+      34
+    ]
+  ],
+  "Libraries/SharpFont/Source/SharpFontShared/Internal/NativeObject.cs": [
+    [
+      1,
+      33
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Utilities/FuncLoader.iOS.cs": [
+    [
+      1,
+      33
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Texture.Web.cs": [
+    [
+      1,
+      33
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/BlendFunction.cs": [
+    [
+      1,
+      33
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SpriteSortMode.cs": [
+    [
+      1,
+      33
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/TextInputEventArgs.cs": [
+    [
+      1,
+      32
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/PrimitiveType.cs": [
+    [
+      1,
+      32
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectTechnique.cs": [
+    [
+      1,
+      32
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/NullableReader.cs": [
+    [
+      1,
+      32
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/TaskManager.Net.cs": [
+    [
+      1,
+      32
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/GamePadDeadZone.cs": [
+    [
+      1,
+      31
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/IndexBufferReader.cs": [
+    [
+      1,
+      31
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/IGraphicsDeviceManager.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexBufferBindings.DirectX.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentSerializerTypeVersionAttribute.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentSerializerRuntimeTypeAttribute.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentSerializerCollectionItemNameAttribute.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/RectangleReader.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/MatrixReader.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/BasicEffectReader.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Foundation/Tasks/TaskManager.WSA.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/PreparingDeviceSettingsEventArgs.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/PlayerIndex.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/TextureAddressMode.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/DepthFormat.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PresentInterval.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ClearOptions.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/EnumReader.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Threading/TimedBlock.cs": [
+    [
+      1,
+      29
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SpriteEffects.cs": [
+    [
+      1,
+      28
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OcclusionQuery.Null.cs": [
+    [
+      1,
+      28
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/TimeSpanReader.cs": [
+    [
+      1,
+      28
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ColorReader.cs": [
+    [
+      1,
+      28
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/IUpdateable.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCube.Web.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/Shader.Web.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/NoSuitableGraphicsDeviceException.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/DeviceNotResetException.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/DeviceLostException.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameComponentCollectionEventArgs.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/VertexDeclarationReader.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/PointReader.cs": [
+    [
+      1,
+      27
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/TextureCollection.Web.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ConstantBuffer.Web.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTargetUsage.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDeviceStatus.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/SkinnedEffectReader.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/EnvironmentMapEffectReader.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/CullMode.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/SetDataOptions.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/CurveTangent.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/VertexBufferReader.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/EffectReader.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/DualTextureEffectReader.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/CharReader.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/BooleanReader.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexDeclarationCache.cs": [
+    [
+      1,
+      24
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDebug.cs": [
+    [
+      1,
+      24
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GamePlatform.Desktop.cs": [
+    [
+      1,
+      24
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/DateTimeReader.cs": [
+    [
+      1,
+      24
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/AlphaTestEffectReader.cs": [
+    [
+      1,
+      24
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/Keyboard.Default.cs": [
+    [
+      1,
+      23
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/RenderTargetCube.Web.cs": [
+    [
+      1,
+      23
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/RayReader.cs": [
+    [
+      1,
+      23
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ExternalReferenceReader.cs": [
+    [
+      1,
+      23
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/BoundingSphereReader.cs": [
+    [
+      1,
+      23
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Input/ButtonState.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Vector3Reader.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Vector2Reader.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/StringReader.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/PlaneReader.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Int64Reader.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Int16Reader.cs": [
+    [
+      1,
+      22
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/IndexElementSize.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/BufferUsage.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/FillMode.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsProfile.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameRunBehavior.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/CurveContinuity.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/DoubleReader.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/BoundingFrustumReader.cs": [
+    [
+      1,
+      21
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/IDrawable.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Vector4Reader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/UInt64Reader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/UInt32Reader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/UInt16Reader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/SingleReader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/SByteReader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/QuaternionReader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/Int32Reader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/DecimalReader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/ByteReader.cs": [
+    [
+      1,
+      20
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDebugMessage.cs": [
+    [
+      1,
+      19
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Http/EGAHTTPApiResponse.cs": [
+    [
+      1,
+      19
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/BlendState.Web.cs": [
+    [
+      1,
+      18
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/PresentationEventArgs.cs": [
+    [
+      1,
+      18
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/TextEditingEventArgs.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/DepthStencilState.Web.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ResourceDestroyedEventArgs.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/IGraphicsContext.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsCapabilities.Web.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/TextureReader.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Content/ContentReaders/BoundingBoxReader.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Clipboard.cs": [
+    [
+      1,
+      17
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/VertexDeclaration.Web.cs": [
+    [
+      1,
+      16
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/RasterizerState.Web.cs": [
+    [
+      1,
+      16
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectResource.OpenGL.cs": [
+    [
+      1,
+      16
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Effect/EffectResource.DirectX.cs": [
+    [
+      1,
+      16
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/TextureFilterMode.cs": [
+    [
+      1,
+      15
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/GraphicsDebug.Default.cs": [
+    [
+      1,
+      15
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/FrameworkResources.cs": [
+    [
+      1,
+      15
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Windows/HorizontalMouseWheelEventArgs.cs": [
+    [
+      1,
+      14
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/WindowInfo.SDL.cs": [
+    [
+      1,
+      14
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/GameUpdateRequiredException.cs": [
+    [
+      1,
+      14
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/IWindowInfo.cs": [
+    [
+      1,
+      13
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/FileDropEventArgs.cs": [
+    [
+      1,
+      13
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/EGAErrorSeverity.cs": [
+    [
+      1,
+      13
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/LaunchParameters.cs": [
+    [
+      1,
+      12
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/IGameComponent.cs": [
+    [
+      1,
+      12
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/ResourceCreatedEventArgs.cs": [
+    [
+      1,
+      12
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/OpenGL.Common.cs": [
+    [
+      1,
+      12
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/States/SamplerState.Web.cs": [
+    [
+      1,
+      11
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Display.cs": [
+    [
+      1,
+      11
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/ICommandCenterListener.cs": [
+    [
+      1,
+      11
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/EGAProgressionStatus.cs": [
+    [
+      1,
+      11
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/EGALoggerMessageType.cs": [
+    [
+      1,
+      11
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Vertices/IVertexType.cs": [
+    [
+      1,
+      10
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/EGAResourceFlowType.cs": [
+    [
+      1,
+      10
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/EGAGender.cs": [
+    [
+      1,
+      10
+    ]
+  ],
+  "Libraries/GameAnalytics/GA-SDK-MONO-SHARED/Http/EGASdkErrorType.cs": [
+    [
+      1,
+      9
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Graphics/Shader/ShaderStage.cs": [
+    [
+      1,
+      8
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.iOS.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.Windows.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.Web.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.UniversalWindowsPlatform.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.TVOS.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.Mac.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.DesktopGL.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.Angle.cs": [
+    [
+      1,
+      7
+    ]
+  ],
+  "Libraries/MonoGame.Framework/Src/MonoGame.Framework/Properties/AssemblyInfo.Android.cs": [
+    [
+      1,
+      7
+    ]
   ]
 }

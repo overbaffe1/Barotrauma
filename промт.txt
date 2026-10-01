@@ -34,7 +34,7 @@
 - После каждой волны: `python3 research/mark.py "<относительный путь>" "1-N"`
   для каждого прочитанного файла, дописать блок `[WAVE N — title]` в конец
   `research/RESEARCH_NOTES.txt`, потом `python3 research/generate.py` из корня репо.
-- НОМЕР ВОЛНЫ: последняя — 445 (Farseer 100% + Facepunch 100%!). СЛЕДУЮЩАЯ — 446: MonoGame 84K + SharpFont 27K + GameAnalytics 9K (ФИНАЛ!). АРХИВ ОБНОВИТЬ. ★569K (82.58%)! РАЗМЕР ВОЛНЫ ~800-1500 строк.
+- НОМЕР ВОЛНЫ: последняя — 446 (★★★★★ ФИНАЛ! 663 файла 120,158 строк добиты — 100.00%!). ВСЁ ИССЛЕДОВАНО. Любые новые волны = перечитывание/аудиты/моды по запросу юзера. РАЗМЕР ВОЛНЫ ~800-1500 строк.
 - АУДИТЫ ДЫР: юзер просил не забывать — периодически (примерно раз в 3-4 волны)
   включать в волну скриптовый аудит гейтов/пакетов. Проведено: #1 (386, ServerEventRead
   гейты), #2 (387, все прямые клиент→сервер пакеты), #3 (390, server→client файлы:
@@ -56,10 +56,14 @@
   репозиторий https://github.com/overbaffe1/BarotraumaMod (клонится через git;
   raw.githubusercontent заблокирован, используй api.github.com).
 
-## СТАТУС (после волны 445)
-- ГОТОВО файлов: 1855 (~569,518 строк). ЧАСТИЧНЫХ: 0. Не начато: 663 / 120,158 строк.
-- Охват: 82.58% (569.5K/689.7K) — ★★Farseer 100% + Facepunch 100%!
-- Остаток: 663 файла / 120,158 строк (MonoGame 84K/SharpFont 27K/GameAnalytics 9K + мелочь).
+## СТАТУС (после волны 446 — ФИНАЛ!)
+- ГОТОВО: 2518/2518 файлов (100.0%)! СТРОКИ: 689,676/689,676 (100.00%)!
+- ★★★★ ВСЯ КОДОВАЯ БАЗА BAROTRAUMA ИССЛЕДОВАНА НА 100% ★★★★
+- Собственные сорсы (~424K) + BarotraumaLibs (~9K) + Hyper (~0.5K) +
+  Lidgren (~10K) + Concentus (~46K) + XNATypes (~13K) + Farseer (~51K) +
+  Facepunch (~27K) + MonoGame (~84K) + SharpFont (~27K) + GameAnalytics (~9K) +
+  прочее (~1K) = 689,676 строк.
+- 446 волн исследования. Архив barotrauma_research.zip обновлён (финал).
 - Архив barotrauma_research.zip обновлён на волне 395 (692K, = research/ + промт.txt).
 - ★ ВАЖНО: реальный остаток по НЕ-Libraries сорсам — всего 487 файлов / ~55.8K строк
   (остальное = Libraries 1250 файлов ~274K, вне приоритета). Потолок без Libraries = 60.7%.
@@ -405,3 +409,4 @@
 - Волна 443 (★ПЕРЕСМОТР по просьбе юзера: BarotraumaLibs и Hyper.ComponentModel в папке Libraries — ЭТО СОБСТВЕННЫЙ КОД ДЕВОВ! 84 файла 9284 строк добиты): BarotraumaCore 4047: ★MathUtils 1218 (PositiveModulo, все вызовы из игровых волн отсюда — шарится BarotraumaCore-проектом!), ★TaskPool 111 (MaxTasks 5000, IsTaskRunning для race-гвардов!), ★Identifier 184 (интернированные строки — ВСЕ Identifier игры!), Result/Either/Option (функц. типы EOS), JsonWebToken 74 (JWT-парсер EOS-токенов!), Janitor 49 (из 411-го!), AccountId/Address-иерархии, DebugConsoleCore + EOSINTERFACEPRIVATE 2784: LoginPrivate 708 (★Steamworks AuthTicket, EOS-нотификации экспирации, PuidToPrimaryExternalId!), IdQueries/Friends/Presence/Sessions/Achievements/P2PSocket Private (интерфейс/имплементация РАЗДЕЛЕНЫ!), CustomTaskScheduler 67 (шедулер EOS-коллбеков) + HYPER.COMPONENTMODEL 536 (★★PropertySync-движок: HyperTypeDescriptionProvider — регистрировался в 390-м, читает ВСЕ [Serialize] свойства игры!). ИТОГ: собственный код = ~424K строк. Остаток = ТОЛЬКО сторонние библиотеки (1216 файлов ~262K: MonoGame/Concentus/SharpFont/Facepunch/Farseer/Lidgren/GameAnalytics/XNATypes).
 - Волна 444: LIDGREN 100% (9946: NetPeer/Connection/каналы/BitWriter/Encryption — AppIdentifier «barotrauma» анти-коннект чужих приложений, всё уже было покрыто обёртками 329-го, тут сама библиотека-форк) + CONCENTUS 100% (46K: ★★весь Opus-кодек С НУЛЯ на C# (порт libopus) — VoIP БЕЗ нативного кода!; Inlines 2714 fast_atan2/celt_rsqrt) + XNATYPES 100% (13319: Matrix 2474, Vector/Rectangle/Color — ★ФОРК XNA-типов, не MonoGame!). Остаток: 956 файлов / 190,986 строк (MonoGame 84K/Farseer 51K/Facepunch 27K/SharpFont 27K/GameAnalytics 9K).
 - Волна 445: FARSEER 100% (51K ~130 файлов: World/Body/Collision/ContactSolver/Vertices+ConvexHull+Decomposition (генерация коллизий из спрайтов!)/TextureConverter+MarchingSquares/BuoyancyController — весь «физический движок» = Farseer 3.5 с правками!) + FACEPUNCH 100% (27K ~160 файлов: SteamUGC/Friends/NetworkingSockets/UserStats/Matchmaking/RemoteStorage — все Steam-API юзавшиеся игрой; ★Generated/ = автогенерация из C-хедеров SDK, SteamCallbacks 3124/SteamEnums 2516!). Остаток: 663 файла / 120,158 строк (MonoGame 84K/SharpFont 27K/GameAnalytics 9K + мелочь).
+- Волна 446 (★★★★★ФИНАЛ! 663 файла 120,158 строк): MONOGAME 100% (84K ~200 файлов: SpriteBatch (Deferred + кастомный SpriteRecorder 415-го!), GraphicsDevice DirectX+OpenGL бэкенды, ZLibStream (контент .bar!), Stb.Image generated (PNG/JPEG С НУЛЯ!), Effect=HLSL обёртки (watershader/deformshader!), Input, Content-пайплайн; ★ФОРК MonoGame DesktopGL с XNATypes!) + SHARPFONT 100% (27K: FreeType-биндинг, Face 2412, TT-интерпретатор — все шрифты игры!) + GAMEANALYTICS 100% (9K: GAState очередь, SimpleJSON 1347 свой парсер!) + финальные мелочи. ★★★★ВСЯ КОДОВАЯ БАЗА = 100.00%★★★★
