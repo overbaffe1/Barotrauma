@@ -16101,3 +16101,57 @@ Barotrauma разложен по винтикам от handshake до титро
 
 --- ClientReadIngame: TeamID назначает СЕРВЕР (PvP → AssignClientToPvpTeamMidgame,
   иначе Team1 принудительно). Клиент свою команду в игре не выбирает. Чисто.
+===============================================================================
+[WAVE 458 — RESYNC-ТОГГЛ: ENDROUND_SELF + UPDATE_INGAME = сервер льёт бэклог заново]
+===============================================================================
+
+--- ★★★ RESYNC-ТОГГЛ СПАМ (CPU+bandwidth+memory grief) ---
+  Пара пакетов БЕЗ гейтов и кулдаунов:
+  1) ENDROUND_SELF (GameServer:1002): connectedClient.InGame=false;
+     connectedClient.ResetSync();  ← Client.cs:352: EntityEventLastSent.Clear(),
+     LastRecvEntityEventID=0, UnreceivedEntityEventCount=0 — ПРОГРЕСС СИНКА
+     СТЁРТ. Никаких проверок (ни InGame-таймера, ни рейт-лимита своего).
+  2) UPDATE_INGAME (GameServer:1341): c.InGame==false →
+     if (!midroundSyncingDone=клиентский бит!) → InitClientMidRoundSync(c):
+     uniqueEvents.Count>0 && events[0].ID != uniqueEvents[0].ID →
+     NeedsMidRoundSync=true, UnreceivedEntityEventCount=uniqueEvents.Count
+     (ВСЯ история событий раунда), timeout = Count/10*interval (min
+     MinimumMidRoundSyncTimeout) → плюс SendCrewState + NotifyMissions-
+     UnlockedThisRound + UnlockPathAction.Notify (на каждый ре-вход).
+
+  Что делает сервер пока NeedsMidRoundSync=true (GetEventsToSync:400):
+    eventList = uniqueEvents;   ← НЕ events, а ВСЕ уникальные события раунда
+    eventsToSync.AddRange(eventList.GetRange(i, UnreceivedEntityEventCount-i));
+  → серриализация ВСЕГО пропущенного бэклога (тысячи событий в длинном
+  раунде) в исходящие пакеты, растянуто троттлингом minInterval (≤0.5s
+  на событие), НО: каждый новый тоггл обнуляет EntityEventLastSent →
+  весь бэклог РЕ-СЕРИАЛИЗУЕТСЯ С НУЛЯ. CPU + исходящий трафик на каждый
+  тоггл, растут с длиной раунда.
+
+  Эффекты на окружающих пока клиент в синке:
+  - inGameClients = InGame && !NeedsMidRoundSync (строка 206) → синкающийся
+    ВЫПАДАЕТ из bookkeeping; line 239: lastSentToAll тянет НАЗАД к его
+    FirstNewEventID → события дольше живут в списке (memory-рост в
+    длинных раундах; pruning RemoveAll зависит от lastSentToAll).
+  - Кики за старые события: firstEventToResend оттянут → OldEventKick
+    условия считаются от старой точки, НО легит-клиенты уже получили
+    события (IdMoreRecent false) → кикится в основном сам гример по
+    SyncTimeout (line 280). DoS в основном в СЕБЯ, но CPU сервера
+    тратится ЧЕСТНО за каждый тоггл.
+
+  Атака: цикл ENDROUND_SELF→UPDATE_INGAME в рамках бюджетов DoSProtection
+  (пакетных лимитов) = сервер занят пер-сериализацией бэклога.
+  ★★★ (CPU/трафик грамотно растягивается, но сам себя кикает по таймауту).
+  ФИКС: кулдаун на ENDROUND_SELF (5-10s) или игнор midroundSyncingDone=false
+  для клиентов, вышедших из игры < N секунд назад; или кап на число ресинков.
+
+--- ★ HandleClientError хвост — с киком за malformed, но... ---
+  try/catch → malformed → KickClient ✓; subNames кламп
+  MaxSubNameLengthInErrorMessages ✓. НО: Log() на КАЖДЫЙ валидный ERROR-
+  пакет (диск-I/O) + AddErrorEventOnce по ключу с entityID — ключи
+  НЕограничены (разные ID = разные GA-ивенты) → лог/телеметрия-спам в
+  рамках пакетных лимитов ★.
+
+--- ✅ PetManager не существует как сетевой хендлер (pets = AI-персонажи),
+  FILE-UPLOAD с клиента нет (ModSender = server→client),
+  Hyper.ComponentModel = перф-кэш (457).
