@@ -15562,3 +15562,95 @@ Barotrauma разложен по винтикам от handshake до титро
   DoSProtection считает пакеты, не стоимость. Любой пакет, который за
   константу времени делает N дисковых/парс-операций = амплитфикатор.
   Второй паттерн: catch-all на peer-уровне маскирует исключения как лог-спам.
+===============================================================================
+[WAVE 450 — HULL EVENTS / SPECTATEPOS / INVENTORY OPS / CHARACTER EVENTS / VOIP]
+===============================================================================
+
+--- ★★★ ГЛАВНОЕ: SPECTATEPOS — сырой f32×2 → серверный interest-management ---
+  Диспетчер сегментов (GameServer.cs:1490): case SpectatingPos:
+    c.SpectatePos = new Vector2(inc.ReadSingle(), inc.ReadSingle());
+  НИКАКИХ проверок: нет IsValid, нет InGame, нет SpectateOnly, нет дистанций.
+  Куда течёт (серверная логика):
+  1) Character.cs:3866 GetDistanceSqrToClosestPlayer — счит distSqr = MIN по
+     всем клиентам, ВКЛЮЧАЯ их SpectatePos. NaN SpectatePos:
+     Math.Min(distSqr, DistanceSquared(NaN)) = NaN → все последующие
+     `distSqr >= Pow2(DisableDistance)` = false → ПЕРСОНАЖ НИКОГДА НЕ
+     ВЫКЛЮЧАЕТСЯ. Мёртвый spectator шлёт ОДИН SPECTATING_POS c NaN →
+     ВСЕ персонажи раунда постоянно активны (AI+физика) = серверный CPU-grief
+     одним пакетом. ★★
+  2) GameServer.cs:2080 ClientWriteIngame — стриминг позиций персонажей:
+     если SpectatePos != null, дистанция берётся ОТ НЕЁ. НО —
+  ★ ЗАЩИТА, КОТОРУЮ Я ЧУТЬ НЕ ПРОПУСТИЛ: Client.SpectatePos ГЕТТЕР
+     (Client.cs:115): if (character == null || character.IsDead) return
+     spectatePos; else return null;  ← ЖИВОЙ персонаж = ГЕТТЕР ВОЗВРАЩАЕТ NULL,
+     сырое поле недоступно! Радар/валлхак через SpectatePos у ЖИВОГО игрока
+     НЕ РАБОТАЕТ — вектор умирает об геттер. Работает только для мёртвых/
+     спектаторов (которым и так разрешено камеру куда угодно).
+  3) Hull.cs:34 — апдейты воды/огня шлются в радиусе hullUpdateDistance от
+     SpectatePos (только мёртвым). 4) VoipServer — distanceFactor.
+  ВЕРДИКТ: живой = чисто; мёртвый spectator с NaN = «вечная симуляция» ★★
+  + несанкционированный стрим ВСЕХ персонажей спектатору (NaN comparisons
+  false → не skip) — но спектатор и так видит всё свободной камерой → шум.
+
+--- ★★★ HULL.ServerEventRead — ЗАГЕЙЧЕН ПРИЛИЧНО (опроверг «воду без перм») ---
+  Hull.cs:127:
+  - Status (вода/огонь): ГЕЙТ = ClientPermissions.ConsoleCommands + Permitted
+    ConsoleCommands содержит "fire"/"editfire". После гейта WaterVolume =
+    произвольное... но перм есть. Чисто.
+  - BackgroundSections (краскопульт): AllowInput + HeldItems содержит Sprayer +
+    жидкость в контейнере краскопульта + цвет движется К цвету краски + при
+    чистке strength только ВНИЗ + ДИСТАНЦИОННЫЙ ЧЕК sprayer.Range × 1.1.
+    Написано со знанием дела (комментарий про «clients set colors themselves»).
+  - Decal: decalIndex bounds-check + held Sprayer. Чисто.
+  RequireCharacter = entity is not Hull (ServerEntityEventManager:536) — хулл-
+  ивенты идут без персонажа, но все 3 ветки внутри загейчены пермами/предметами.
+
+--- ★★ INVENTORY.ServerEventRead — сверка состояния, ЗАКРЫТО НАГЛУХО ---
+  Inventory.cs:14: клиент шлёт ПОЛНУЮ матрицу item-ID по слотам (SharedRead,
+  мульти-пакет readyToApply). Сервер:
+  - гейт инвентаря: CanAccessInventory(AllowFriendly/AllowBotsAndPets)
+  - ПРЕ-ЧЕК доступности КАЖДОГО предмета до шафлинга (GetItemAccessibility
+    → CanClientAccess = дистанция!) — фикс от race "пicked up then unequipped"
+  - HandleRemovedItems: drop только если item interactable и НЕ itemAccessDenied
+    (prevItems + accessibility + prev-inventory доступ). Дроп у ПОЗИЦИИ
+    ПЕРСОНАЖА (SetTransform(prevOwner.SimPosition)) — не у клиента.
+  - HandleAddedItems: Pickable-чек + Holdable.CanBeDeattached + accessibility +
+    ОТДЕЛЬНЫЙ ЖЁСТКИЙ гейт для наручников (HandLockerItem →
+    AllowBotsAndPets, не драг-н-дроп уровень) — анти-"надел кандалы через UI".
+  - Фейл → коррективные ивенты + PendingPositionUpdates (респин позиции).
+  Карма-лог OnItemTakenFromPlayer. ЭТО ОБРАЗЕЦ: прежде чем шаффлить — снимок
+  доступности. Дистанционный чит-пикап невозможен.
+
+--- ★★ CHARACTER.ServerEventRead — все case'ы закрыты ---
+  InventoryState → Inventory.ServerEventRead (см. выше).
+  Treatment (CPR) — только c.Character == this. Status ("give in") — только
+  self + IsIncapacitated → Kill. ConfirmTalentRefund/UpdateTalents —
+  CanManageTalents (self ИЛИ бот+ManageBotTalents+не spectator).
+  UpdateTalents: TalentPrefab lookup по u32 + IsViableTalentForCharacter —
+  знакомый TalentOverspend (бюджет по «всего заработано», 447) — не новое.
+
+--- ★★ VOIP — фреймы ограничены, декодер ест клиентские байты ---
+  VoipQueue.Read (shared): u16 incLatestBufferID → если свежее: 8×(byte len +
+  ReadBytes(len)) — фрейм ≤ 255 байт (byte), 8 фреймов/пакет ≤ 2040 байт.
+  LatestBufferID = КЛИЕНТСКИЙ u16.
+  OnNewVoiceReceived: for i in lastRetrieved+1 .. LatestBufferID — дельта до
+  32767 ИТЕРАЦИЙ за пакет; RetrieveBuffer вне окна (8) → outSize=-1 → continue
+  (дёшево), в окне → new short[BUFFER_SIZE] + Concentus OpusDecoder.Decode
+  (клиентские ≤255 байт!). lastRetrievedBufferID растёт ТОЛЬКО на успешном
+  декоде → протухший диапазон переобходится КАЖДЫЙ вызов (дёшево, но мусор).
+  РИСКИ: (а) Concentus (C#-порт!) на злом фрейме может кинуть — исключение
+  летит VoipServer.Read → ReadDataMessage → peer catch-all → ДРОП БАТЧА
+  (тот же паттерн что EventManager 449) = VOICE-спам с битыми фреймами =
+  постоянный дроп соседних пакетов ★★; (б) 32k итераций×50 pps — мелкий CPU ★.
+  CanReceive-логика: муты/SpeechImpediment/спектаторы/радио CanReceive — ок.
+
+--- ★ ЧИСТОЕ: ServerEntityEventManager.ReadPacket ---
+  eventCount цикл, entityID u16 → FindEntityByID; дедуп по thisEventID ==
+  LastSentEntityEventID+1; msgLength VariableUInt32 → skip по BitPosition.
+  Гейта InGame нет, НО: RequireCharacter=true для не-хуллов → без персонажа
+  всё скипается; хуллы загейчены внутри (см. выше). BufferedEvent ждёт
+  обработки characterStateID (LastProcessedID) — анти-регрессия.
+
+--- ПАТТЕРН ВОЛНЫ: «геттер-щит» — Client.SpectatePos чтение возвращает null
+  для живых, и ЭТО главная защита. Плюс третий случай «throw → peer catch-all
+  → дроп батча» (EventManager 449, VoIP 450, ConnectionPanel-семейство).
