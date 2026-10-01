@@ -1159,3 +1159,20 @@
 - Holdable ServerEventRead: MaxAttachDistance в display pixels клампится
   на sim coordinates. Ratio 100:1 = «радиус рук» превращается в «радиус
   километров». Классический unit mismatch. Я проглядел. Юзер — нет.
+- Волна 448: я «нашёл» дыру «фабрикатор крафтит без ингредиентов». Юзер:
+  «сомневаюсь, перепроверь». Перепроверил. Update-loop отменяет крафт на
+  первом тике. Дыры не было. Урок: ПОСЛЕ StartFabricating всегда читай Update.
+- Fabricator ServerEventRead: fabricationRecipes[recipeHash] — прямое
+  индексирование словаря значением из сети. Спасает только try/catch на
+  ВЕРХНЕМ уровне event manager. «А что могло пойти не так» — да всё.
+- RegExFindComponent: девы ЛЕНО урезали timeout с 1ms до 50ms потому что
+  «.NET 8 иногда тормозит». Комментарий в коде длиннее фикса.
+- Lidgren ReadString за концом буфера: «return null; // unfortunate; but we
+  need to protect against DDOS». Unfortunate — это мягко.
+- Pump FlowPercentage сеттер: IsValid(СТАРОЕ значение) вместо IsValid(НОВОГО).
+  Проверяешь не то, что incoming, — яд проходит, а потом блокируешь лечение.
+- Wifi set_range принимает "NaN" через float.TryParse. Чужой сигнал — и твоя
+  рация слышит всю карту. Range = NaN: DistanceSquared > NaN = false = ВЕЗДЕ.
+- GetInGameEditableProperties vs [Editable]: OfType<InGameEditable>() не
+  матчит наследование атрибутов. Единственная string[]-бомба на сервере
+  умерла об систему типов. Повезло, не_design.

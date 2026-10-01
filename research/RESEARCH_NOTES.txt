@@ -15276,3 +15276,175 @@ Barotrauma разложен по винтикам от handshake до титро
   ServerEventRead. Он проверяет: sub-membership + CanInteractWith (дистанция
   в display units). ПОСЛЕ него сервер доверяет ВСЕМ данным из пакета.
 
+===============================================================================
+[WAVE 448 — ПЕРЕПРОВЕРКА ФАБРИКАТОРА + АУДИТ ОСТАЛЬНЫХ ServerEventRead + ChangeProperty]
+===============================================================================
+
+--- ★ ВЕРДИКТ: ДЫРА #5 (Fabricator "крафт без ингредиентов") — ОПРОВЕРГНУТА ---
+  Юзер сомневался — и ПРАВИЛЬНО. Полная трасса сервера:
+
+  1) StartFabricating (Shared Fabricator.cs:206) — да, НЕ проверяет ингредиенты.
+     Только outputContainer.Inventory.CanProbablyBePut (влезет ли результат).
+     Крафт СТАРТУЕТ без ингредиентов. Звучит страшно, НО:
+
+  2) Fabricator.Update (Shared:296-303) на СЕРВЕРЕ каждый тик:
+       if (fabricatedItem == null || !CanBeFabricated(fabricatedItem,
+           availableIngredients, user)) { CancelFabricating(); return; }
+     availableIngredients заполнен FRESH (StartFabricating звал
+     RefreshAvailableIngredients, строка 216). Ингредиентов нет →
+     CanBeFabricated=false → ОТМЕНА НА ПЕРВОМ ЖЕ ТИКЕ. Спавна НЕТ.
+
+  3) Fabricate() (Shared:355) перед консумацией/спавном ДВОЙНАЯ перепроверка:
+       RefreshAvailableIngredients(); if (!CanBeFabricated(...)) CancelFabricating();
+
+  4) amountRemaining-очередь: после каждого Fabricate тоже CanBeFabricated
+     перед продолжением (Shared:576).
+
+  → «Крафт без ингредиентов» живёт РОВНО 0 тиков. Предмет не спавнится.
+    Дыры нет. Волна 447 ошиблась — зафиксировано исправление.
+
+--- ★ КВОРКИ ФАБРИКАТОРА (не векторы, но зафиксировать) ---
+  a) fabricationRecipes[recipeHash] — ПРЯМОЕ индексирование словаря клиентским
+     u32! Левый хэш → KeyNotFoundException. НО: ServerEntityEventManager.Update
+     обёртывает ВСЕ ServerEventRead в try/catch (ServerEntityEventManager.cs:185-203)
+     → лог + GameAnalytics, сервер живёт. Не DoS.
+  b) item.CreateServerEvent(this) ДО CanClientAccess (эхо-спуф из 447) — эхо
+     состояния себе же и всем, дедуп через serverEventId. Безобидно.
+  c) MoveIngredientsToInputContainer (Shared:995) — если input контейнер полон,
+     ВЫБРАСЫВАЕТ unneededItem?.Drop() наружу чтобы освободить место.
+  d) RefreshAvailableIngredients тянет ингредиенты из: inputContainer, linked
+     контейнеров (ItemContainer-linked к фабрикатору), вложенных контейнеров,
+     инвентаря юзера (если выбран фабрикатор), И ЧУЖИХ ИНВЕНТАРЕЙ — любой
+     CharacterList-персонаж, у которого выделен linked контейнер! Это vanilla-
+     механика "display cabinet", но по факту Fabricate() КОНСУМИРУЕТ предметы
+     из чужого инвентаря через AddItemToRemoveQueue. intended, но солёно.
+  e) На MapLoaded: StartFabricating(recipe, user:null) с сейвнутым
+     timeUntilReady — юзер null = MissingRequiredRecipe всегда false.
+
+--- ★★★ НОВАЯ: Item.ReadPropertyChange — событие ChangeProperty ---
+  Item.ServerEventRead (server:230) → EventType.ChangeProperty →
+  Item.cs:3855 ReadPropertyChange. Клиент шлёт: Identifier propertyIdentifier +
+  значение типа свойства. Серверный список: GetInGameEditableProperties =
+  [ConditionallyEditable] ∪ [InGameEditable] (Item.cs:3841).
+
+  ГЕЙТЫ: CanClientAccess(sender) (или circuit-box exception),
+  ConditionallyEditable.IsEditable, ItemComponent.AllowInGameEditing.
+  НО allowEditing блокирует ТОЛЬКО TrySetValue — ЧТЕНИЕ ИЗ ПАКЕТА идёт ВСЕГДА.
+
+  ★ Ветвь float: msg.ReadSingle() СЫРОЙ — Editable.MinValueFloat/MaxValueFloat
+    НИКЕМ НЕ ПРОВЕРЯЮТСЯ на сервере! Атрибуты существуют (Editable.cs:13-15),
+    юзаются только клиентским UI. NaN/1e30 проходит в любое InGameEditable
+    float-свойство при живом CanClientAccess.
+    Жертвы: DelayComponent.Delay, OscillatorComponent.Frequency,
+    ExponentiationComponent.Exponent, ModuloComponent.Modulus,
+    BooleanOperator.TimeFrame, MotionSensor.RangeX/RangeY/MinimumVelocity...
+  ★ Ветвь string: кламп через Editable.MaxLength ТОЛЬКО если задан (>0).
+    NameTag.WrittenName — без MaxLength → длиннющая строка раздаётся всем
+    клиентам (bandwidth-квирк).
+  ★ Ветвь string[]: arrayLength = msg.ReadInt32() СЫРОЙ → new string[N] +
+    N итераций ReadString. ВЫГЛЯДИТ как memory-bomb, НО МЕРТВА на сервере:
+    единственное string[]-свойство — ButtonTerminal.Signals, у него plain
+    [Editable], а серверный список = InGameEditable/ConditionallyEditable;
+    SerializableProperty.GetProperties юзает Attributes.OfType<T>() —
+    OfType НЕ матчит наследование атрибутов (Editable != InGameEditable) →
+    propertyIndex<0 → исключение (ловится). Стрелка в сторону, но если девы
+    пометят Signals как [InGameEditable] — серверная memory-bomb из коробки.
+  ★ Enum-ветвь: Enum.ToObject(type, произвольный int32) — невалидные значения
+    enum'ов в свойства. try/catch есть. Мусор в состоянии, не краш.
+  ВЫВОД: ChangeProperty = «сеттер-инжектор» для всего, что [InGameEditable],
+    с клиент-доверенными клампами. Гейт всего один — CanClientAccess.
+
+--- ★★★ НОВАЯ: WifiComponent.ReceiveSignal set_range — NaN = РАДИУС ∞ ---
+  WifiComponent.cs (shared) ReceiveSignal:
+    case "set_range": float.TryParse(signal.value, NumberStyles.Float) →
+    Range = newRange.  БЕЗ клампа. БЕЗ IsValid.
+  .NET Core 3.0+ (баротраума на .NET 8): float.TryParse("NaN",
+  NumberStyles.Float) УСПЕШЕН. Аналогично "Infinity".
+  CanReceive (строка ~192): if (DistanceSquared(...) > sender.range*sender.range)
+    return false;  — сравнение с NaN ВСЕГДА false → чек дистанции ПРОПУСКАЕТ.
+  CanTransmit — тот же паттерн.
+  → воткнул сигнал "NaN" в set_range (или infinity) = вайфай ловит/шлёт НА ВСЮ
+    КАРТУ. Комбо с дырой #3: wifi → turret trigger_in = стрельба из любого
+    конца карты, wifi → door/mask... Безграничный трейтор-радио.
+  Родство с волной 396 (pump set_speed NaN) — паттерн "TryParse+no-IsValid".
+
+--- ★ ПЕРЕПОДТВЕРЖДЕНО: Pump set_speed NaN-отравление (волна 396) ---
+  Точный механизм: ReceiveSignal("set_speed") пишет flowPercentage НАПРЯМУЮ В
+  ПОЛЕ мимо сеттера: flowPercentage = MathHelper.Clamp(tempSpeed, -100, 100).
+  Clamp(NaN, ...) = NaN (сравнения с NaN = false).
+  Сеттер FlowPercentage: if (!MathUtils.IsValid(flowPercentage)) return; —
+  гард проверяет СТАРОЕ значение (поле), НЕ вход (value)! Логика инвертирована:
+  пишут только если старое валидно, а клампится новый NaN → NaN остаётся NaN.
+  Итог: одно "NaN" в set_speed = насос ОТРАВЛЕН НАВСЕГДА (сеттер блокируется
+  веткой !IsValid(старое)). flow = NaN → вода/уровень в хулле → NaN-сим.
+  set_targetlevel: InverseLerp(-100,100,NaN) = NaN в TargetLevel — тоже.
+
+--- ★ REGEX: ReDoS-вектор ПРИДУМАН И ОБЕЗВРЕЖЕН девами ---
+  RegExFindComponent.Expression = [InGameEditable] string. Клиент у панели
+  может влить злой regex → сервер компилит Regex КАЖДОЕ изменение сигнала.
+  НО: new Regex(..., matchTimeout: 50ms) (RegExFindComponent.cs:91-96) +
+  timedOut → "TIMEOUT" в signal_out + деактивация после 3 таймаутов подряд
+  (MaxTimeOutsInARow). Лаг-спайк 50мс за раз — потолок. Задокументированный
+  харденинг: комментарий про .NET 8 и "measure the actual time ourselves".
+  Респект девам. (Lidgren ReadString за концом буфера в RELEASE возвращает
+  null вместо исключения — "protect against DDOS", NetBuffer.Read.cs:569.)
+
+--- ★★★ ЧИСТЫЕ ServerEventRead (закрыт весь список из 19 файлов) ---
+  Reactor: ReadRangedSingle(0,100)×3 + temperature boost кламп ±const + гейт.
+  Engine: ReadRangedInteger(-10,10)*10 + гейт.
+  Sonar (shared:408): всё через ReadRangedSingle(0,1) → Lerp в Min/Max + гейт.
+  WifiComponent ServerEventRead: ReadRangedInteger(0,10000) channel + memory,
+    применение ТОЛЬКО после CanClientAccess. (Сам канал у нас в руках легально.)
+  ButtonTerminal: ReadRangedInteger(0, Signals.Length-1) + гейт + SendSignal.
+  Deconstructor: bool + гейт (эхо до гейта — квирк).
+  Terminal: string → гейт + !Readonly → кламп MaxMessageLength → SendSignal.
+  CustomInterface: bool[]/string[] по списку элементов; гейт = (DrawHudWhenEquipped
+    && item в инвентаре персонажа) || CanClientAccess — владение = валидный
+    доступ, надетый интерфейс это wearable-дизайн. ButtonClicked/TextChanged
+    шлют сигналы в ЗАПИХАННЫЕ автором суба выхода. Чисто.
+  Repairable: гейт CanClientAccess + HasRequiredItems; Sabotage только IsTraitor.
+    ★ НО: bool QTESuccess = msg.ReadBoolean() — успех QTE-буста ремонта верит
+    клиенту НА СЛОВО (RepairBoost(QTESuccess)). Клиент-авторитарный буст
+    скорости ремонта — мини-чит: всегда слать true. Сервер не может проверить,
+    minigame клиентский. Severity ★.
+  ConnectionPanel: Locked/TemporarilyLocked/AllowRewiring гейт + CanClientAccess
+    на панель И на каждый новый провод; checkCharacterSuccess (скилл-чек с
+    OnFailure откатом). Отключение Locked-проводов детектится и логируется
+    как ERROR ("modified version of the game"). Прилично.
+  CircuitBox ServerEventRead: AddComponent (гейт CanAccessAndUnlocked + ресурс
+    из инвентаря + RemoveItem ресурса — честно), AddWire (CanAccessAndUnlocked,
+    провод создаётся БЕСПЛАТНО — подтверждено, известное), MoveComponent —
+    только CanClientAccess БЕЗ Locked-чека (двигать ноды в ЗАЛОЧЕННОМ боксе —
+    известное из 447). CircuitBoxMoveComponentEvent.MoveAmount = сырой Vector2
+    (CircuitBoxNetStructs.cs:131) → node.Position += moveAmount без клампов —
+    но это UI-координаты внутри бокса, косметика. CursorInfo relay —
+    RecordedPositions.Length: 10 фильтр, значения сырые, только релей.
+  Pump ServerEventRead: ReadRangedInteger(-10,10)*10 + гейт + lockTimer. Чисто.
+
+--- ★ ДЫРА #1 УТОЧНЕНА: Holdable attach — cross-sub и "содержимое летит с тобой" ---
+  AttachToWall (Holdable.cs:783+):
+  - Предмет СНАРУЖИ суба (Submarine==null, CurrentHull==null):
+    Structure.GetAttachTarget(WorldPosition) → МОЖНО ПРИЛЕПИТЬ К ЧУЖОЙ СУБЕ/
+    АУТПОСТУ: item.Submarine = attachTarget.Submarine (строка 813!). Иначе
+    attachTargetCell = GetAttachTargetCell(150.0f) — цепляние к СКАЛЕ УРОВНЯ
+    (voronoi cell, IsDestructible → отваливается при разрушении стены).
+  - SetTransform таскает OwnInventory содержимое ВМЕСТЕ с предметом (825-832).
+  - Кламп 171 SIM (должен быть 1.14) = 17,100 display = ~171 метр свободы
+    сквозь стены. Механика из 447 подтверждена побайтово.
+
+--- ★ ItemComponent.ReceiveSignal (БАЗА) — обобщение дыры #3 ---
+  ItemComponent.cs:514-533: ЛЮБОЙ компонент БЕЗ override на сигналы
+  "activate"/"use"/"trigger_in" зовёт item.Use(1.0f, user: signal.sender).
+  ItemContainer.cs:934 — то же. ElectricalDischarger:598 — разряд по сигналу.
+  → Сигнальная шина = доверенная. Wifi = неаутентифицированный вход в шину
+  (фильтры: channel 0..10000, TeamID (если AllowCrossTeamCommunication=false
+  у ОБОИХ... точнее у приёмника), jamTimer, sender.range, HasRequiredContainedItems).
+  Причём set_range в приёмнике с NaN убивает и range-фильтр (см. выше).
+  Изготовленные на фабрикаторе вайфай-предметы получают TeamID покупателя —
+  "свой" TeamID у хендхелд-радио = легальный вход в шину своей команды.
+
+--- ПАТТЕРН ВОЛНЫ: float.TryParse/ReadSingle + отсутствие IsValid на ПРИЁМЕ —
+  третий подтверждённый случай (Pump set_speed, Wifi set_range, ReadPropertyChange
+  float-ветвь). Грепать "TryParse(NumberStyles" по всем ReceiveSignal — почти
+  все НЕ проверяют IsValid после парса. Единственный, кто проверил — Turret
+  position_in (MathUtils.IsValid(newRotation)).

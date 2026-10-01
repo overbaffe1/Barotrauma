@@ -34,7 +34,7 @@
 - После каждой волны: `python3 research/mark.py "<относительный путь>" "1-N"`
   для каждого прочитанного файла, дописать блок `[WAVE N — title]` в конец
   `research/RESEARCH_NOTES.txt`, потом `python3 research/generate.py` из корня репо.
-- НОМЕР ВОЛНЫ: последняя — 447 (★★★★ TRUST BOUNDARY АУДИТ: найдены 5 критических дыр!). СЛЕДУЮЩАЯ — 448: продолжить аудит остальных ServerEventRead + Wire nodes + Turret signals. Любые волны = углублённый аудит/моды. РАЗМЕР ВОЛНЫ ~800-1500 строк.
+- НОМЕР ВОЛНЫ: последняя — 448 (★★★ перепроверка фабрикатора: дыра #5 ОПРОВЕРГНУТА + закрыт весь список ServerEventRead + найдены wifi NaN-range и ChangeProperty без клампов). СЛЕДУЮЩАЯ — 449: ReceiveSignal-скан всех TryParse(NumberStyles на IsValid, проверка Planter cross-sub attach, Ladder/Hatch/IdCard/Labeller хвосты, мод-код для дыры #1. Любые волны = углублённый аудит/моды. РАЗМЕР ВОЛНЫ ~800-1500 строк.
 - АУДИТЫ ДЫР: юзер просил не забывать — периодически (примерно раз в 3-4 волны)
   включать в волну скриптовый аудит гейтов/пакетов. Проведено: #1 (386, ServerEventRead
   гейты), #2 (387, все прямые клиент→сервер пакеты), #3 (390, server→client файлы:
@@ -56,13 +56,33 @@
   репозиторий https://github.com/overbaffe1/BarotraumaMod (клонится через git;
   raw.githubusercontent заблокирован, используй api.github.com).
 
-## СТАТУС (после волны 447)
-- 100% файлов пройдено, но ОБНАРУЖЕНЫ 5 критических дыр в trust boundary:
+## СТАТУС (после волны 448)
+- 100% файлов пройдено. Дыры trust boundary (статус после перепроверки 448):
   #1 Holdable attach: unit mismatch 150x (171 sim = 17,100 display вместо 114)
+     [448] cross-sub подтверждён: предмет снаружи цепляется к ЧУЖОЙ субе/
+     аутпосту/скале (item.Submarine = attachTarget.Submarine), OwnInventory
+     содержимое телепортируется вместе с предметом
   #2 Steering autopilot: posToMaintain БЕЗ валидации (любая точка карты)
   #3 Turret position_in: НЕТ дистанционного чека (wifi = управление из любого места)
+     [448] ОБОБЩЕНО: базовый ItemComponent.ReceiveSignal на activate/use/
+     trigger_in зовёт item.Use для ЛЮБОГО компонента — сигнальная шина доверенная
   #4 Wire nodes: БЕЗ клампа позиций (рисуются через стены)
-  #5 Fabricator: рецепт крафтится даже без ингредиентов
+  #5 Fabricator «крафт без ингредиентов»: ★ОПРОВЕРГНУТ в 448 — Update-loop
+     отменяет крафт на первом тике (CanBeFabricated → CancelFabricating),
+     Fabricate() перепроверяет. Спавна без ингредиентов НЕТ
+- [448] НОВЫЕ: WifiComponent set_range сигнал = NaN → Range=NaN →
+  DistanceSquared>NaN² всегда false → CanReceive/CanTransmit = ∞ радиус.
+  Item.ReadPropertyChange (ChangeProperty event): float/Vector2 ветви БЕЗ
+  клампов (Editable Min/Max клиентские!), гейт один — CanClientAccess.
+  Repairable QTESuccess — клиент верится на слово (мини-чит буста ремонта).
+  CircuitBox MoveComponent = CanClientAccess БЕЗ Locked-чека, MoveAmount сырой
+  Vector2 (UI-косметика). AddWire бесплатный (подтверждено).
+- [448] ServerEventRead-аудит ЗАВЕРШЁН (все 19 файлов): Reactor/Engine/Sonar/
+  Wifi/ButtonTerminal/Deconstructor/Terminal/CustomInterface/Pump — чистые
+  (клампы ReadRanged* + гейты). RegExFind: ReDoS придушен matchTimeout 50ms.
+- [448] ПАТТЕРН: float.TryParse/ReadSingle без IsValid на ПРИЁМЕ — Pump
+  set_speed (яд застревает: сеттер проверяет СТАРОЕ значение), Wifi set_range,
+  ReadPropertyChange float. Turret position_in — единственный с IsValid.
 - Все ServerEventRead доверяют данным после CanClientAccess
 - CanClientAccess = sub + CanInteractWith (display-unit distance)
 - ГЛАВНЫЙ УРОК: наличие валидации ≠ корректная валидация. Unit mismatch display↔sim.
@@ -413,3 +433,4 @@
 - Волна 445: FARSEER 100% (51K ~130 файлов: World/Body/Collision/ContactSolver/Vertices+ConvexHull+Decomposition (генерация коллизий из спрайтов!)/TextureConverter+MarchingSquares/BuoyancyController — весь «физический движок» = Farseer 3.5 с правками!) + FACEPUNCH 100% (27K ~160 файлов: SteamUGC/Friends/NetworkingSockets/UserStats/Matchmaking/RemoteStorage — все Steam-API юзавшиеся игрой; ★Generated/ = автогенерация из C-хедеров SDK, SteamCallbacks 3124/SteamEnums 2516!). Остаток: 663 файла / 120,158 строк (MonoGame 84K/SharpFont 27K/GameAnalytics 9K + мелочь).
 - Волна 446 (★★★★★ФИНАЛ! 663 файла 120,158 строк): MONOGAME 100% (84K ~200 файлов: SpriteBatch (Deferred + кастомный SpriteRecorder 415-го!), GraphicsDevice DirectX+OpenGL бэкенды, ZLibStream (контент .bar!), Stb.Image generated (PNG/JPEG С НУЛЯ!), Effect=HLSL обёртки (watershader/deformshader!), Input, Content-пайплайн; ★ФОРК MonoGame DesktopGL с XNATypes!) + SHARPFONT 100% (27K: FreeType-биндинг, Face 2412, TT-интерпретатор — все шрифты игры!) + GAMEANALYTICS 100% (9K: GAState очередь, SimpleJSON 1347 свой парсер!) + финальные мелочи. ★★★★ВСЯ КОДОВАЯ БАЗА = 100.00%★★★★
 - Волна 447 (★★★★TRUST BOUNDARY АУДИТ — юзер нашёл, я проверил): ДЫРА #1 Holdable attach: MaxAttachDistance=114 display px клампится на SIM coords → 171 sim = 17,100 display = 150x превышение! Плантер наследует. ДЫРА #2 Steering: posToMaintain = raw f32×2 из сети, НЕТ IsValid/clamp/distance → автопилот на любую точку. ДЫРА #3 Turret: position_in сигнал НЕ проверяет дистанцию/отправителя → wifi = управление турелью из любого места. ДЫРА #4 Wire: node positions = raw f32×2, рисуются через стены. ДЫРА #5 Fabricator: recipeHash без валидации принадлежности, fabrication запускается даже без ингредиентов (MoveIngredientsToInputContainer ищет по всему субу, не находит = крафтит без них). ПАТТЕРН: CanClientAccess = ЕДИНСТВЕННЫЙ чек, после него полное доверие пакету. CanClientAccess проверяет sub-membership + CanInteractWith (distance в display units). УРОК: валидация ≠ корректная валидация.
+- Волна 448 (★★★ПЕРЕПРОВЕРКА по запросу юзера «насчет фабрикатора сомневаюсь»): ★ДЫРА #5 ОПРОВЕРГНУТА — трасса: StartFabricating не проверяет ингредиенты (да), НО Update на сервере КАЖДЫЙ ТИК: !CanBeFabricated(availableIngredients, user) → CancelFabricating; Fabricate() перепроверяет перед консумацией/спавном; availableIngredients свежий (RefreshAvailableIngredients в StartFabricating:216). Крафт без ингредиентов живёт 0 тиков, спавна НЕТ. Попутно: fabricationRecipes[recipeHash] = прямое индексирование клиентским u32 → KeyNotFoundException, но ServerEntityEventManager.Update оборачивает ВСЕ ServerEventRead в try/catch → не DoS. MoveIngredientsToInputContainer ВЫБРАСЫВАЕТ предметы из input-контейнера ради места + тянет ингредиенты из чужих инвентарей (linked container selected — vanilla «display cabinet»). ЗАКРЫТ ВЕСЬ СПИСОК ServerEventRead (19 файлов): Reactor/Engine/Sonar/Wifi/ButtonTerminal/Deconstructor/Terminal/CustomInterface/Pump/ConnectionPanel — чистые (ReadRanged* клампы + гейты; CustomInterface: DrawHudWhenEquipped+item в инвентаре = валидный доступ). Repairable: QTESuccess bool верится клиенту (мини-чит буста). CircuitBox: MoveComponent БЕЗ Locked, MoveAmount сырой Vector2 (UI), AddWire бесплатный — подтверждено. НОВОЕ ★★★: WifiComponent.ReceiveSignal set_range = float.TryParse БЕЗ IsValid → "NaN"/"Infinity" проходят (.NET Core 3.0+ IEEE) → Range=NaN → DistanceSquared>NaN² false → CanReceive/CanTransmit ∞ радиус (трейтор-радио на всю карту + combo с дырой #3). НОВОЕ ★★★: Item.ReadPropertyChange (EventType.ChangeProperty, Item.cs:3855): гейт один CanClientAccess (+circuit box exception); float/Vector2 ветви БЕЗ клампов — Editable.MinValueFloat/MaxValueFloat сервером НЕ читаются (клиентские!); string[] ветвь (arrayLength сырой int32 → new string[N] memory-bomb) МЕРТВА: единственное string[] InGameEditable-свойства нет (ButtonTerminal.Signals = plain [Editable], а OfType<InGameEditable>() не матчит наследование атрибутов). RegExFind Expression InGameEditable → ReDoS придушен matchTimeout 50ms + деактивация после 3 таймаутов (девы молодцы). Паттерн волны: TryParse/ReadSingle без IsValid на приёме — Pump set_speed (сеттер проверяет СТАРОЕ значение, клампит NaN в поле напрямую — яд застревает навсегда), Wifi set_range, ChangeProperty float; единственный с IsValid — Turret position_in. База ItemComponent.ReceiveSignal: activate/use/trigger_in → item.Use для ЛЮБОГО компонента — дыра #3 обобщена до класса. Holdable attach cross-sub подтверждён: снаружи предмет цепляется к чужой субе/аутпосту/скале уровня, OwnInventory летит вместе. Кандидаты 449: греп TryParse(NumberStyles по всем ReceiveSignal на IsValid, Planter cross-sub, Ladder/Hatch/IdCard/Labeller/MarkerTransponder хвосты, CSHUB-мод для дыры #1.
