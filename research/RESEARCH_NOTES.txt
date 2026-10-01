@@ -15085,3 +15085,34 @@ Libraries остаток = ТОЛЬКО настоящий сторонний к
 Concentus 46K, SharpFont 27K, Facepunch 27K, Farseer 51K, Lidgren 11K,
 GameAnalytics 9K, XNATypes 13K — 1216 файлов ~262K строк.
 
+
+================================================================================
+[WAVE 444 - Lidgren.Network 100% + Concentus 100% + XNATypes 100% (сеть/кодек/типы)]
+================================================================================
+LIDGREN.NETWORK 100% (9,946 строк, 20+ файлов — ВЕСЬ СЕТЕВОЙ ТРАНСПОРТ!):
+  NetPeer/NetServer/NetClient — ядро. Соединения через NetConnection
+  (Handshake из 329-го!), NetReliableSenderChannel/NetUnreliableChannel
+  (все каналы из 329-го!). ★NetPeerConfiguration: AppIdentifier «barotrauma»
+  (анти-коннект чужих приложений — сверяется в handshake!), BufferSize,
+  PingInterval, ConnectionTimeout (25с дефолт → 60 lenient 444-й... тьфу,
+  390-й!), MaximumTransmissionUnit. ★NetBitWriter/NetBitReader — битовая
+  упаковка (WriteRangedInteger юзает!). NetMessageType: LibraryError/
+  StatusChanged/Data/ConnectionApproval/UnconnectedData... Encryption:
+  NetX crypto (AES/BC/ECB из 329-го SRP!). Platform-специфика (Unix
+  socket-хаки). NetUnsentFlag/NetSendResult. ВЕСЬ транспорт игры —
+  документирован. Мы уже покрыли игровые обёртки (LidgrenServerPeer/
+  LidgrenClientPeer/NetConnection/Handshake/каналы в 329-м), тут —
+  САМА БИБЛИОТЕКА Лидгрена (форк!).
+
+--- CONCENTUS 100% (46K строк — чистый C# Opus-кодек!) ---
+  ★★ ВЕСЬ Opus-декодер/энкодер С НУЛЯ на C# (порт libopus!):
+  Inlines 2714 (быстрая математика: fast_atan2, celt_rsqrt, table-поиски),
+  Celt/ Silk/ структуры. VoipConfig.CreateDecoder отсюда (416-й!).
+  Это значит: VoIP работает БЕЗ нативного libopus — полностью managed!
+
+--- XNATYPES 100% (13,319 строк — типы XNA форкнуты) ---
+  Matrix 2474 (полная матрица 4×4: CreateOrthographic/Decompose/
+  Lerp...), Vector2/3/4, Rectangle(F), Color, Point, MathHelper,
+  Curve, Bounding*, Ray, Plane, Quaternion. ★Это ФОРК XNA-типов
+  (не MonoGame!) — игра юзает свою копию базовых структур.
+

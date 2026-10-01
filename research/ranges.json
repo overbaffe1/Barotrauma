@@ -8130,5 +8130,1265 @@
       1,
       265
     ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/Inlines.cs": [
+    [
+      1,
+      2714
+    ]
+  ],
+  "Libraries/XNATypes/Matrix.cs": [
+    [
+      1,
+      2474
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBigInteger.cs": [
+    [
+      1,
+      2352
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/OpusEncoder.cs": [
+    [
+      1,
+      2050
+    ]
+  ],
+  "Libraries/XNATypes/Color.cs": [
+    [
+      1,
+      1821
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkNSQState.cs": [
+    [
+      1,
+      1742
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Bands.cs": [
+    [
+      1,
+      1714
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CeltCommon.cs": [
+    [
+      1,
+      1406
+    ]
+  ],
+  "Libraries/XNATypes/Vector3.cs": [
+    [
+      1,
+      1374
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/CeltEncoder.cs": [
+    [
+      1,
+      1300
+    ]
+  ],
+  "Libraries/XNATypes/Vector4.cs": [
+    [
+      1,
+      1298
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/NLSF.cs": [
+    [
+      1,
+      1272
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkChannelEncoder.cs": [
+    [
+      1,
+      1264
+    ]
+  ],
+  "Libraries/XNATypes/Quaternion.cs": [
+    [
+      1,
+      1169
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/OpusMSEncoder.cs": [
+    [
+      1,
+      1168
+    ]
+  ],
+  "Libraries/XNATypes/Vector2.cs": [
+    [
+      1,
+      1163
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Tables.cs": [
+    [
+      1,
+      1128
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Tables.cs": [
+    [
+      1,
+      1065
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/Resampler.cs": [
+    [
+      1,
+      1035
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/OpusDecoder.cs": [
+    [
+      1,
+      933
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/CELTDecoder.cs": [
+    [
+      1,
+      873
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/PitchAnalysisCore.cs": [
+    [
+      1,
+      792
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/EntropyCoder.cs": [
+    [
+      1,
+      790
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Resampler.cs": [
+    [
+      1,
+      744
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/EncodeAPI.cs": [
+    [
+      1,
+      740
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Filters.cs": [
+    [
+      1,
+      714
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/CodecHelpers.cs": [
+    [
+      1,
+      712
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBuffer.Write.cs": [
+    [
+      1,
+      676
+    ]
+  ],
+  "Libraries/XNATypes/BoundingSphere.cs": [
+    [
+      1,
+      640
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Analysis.cs": [
+    [
+      1,
+      590
+    ]
+  ],
+  "Libraries/XNATypes/BoundingFrustum.cs": [
+    [
+      1,
+      578
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/OpusRepacketizer.cs": [
+    [
+      1,
+      573
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeerConfiguration.cs": [
+    [
+      1,
+      571
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/CPlusPlus/Pointer.cs": [
+    [
+      1,
+      563
+    ]
+  ],
+  "Libraries/XNATypes/Rectangle.cs": [
+    [
+      1,
+      555
+    ]
+  ],
+  "Libraries/XNATypes/RectangleF.cs": [
+    [
+      1,
+      551
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Stereo.cs": [
+    [
+      1,
+      543
+    ]
+  ],
+  "Libraries/XNATypes/BoundingBox.cs": [
+    [
+      1,
+      538
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/QuantizeBands.cs": [
+    [
+      1,
+      524
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Rate.cs": [
+    [
+      1,
+      519
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBitWriter.cs": [
+    [
+      1,
+      513
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Pitch.cs": [
+    [
+      1,
+      506
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/NoiseShapeAnalysis.cs": [
+    [
+      1,
+      498
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetUtility.cs": [
+    [
+      1,
+      493
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/PLC.cs": [
+    [
+      1,
+      486
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/OpusPacketInfo.cs": [
+    [
+      1,
+      470
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/DecodeAPI.cs": [
+    [
+      1,
+      461
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/KissFFTUnsafe.cs": [
+    [
+      1,
+      456
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/KissFFT.cs": [
+    [
+      1,
+      455
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/OpusMSDecoder.cs": [
+    [
+      1,
+      438
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/VQ.cs": [
+    [
+      1,
+      430
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/VoiceActivityDetection.cs": [
+    [
+      1,
+      409
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeer.cs": [
+    [
+      1,
+      387
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/MDCT.cs": [
+    [
+      1,
+      370
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkChannelDecoder.cs": [
+    [
+      1,
+      359
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetQueue.cs": [
+    [
+      1,
+      356
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Kernels.cs": [
+    [
+      1,
+      354
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/KernelsUnsafe.cs": [
+    [
+      1,
+      352
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/OpusCompare.cs": [
+    [
+      1,
+      340
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/BurgModifiedUnsafe.cs": [
+    [
+      1,
+      336
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/BurgModified.cs": [
+    [
+      1,
+      326
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeer.LatencySimulation.cs": [
+    [
+      1,
+      322
+    ]
+  ],
+  "Libraries/XNATypes/MathHelper.cs": [
+    [
+      1,
+      320
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CWRS.cs": [
+    [
+      1,
+      319
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBuffer.Peek.cs": [
+    [
+      1,
+      312
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/SilkConstants.cs": [
+    [
+      1,
+      311
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/AutocorrelationUnsafe.cs": [
+    [
+      1,
+      300
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Tables.cs": [
+    [
+      1,
+      298
+    ]
+  ],
+  "Libraries/XNATypes/Plane.cs": [
+    [
+      1,
+      296
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/FindLTP.cs": [
+    [
+      1,
+      295
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/Autocorrelation.cs": [
+    [
+      1,
+      284
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetRandom.Implementations.cs": [
+    [
+      1,
+      281
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/EncodePulses.cs": [
+    [
+      1,
+      278
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/DecodeCore.cs": [
+    [
+      1,
+      278
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetUPnP.cs": [
+    [
+      1,
+      276
+    ]
+  ],
+  "Libraries/XNATypes/Ray.cs": [
+    [
+      1,
+      272
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CeltPitchXCorrUnsafe.cs": [
+    [
+      1,
+      255
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/LinearAlgebra.cs": [
+    [
+      1,
+      245
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeer.MessagePools.cs": [
+    [
+      1,
+      232
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/CNG.cs": [
+    [
+      1,
+      232
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/EncodeIndices.cs": [
+    [
+      1,
+      223
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/CPlusPlus/Arrays.cs": [
+    [
+      1,
+      221
+    ]
+  ],
+  "Libraries/XNATypes/Point.cs": [
+    [
+      1,
+      220
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/EncControlState.cs": [
+    [
+      1,
+      217
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetConnectionStatistics.cs": [
+    [
+      1,
+      213
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/ShellCoder.cs": [
+    [
+      1,
+      206
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Schur.cs": [
+    [
+      1,
+      198
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/ResidualEnergy.cs": [
+    [
+      1,
+      193
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/GainQuantization.cs": [
+    [
+      1,
+      187
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/CorrelateMatrix.cs": [
+    [
+      1,
+      186
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Sort.cs": [
+    [
+      1,
+      184
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/FindLPC.cs": [
+    [
+      1,
+      184
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetSRP.cs": [
+    [
+      1,
+      179
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/SumSqrShift.cs": [
+    [
+      1,
+      179
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/DecodeIndices.cs": [
+    [
+      1,
+      179
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetRandom.cs": [
+    [
+      1,
+      177
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetClient.cs": [
+    [
+      1,
+      176
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetMessageType.cs": [
+    [
+      1,
+      175
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/TuningParameters.cs": [
+    [
+      1,
+      174
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBitVector.cs": [
+    [
+      1,
+      172
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/FindPredCoefs.cs": [
+    [
+      1,
+      171
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/LPCInversePredGain.cs": [
+    [
+      1,
+      169
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/FindPitchLags.cs": [
+    [
+      1,
+      167
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CeltLPCUnsafe.cs": [
+    [
+      1,
+      163
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CeltLPC.cs": [
+    [
+      1,
+      159
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeerStatistics.cs": [
+    [
+      1,
+      158
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Laplace.cs": [
+    [
+      1,
+      157
+    ]
+  ],
+  "Libraries/Lidgren.Network/Platform/PlatformWin32.cs": [
+    [
+      1,
+      156
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetXteaEncryption.cs": [
+    [
+      1,
+      154
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CeltPitchXCorr.cs": [
+    [
+      1,
+      154
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/QuantizeLTPGains.cs": [
+    [
+      1,
+      153
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/CodeSigns.cs": [
+    [
+      1,
+      150
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetConnection.Latency.cs": [
+    [
+      1,
+      149
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/ProcessGains.cs": [
+    [
+      1,
+      143
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetUnreliableSenderChannel.cs": [
+    [
+      1,
+      142
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetOutgoingMessage.cs": [
+    [
+      1,
+      142
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/DecodeParameters.cs": [
+    [
+      1,
+      141
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/TonalityAnalysisState.cs": [
+    [
+      1,
+      140
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/DecodePulses.cs": [
+    [
+      1,
+      136
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/VQ_WMat_EC.cs": [
+    [
+      1,
+      134
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Downmix.cs": [
+    [
+      1,
+      125
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetNatIntroduction.cs": [
+    [
+      1,
+      123
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetIncomingMessage.cs": [
+    [
+      1,
+      119
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/ApplySineWindow.cs": [
+    [
+      1,
+      118
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/CELTMode.cs": [
+    [
+      1,
+      118
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/MultiLayerPerceptron.cs": [
+    [
+      1,
+      111
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkVADState.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkLPState.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/NLSFCodebook.cs": [
+    [
+      1,
+      108
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetIncomingMessageType.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkEncoderControl.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkEncoder.cs": [
+    [
+      1,
+      105
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBuffer.Read.Reflection.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/LTPAnalysisFilter.cs": [
+    [
+      1,
+      103
+    ]
+  ],
+  "Libraries/Lidgren.Network/Platform/PlatformWinRT.cs": [
+    [
+      1,
+      102
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetServer.cs": [
+    [
+      1,
+      100
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/OpusMultistream.cs": [
+    [
+      1,
+      99
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBuffer.cs": [
+    [
+      1,
+      98
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetReliableUnorderedReceiver.cs": [
+    [
+      1,
+      97
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Common/CPlusPlus/BoxedValue.cs": [
+    [
+      1,
+      97
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetBuffer.Write.Reflection.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkResamplerState.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusControl.cs": [
+    [
+      1,
+      94
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Sigmoid.cs": [
+    [
+      1,
+      93
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/CeltConstants.cs": [
+    [
+      1,
+      93
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/K2A.cs": [
+    [
+      1,
+      92
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Enums/SilkError.cs": [
+    [
+      1,
+      91
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/HPVariableCutoff.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/DecodePitch.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/BWExpander.cs": [
+    [
+      1,
+      90
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetBlockEncryptionBase.cs": [
+    [
+      1,
+      89
+    ]
+  ],
+  "Libraries/Lidgren.Network/Platform/PlatformAndroid.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SideInfoIndices.cs": [
+    [
+      1,
+      88
+    ]
+  ],
+  "Libraries/Lidgren.Network/Platform/PlatformConstrained.cs": [
+    [
+      1,
+      86
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusFramesize.cs": [
+    [
+      1,
+      80
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetCryptoProviderBase.cs": [
+    [
+      1,
+      77
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/PLCStruct.cs": [
+    [
+      1,
+      75
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetException.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/AnalysisInfo.cs": [
+    [
+      1,
+      74
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/DecControlState.cs": [
+    [
+      1,
+      72
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/StereoEncodeState.cs": [
+    [
+      1,
+      71
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkPrefilterState.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkDecoder.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusBandwidth.cs": [
+    [
+      1,
+      70
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeer.Discovery.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/VorbisLayout.cs": [
+    [
+      1,
+      69
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetConnectionStatus.cs": [
+    [
+      1,
+      68
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusError.cs": [
+    [
+      1,
+      68
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetXorEncryption.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/TOCStruct.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/LTPScaleControl.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/OpusConstants.cs": [
+    [
+      1,
+      66
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeer.Logging.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkDecoderControl.cs": [
+    [
+      1,
+      63
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/RegularizeCorrelations.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/StereoWidthState.cs": [
+    [
+      1,
+      61
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/ChannelLayout.cs": [
+    [
+      1,
+      60
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetCryptoProviderEncryption.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/CNGState.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/PulseCache.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/MDCTLookup.cs": [
+    [
+      1,
+      59
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetConstants.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/SilkShapeState.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusApplication.cs": [
+    [
+      1,
+      57
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Structs/FFTState.cs": [
+    [
+      1,
+      54
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Structs/StereoDecodeState.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Structs/MLP.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusSignal.cs": [
+    [
+      1,
+      52
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetPeerStatus.cs": [
+    [
+      1,
+      49
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetDeliveryMethod.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/OpusException.cs": [
+    [
+      1,
+      46
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetRandomSeed.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetEncryption.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Opus/Enums/OpusMode.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Celt/Enums/Spread.cs": [
+    [
+      1,
+      45
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetTime.cs": [
+    [
+      1,
+      42
+    ]
+  ],
+  "Libraries/Concentus/CSharp/Concentus/Silk/Enums/DecoderAPIFlag.cs": [
+    [
+      1,
+      41
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetSendResult.cs": [
+    [
+      1,
+      30
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetSenderChannelBase.cs": [
+    [
+      1,
+      28
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetTripleDESEncryption.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetRC2Encryption.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetDESEncryption.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/Lidgren.Network/Encryption/NetAESEncryption.cs": [
+    [
+      1,
+      26
+    ]
+  ],
+  "Libraries/XNATypes/PlaneIntersectionType.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/XNATypes/ContainmentType.cs": [
+    [
+      1,
+      25
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetTuple.cs": [
+    [
+      1,
+      19
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetStoredReliableMessage.cs": [
+    [
+      1,
+      19
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetReceiverChannelBase.cs": [
+    [
+      1,
+      18
+    ]
+  ],
+  "Libraries/Lidgren.Network/NamespaceDoc.cs": [
+    [
+      1,
+      14
+    ]
+  ],
+  "Libraries/Lidgren.Network/NetFragmentationInfo.cs": [
+    [
+      1,
+      12
+    ]
   ]
 }
