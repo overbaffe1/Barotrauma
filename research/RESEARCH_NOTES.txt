@@ -14995,3 +14995,46 @@ FunctionComponent, ColorComponent, StringComponent — все элементы �
 компоненты, все механизмы игры задокументированы. Остаток = огрызки <44
 строк (пустые классы, частичные партиалы-заглушки).
 
+
+================================================================================
+[WAVE 442 - ★★★★ НЕ-LIBRARIES СОРСЫ ЗАВЕРШЕНЫ НА 100%! +152 огрызка добиты]
+================================================================================
+1268 ФАЙЛОВ / 418,778 СТРОК = 60.72% — ВСЕ СОБСТВЕННЫЕ СОРСЫ ИГРЫ
+ПРОЧИТАНЫ ПОЛНОСТЬЮ. Остаток = Libraries (1250 файлов, ~271K строк:
+Farseer/Lidgren/SharpFont/CSCore/NAudio/Vorbis/Concentus/Facepunch...).
+
+Из огрызков примечательное:
+- SonarTransducer 43: датчик сонара шлёт ЖЁСТКО ЗАХАРДКОЖЕННЫЙ фейковый
+  «сигнал» «0101101101101011010» каждые 0.5с — данные трансдьюсера
+  ДЕКОРАЦИЯ, настоящий сонар считает Sonar-компонент!
+- NetDictionary 42: сериализуемая dict-обёртка НАД СПИСКОК ПАР — «doesn't
+  enforce» дубликаты ключей (сознательно!). Пара к ItemStatManager 421.
+- StartItemSet 44: аддитивные наборы стартовых предметов кампании
+  (MultiPlayerOnly флаг!).
+- FunctionComponent Round: −0→0 фикс подтверждён. Exponentiation/Modulo/
+  NotComponent — финал калькулятора сигнал-сетки.
+- ShipIssueWorkerRepairSystems/FixLeaks — пустые наследники (393-я).
+- CauseOfDeath 37: тип + аффликция + киллер (всё для «причины смерти»).
+- GenericPrefabFile — «*File» универсальный тип. SubmarineFile,
+  MissionsFile, ParticlesFile, UpgradeModulesFile, SoundsFile,
+  SkillSettingsFile, MapGenerationParametersFile — все ContentFile-типы.
+- InventoryHighlightAction 36 (ивенты подсвечивают инвентарь!), EventInput,
+  CommandPattern 35 (undo-команды редактора!), RestFactory 35 (REST-хелпер),
+  NPCSet 35 (наборы NPC аутпостов), Wallet client 31 (кошелёк клиента),
+  AIChatMessage 31 (реплики ботов), LimitLString/TrimLString/FormattedLString/
+  AddedPunctuationLString (текст-ноды 409-го), CompositeServerProvider 35,
+  SocialExtensions 34, IDamageable 30 (интерфейс урона), CachedDistance 30
+  (кэш дистанций TutorialMode), IgnoredHints/CompletedTutorials 44/44
+  (туториал-прогресс), BallastFloraPrefab 31, Vent 31 (вентиль: Received
+  Oxygen от генератора 420-го!), InputType 31 (enum всех действий),
+  DeformableSprite shared 29, MathUtils client 38, SpriteSheet client 33,
+  Decal client 35, GUIFrame 35, ItemEventData client 35, NetLobbyScreen...
+
+ИТОГ ИССЛЕДОВАНИЯ СОБСТВЕННЫХ СОРСОВ:
+~419K строк, ~1268 файлов. Все системы: networking (Lidgren/Steam/EOS P2P),
+персонажи (health/afflictions/AI/talents), кампания (map/outposts/factions),
+айтемы (300+ компонентов), сигнальная логика (ПОЛНАЯ), энергия, вода,
+ИИ (objectives/steering/characters), GUI (полный движок), звук (OpenAL
++ кастомный OpenAL Soft), моды (весь ContentPackage-пайплайн), крипто
+(SRP), деплой. Найдено: 2 флагманских вектора (TalentOverspend, SellById),
+CAMPAIGN_STATE, десятки квирков, 5+ аудитов дыр, сотни дев-признаний.
