@@ -16253,3 +16253,60 @@ Barotrauma разложен по винтикам от handshake до титро
   (снятие ПОЗИТИВНЫХ аффликций = гриф, кармой невидим). Кулдаун 1с
   (лимит клиники 20req/5s). Рефлексия Send — тот же паттерн, что SellById.
   Прим.: хедер-комментарий модуля содержит полный анализ вектора.
+===============================================================================
+[WAVE 461 — INVENTORY SHAREDREAD: byte-индексы vs capacity + УТЕЧКА ДИКТА]
+===============================================================================
+
+--- ★★ SHAREDREAD: start/end = сырые БАЙТЫ, массив = capacity ---
+  SharedRead (shared:1108), вызывается из ServerEventRead (server:24):
+    byte start = msg.ReadByte();      ← СЫРОЙ
+    byte end = msg.ReadByte();        ← СЫРОЙ
+    for (int i = start; i < end; i++) {
+        ...
+        receivedItemIds[i] = newItemIds;   ← массив создан РАЗМЕРОМ capacity!
+    }
+  ВСЕ инвентари игры far<255: CharacterInventory = число слотов из XML
+  (~15-25 у людей), ItemInventory = totalCapacity контейнера (4-8).
+  → start/end >= capacity = IndexOutOfRangeException.
+  ГДЕ ЛОВИТСЯ: Inventory.ServerEventRead зовётся из Character/Item
+  ServerEventRead → ServerEntityEventManager.Update → PER-EVENT try/catch
+  (:183-203) → лог + GameAnalytics, IsProcessed=true. НЕ батч-дроп!
+  Семейство throw #6, но самое мягкое: per-event catch. Просто лог-спам
+  в рамках entity-ивентов (не packet-батча).
+
+--- ✅ readyToApply-чанкинг корректен ---
+  `readyToApply = !receivedItemIds.Contains(null)` — применится только
+  при полном покрытии 0..capacity-1; клиент ФИЗИЧЕСКИ не может заполнить
+  за capacity (кинет исключение раньше) → невалидное состояние не
+  применяется никогда. start==0 сбрасывает все чанки (анти-перемешивание).
+  itemCount = ReadRangedInteger(0, MaxPossibleStackSize=63) — кламп.
+  До apply только чтение. Корректно.
+
+--- ★★ УТЕЧКА: receivedItemIds (Dictionary<Client, List<ushort>[]>)
+  Чистка: ТОЛЬКО receivedItemIds.Remove(sender) после УСПЕШНОГО apply
+  (server:49). При ДИСКОННЕКТЕ клиента — НЕТ Remove нигде!
+  → записи (Client → capacity×List) живут вечно для КАЖДОГО инвентаря
+  (ItemContainer'ы — сотни на карте!), в который клиент когда-либо
+  слал inventory-ивенты. Пере-джоины создают НОВЫЕ Client-объекты.
+  Долгоживущий сервер: сотни дисконнектов × сотни инвентарей × мелкие
+  массивы = медленный, но настоящий unbounded-рост. ★★ (leak, не эксплойт:
+  клиент может только чуть-чуть ускорить рост, посылая ивенты в много
+  инвентарей перед выходом).
+
+--- ★ Item.cs:200 null-cast квирк ---
+  case EventType.InventoryState:
+    int containerIndex = msg.ReadRangedInteger(0, components.Count - 1);  ← кламп
+    (components[containerIndex] as ItemContainer).Inventory.ServerEventRead(...);
+  `as ItemContainer` = null, если компонент с этим индексом НЕ контейнер
+  (клиент шлёт InventoryState с индексом, например, Holdable) → NRE →
+  per-event catch → лог. Garbage-throw #7 (per-event).
+
+--- ✅ Клиент-сайд (ClientEventRead 2042): ApplyReceivedState честно дропает
+  предметы, отсутствующие в пришедшем состоянии; задержка применения пока
+  midround syncing (анти-«вещи из ниоткуда»); ForceToSlot только как
+  fallback с сообщением. Серверный SharedWrite — только server→client.
+
+--- ВЕРДИКТ: Inventory-сверка (450) остаётся «образцом», но её ТРАНСПОРТНЫЙ
+  слой (SharedRead) с трещинами: byte-overread (#6), null-cast (#7),
+  dict-утечка. Фиксы девам: Math.Min(end, capacity) + Remove(sender) в
+  OnClientDisconnect + null-чек каста.
