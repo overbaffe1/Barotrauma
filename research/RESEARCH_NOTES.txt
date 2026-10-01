@@ -15116,3 +15116,28 @@ LIDGREN.NETWORK 100% (9,946 строк, 20+ файлов — ВЕСЬ СЕТЕВ
   Curve, Bounding*, Ray, Plane, Quaternion. ★Это ФОРК XNA-типов
   (не MonoGame!) — игра юзает свою копию базовых структур.
 
+
+================================================================================
+[WAVE 445 - Farseer Physics 100% (51K) + Facepunch Steamworks 100% (27K) — 82.58%]
+================================================================================
+FARSEER PHYSICS ENGINE 3.5 100% (51,284 строк, ~130 файлов):
+  Игровой «физический движок» = ВЕТКА Farseer 3.5 с правками:
+  World 1729 (шаг симуляции, Island-solver,Body-Add/Remove), Body 1412
+  (Fixture-менеджмент, ApplyForce/Impulse — юзались всеми компонентами!),
+  Collision 1871 (broad-phase коллизии, Distance/GJK), ContactSolver 1166
+  (импульсы контактов), Vertices 585 + ConvexHull (GiftWrap/Melkman/Chain —
+  юзались Voronoi-декомацей уровня!), Decomposition (Bayazit — полигонная
+  декомпозиция стен!), TextureConverter 1263 / MarchingSquares 805
+  (текстура→полигон — генерация коллизий из спрайтов!), SimpleExplosion,
+  BuoyancyController (плавучесть!), Path/Curve, FixedArray. DLL-версия
+  известна: PhysBody 317-й юзал именно эти API.
+
+FACEPUNCH STEAMWORKS 100% (26,637 строк, ~160 файлов):
+  SteamClient/SteamServer (инициализация), SteamFriends, SteamUGC
+  (Workshop: подписки/скачивание/поиск — юзался Workshop-классом 359!),
+  SteamNetworkingSockets (P2P из 415!), SteamUserStats (ачивки 315!),
+  SteamMatchmaking (лобби 420!), SteamRemoteStorage (Cloud 439!),
+  SteamInventory/ SteamDLC. ★Generated/ папки = автогенерация из
+  Steamworks SDK (SteamCallbacks 3124/SteamEnums 2516 — обёртки
+  C-коллбеков!). Structs/ = структуры Steam API.
+
