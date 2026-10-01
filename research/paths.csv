@@ -908,7 +908,7 @@ Barotrauma/BarotraumaShared/SharedSource/GameSession/CrewManager.cs,692,done,692
 Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/CampaignMetadata.cs,146,done,146
 Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Factions.cs,206,done,206
 Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Reputation.cs,220,done,220
-Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Wallet.cs,237,done,237
+Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Wallet.cs,237,done,240
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignMode.cs,1757,done,1757
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignModePresets.cs,77,done,77
 Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignSettings.cs,288,done,288
@@ -1108,7 +1108,7 @@ Barotrauma/BarotraumaShared/SharedSource/Networking/NetEntityEvent/NetEntityEven
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetEntityEvent/NetEntityEventManager.cs,107,done,107
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetIdUtils.cs,104,done,104
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetworkMember.cs,265,done,265
-Barotrauma/BarotraumaShared/SharedSource/Networking/OrderChatMessage.cs,228,done,230
+Barotrauma/BarotraumaShared/SharedSource/Networking/OrderChatMessage.cs,228,done,240
 Barotrauma/BarotraumaShared/SharedSource/Networking/Primitives/AccountInfo.cs,51,done,51
 Barotrauma/BarotraumaShared/SharedSource/Networking/Primitives/Auth/AuthenticationTicket.cs,65,done,65
 Barotrauma/BarotraumaShared/SharedSource/Networking/Primitives/Auth/Authenticator.cs,38,done,38

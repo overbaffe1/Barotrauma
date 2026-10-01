@@ -15654,3 +15654,78 @@ Barotrauma разложен по винтикам от handshake до титро
 --- ПАТТЕРН ВОЛНЫ: «геттер-щит» — Client.SpectatePos чтение возвращает null
   для живых, и ЭТО главная защита. Плюс третий случай «throw → peer catch-all
   → дроп батча» (EventManager 449, VoIP 450, ConnectionPanel-семейство).
+===============================================================================
+[WAVE 451 — CONCENTUS THROW ПОДТВЕРЖДЁН + ORDER-ИНЪЕКЦИЯ + CAMPAIGN MONEY]
+===============================================================================
+
+--- ★★★★ ГЛАВНОЕ: VOIP = ДЕТЕРМИНИРОВАННЫЙ THROW НА СЕРВЕРЕ (1 байт = батч-дроп) ---
+  Опроверг надежду «Concentus устойчив»: Decode КИДАЕТ.
+
+  Трасса (OpusDecoder.cs, Concentus):
+  1) VoipServerDecoder.OnNewVoiceReceived → decoder.Decode(compressedBuffer,
+     0, compressedSize, buffer, 0, BUFFER_SIZE)  [short[]-перегрузка]
+  2) Decode (строка 739+):
+       ret = opus_decode_native(...);
+       if (ret < 0) {
+           if (ret == OPUS_BAD_ARG) throw new ArgumentException(...);
+           throw new OpusException("An error occurred during decoding", ret);
+       }
+       catch (ArgumentException e) { throw new OpusException(...); } ← РЕ-КИДОК!
+     НЕ exception-safe. ЛЮБОЙ ret<0 = исключение НАРУЖУ.
+  3) opus_decode_native (строка 690):
+       if (count * packet_frame_size > frame_size) return OPUS_BUFFER_TOO_SMALL;
+     count = число фреймов в пакете (TOC, до 48), packet_frame_size = из TOC
+     (2.5-60ms → до 2880 сэмплов @48k). frame_size = BUFFER_SIZE = 960
+     (VoipConfig: (8*40*48000)/16000 — ровно 20ms).
+     Плюс opus_packet_parse_impl count<0 → OPUS_INVALID_PACKET → return →
+     throw. Обрезанный/битый пакет тоже валит декодер.
+  4) ЛЕГИТ-клиент ВСЕГДА шлёт 20ms/960 — влезает. ЗЛОЙ: 2-байтовый пакет с
+     TOC конфига 40ms (1920) или 60ms (2880) → count*frame_size=1920>960 →
+     ГАРАНТИРОВАННЫЙ throw. Дискриминатор = 1 байт TOC.
+  5) Сервер декодирует ВСЁ входящее voice (для амплитуды!) независимо от
+     слушателей. Гейт: VoiceChatEnabled + !Muted — всё.
+  6) Проглатывание: OpusException НЕ является NetStructReadException →
+     catch(Exception) цикла Update (LidgrenServerPeer.cs:122 /
+     P2PServerPeer.cs:104) → AddErrorEventOnce (дедуп, спама нет) →
+     break из foreach → ОСТАТОК БАТЧА СООБЩЕНИЙ ТИКА ДРОПАЕТСЯ.
+  ЭКСПЛОЙТ: спам VOICE (u16 incLatestBufferID инкрементим каждый пакет) с
+  одним битым фреймом → КАЖДЫЙ пакет кидает → каждый тик дропает чужие
+  пакеты, пришедшие после → INPUT/ENTITY_EVENTS/CHAT всех клиентов
+  систематически теряются = софт-DoS всей пати. Надёжный лаг-машин.
+  ★★★★ — самый чистый deterministic-throw из семейства «батч-дроп»
+  (EventManage 449 был edge-case, этот — 1 байт в каждом пакете).
+
+--- ★★ ORDER-ЧАТ: PrefabCollection[Identifier] КИДАЕТ на неизвестном ключе ---
+  OrderChatMessage.ReadOrder (shared:177) + ChatMessage.ServerRead (server:63):
+    var orderPrefab = OrderPrefab.Prefabs[orderIdentifier];
+  Проверяется ТОЛЬКО Empty. PrefabCollection.this[Identifier]
+  (PrefabCollection.cs:266): prefabs[identifier].ActivePrefab →
+  KeyNotFoundException на неизвестном Identifier; IndexOutOfRangeException
+  при override-файле. НЕТ TryGet. НЕТ try/catch.
+  → клиент шлёт Order с identifier "zzzz" → throw → батч-дроп (паттерн выше).
+  Детерминированный garbage-throw #2.
+  Попутно: orderPriority = сырой байт → WithManualPriority (Order.cs:725) —
+  приоритет сортировки целей ботов (int, HighestManualOrderPriority=5,
+  байт 255 = «сверхприоритет»). Квирк: тролль перекручивает приоритеты ЧУЖИХ
+  ботов. Санкционировано дизайном (клик-приоритеты), но валидации нет.
+  orderTargetType = сырой байт в enum — switch fall-through, безвредно.
+  Цель приказа = любой CharacterID — SetOrder чужому персонажу = vanilla
+  «крикнуть приказ» (чат-пинг), боты исполняют. Не вектор.
+
+--- ★ CAMPAIGN MONEY/CREW — ЗАГЕЙЧЕНО (опровергнуты сомнения) ---
+  ServerReadRewardDistribution: AllowedToManageWallets = AllowedToManageCampaign
+  (ClientPermissions.ManageMoney). SetRewardDistribution → ClampRewardDistribution
+  (0..100, Wallet.cs:235). ServerReadMoney: чужой wallet = только ManageMoney
+  (MultiPlayerCampaign.cs:1186). ResetSalaries — тот же гейт.
+  ServerReadCrew: fire/rename = ManageHires + HasCampaignInteractionAvailable;
+  SanitizeName + IsNameValid. Квирк: pendingHireLength = u16 → alloc до
+  ~131KB/сообщение (65535×3B) — читается мусором за концом, дёшево, ★.
+  ReadPerks: ManageSettings ИЛИ PvP-fallback (своей команде, если нет
+  ManageSettings-игрока в команде) — дизайн лобби. Чисто.
+
+--- ПАТТЕРН ВОЛНЫ: детерминированный throw ≠ edge-case. Семейство
+  «garbage → throw → peer catch-all → батч-дроп» теперь имеет 3 экземпляра:
+  (1) Options[255] (449), (2) PrefabCollection[unknown] (451), (3) OpusDecoder
+  TOC/битый фрейм (451, ★★★★ — самый практичный). Антидот у девов один и
+  тот же: catch(NetStructReadException) + AddErrorEventOnce — но batч-дроп
+  не чинится дедупом логов.

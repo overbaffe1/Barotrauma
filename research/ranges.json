@@ -230,7 +230,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Networking/OrderChatMessage.cs": [
     [
       1,
-      230
+      240
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Networking/ChatMessage.cs": [
@@ -918,7 +918,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Wallet.cs": [
     [
       1,
-      237
+      240
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Map/Map/Map.cs": [
