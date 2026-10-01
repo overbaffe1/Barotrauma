@@ -422,7 +422,7 @@ Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs,32,don
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/SalvageMission.cs,84,done,98
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs,39,done,39
 Barotrauma/BarotraumaServer/ServerSource/GameMain.cs,436,done,436
-Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs,88,done,88
+Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs,88,done,110
 Barotrauma/BarotraumaServer/ServerSource/GameSession/CrewManager.cs,177,done,177
 Barotrauma/BarotraumaServer/ServerSource/GameSession/Data/Wallet.cs,54,done,54
 Barotrauma/BarotraumaServer/ServerSource/GameSession/GameModes/CampaignMode.cs,52,done,52

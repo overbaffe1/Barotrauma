@@ -15729,3 +15729,83 @@ Barotrauma разложен по винтикам от handshake до титро
   TOC/битый фрейм (451, ★★★★ — самый практичный). Антидот у девов один и
   тот же: catch(NetStructReadException) + AddErrorEventOnce — но batч-дроп
   не чинится дедупом логов.
+===============================================================================
+[WAVE 452 — ★★★★★ SELL-EXPLOIT ПОДТВЕРЖДЁН (юзер видел вживую) + ВЕЧНЫЙ ДВИГАТЕЛЬ]
+===============================================================================
+
+--- ★★★★★ ЮЗЕР ПРАВ: продажа НЕСУЩЕСТВУЮЩЕГО предмета = ДЕНЬГИ БЕЗ ВЛАДЕНИЯ ---
+  Трасса целиком:
+  SERVER_COMMAND (u16 command=ManageCampaign 0x40 — просто ключ маршрута,
+  «permissions are checked in more detail in ServerRead», GameServer.cs:1745)
+  → MultiPlayerCampaign.ServerRead (server:854 ReadSoldItems)
+  → CargoManager.SellItems (server CargoManager.cs:28).
+
+  SellItems построчно, кейс Origin=Character + itemId=0 (несуществующий):
+    int itemValue = sellValues[item.ItemPrefab];
+    if (store.Balance < itemValue || item.Removed) { continue; }   ← единств. лимит
+    if (item.Origin == Submarine && item.ID == NullEntityID) {...} ← failsafe
+       ↑ ДЛЯ Character СКИПАЕТСЯ ЦЕЛИКОМ! Сервер НЕ ищет предмет!
+    if (!item.Removed && ... && Entity.FindEntityByID(item.ID) is Item entity)
+       { item.Removed = true; AddItemToRemoveQueue(entity); }        ← удаления НЕТ
+       (ID=0 → FindEntityByID=null → скип — и ЭТО НЕ МЕШАЕТ оплате!)
+    itemsSoldAtStore?.Add(item);
+    store.Balance -= itemValue;
+    campaign.GetWallet(client).Give(itemValue);   ← ★ ДЕНЬГИ ВЫДАНЫ. БЕЗУСЛОВНО.
+  НЕТ проверок: владения, инвентаря, близости предмета, DontSell-тега
+  (DontSell проверяется ТОЛЬКО в GetSellableItemsFromSub для Sub-failsafe).
+
+  ВСЕ ПУТИ ведут к оплате, кроме «Submarine+ID=0» (единственный честный):
+  - Character + ID=0        → оплата, удаления нет      ← ПЕЧАТЬ ДЕНЕГ
+  - Character + ID=чужой    → оплата + ЧУЖОЙ ПРЕДМЕТ УДАЛЯЕТСЯ ИЗ МИРА ← КРАЖА
+    (продаёшь ID предмета NPC-торговца/другого игрока/аутпоста — ID видны
+    клиенту, предмет может быть в ЧУЖОМ ИНВЕНТАРЕ прямо сейчас!)
+  - Submarine + ID≠0        → failsafe скипнут (ID≠0!) → как Character-кейсы
+
+  --- ФОРМАТ ПАКЕТА (для CSHUB-мода) ---
+  SERVER_COMMAND | u16 command=0x0040 (ManageCampaign) |
+  u16 currentLocIndex=0 | u16 selectedLocIndex=0 | byte missionCount=0 |
+  bool×3 (hullRepairs/itemRepairs/lostShuttles)=false |
+  byte storeCount=0 (×3: buyCrate, subSellCrate, purchased — ReadPurchasedItems) |
+  -- ReadSoldItems (shared:335): --
+  byte storeCount=1 | Identifier storeId=<магазин> | u16 itemCount=N |
+  N × { Identifier prefabId=<дорогой> | u16 itemId=0 | bool removed=false |
+        byte sellerId=0 | byte origin=0 (Character) } |
+  u16 purchasedUpgradeCount=0 | u16 purchasedItemSwapCount=0
+  sellerId НИГДЕ не используется (декорация). Origin — byte, кастуется.
+
+  --- ГЕЙТЫ (все обходимы в типовых конфигурациях) ---
+  1. AllowedToManageCampaign(SellInventoryItems) (server CampaignMode.cs:18):
+     HasPermission(SellInventoryItems=0x2000) || HasPermission(ManageCampaign)
+     || IsOwner || AnyOneAllowedToManageCampaign:
+     ★ AnyOneAllowed (shared:197): СОЛО на сервере = ВСЕГДА true (Count==1);
+       НИ У КОГО нет перма = ВСЕМ true (типичный ванильный кооп!); пермщик
+       есть, но не alive-in-game после 60с раунда = тоже true.
+  2. HasCampaignInteractionAvailable(Store): CanInteractWith(NPC, 250) или
+     AllowRemoteCampaignInteractions=true (тогда из любого места).
+  3. store.Balance >= sellValue — единственный РЕАЛЬНЫЙ лимит печати.
+  4. GetAdjustedItemSellPrice — цена с модификаторами локации/репутации.
+
+  --- ★★★★★ ВЕЧНЫЙ ДВИГАТЕЛЬ (store.Balance восстановление из воздуха) ---
+  ServerRead КАЖДЫЙ раз перед продажей: BuyBackSoldItems (server:4):
+    if (store.Balance < itemValue || item.Removed) { continue; }
+    store.Balance += itemValue;        ← ПОПОЛНЕНИЕ ДО TryPurchase
+    campaign.TryPurchase(client, itemValue);  ← может FAIL (денег нет)
+    storeSpecificItems.Remove(item);   ← ЗАПИСЬ СТЁРТА ВСЁ РАВНО
+  TryPurchase (server:1507): wallet → банк; если нигде денег → return false,
+  НЕ списывает. Итого цикл: продал 65535 фейков на X (баланс магазина -X,
+  кошелёк +X) → потратил X → новый пакет: buyback возвращает магазину +X
+  БЕСПЛАТНО (TryPurchase fail) и СТИРАЕТ записи → снова печать X.
+  Деньги из ниоткуда в обоих направлениях. u16 itemCount × byte storeCount.
+
+  --- ★ семейство «garbage→throw» #4 ---
+  ReadSoldItems:351: ItemPrefab.Prefabs[prefabId] — прямое индексирование
+  PrefabCollection → неизвестный prefabId = throw → батч-дроп (как Order 451).
+  Также: ReadPurchasedItems читает itemId Identifier — BuyCrate-пути гейтятся
+  HasCampaignInteractionAvailable(Store) отдельно; quantity
+  ReadRangedInteger(0, MaxQuantity) — кламп есть.
+
+  --- вердикт ---
+  Юзеров флаг «продаёшь несуществующий — платят» = ★★★★★ подтверждён кодом.
+  Ремедиум для девов: в SellItems если FindEntityByID fails → continue ДО
+  оплаты; Origin=Character → проверить предмет в инвентаре клиента; buyback
+  → TryPurchase ПЕРЕД store.Balance +=; AnyOneAllowed — дыра в перм-модели.
