@@ -16002,3 +16002,62 @@ Barotrauma разложен по винтикам от handshake до титро
   + owner-защита. StartRound/Traitor: SetVote своего состояния.
   Счёт голосов: только из серверного SetVote, стартующий исключён из
   eligible, total=0 → не проходит. Форж каунтов невозможен.
+===============================================================================
+[WAVE 456 — MANAGE_ROUND + ТАЙНА ЧТЕНИЯ ЗА КОНЦОМ БУФЕРА + TAKEOVER]
+===============================================================================
+
+--- ★ MANAGE_ROUND — прямое завершение раунда БЕЗ вот-а (дизайн-квирк) ---
+  GameServer.cs:1811: SERVER_COMMAND ManageRound → end=true:
+    ГЕЙТ: mpCampaign == null || AllowedToManageCampaign(ManageRound).
+    AllowedToManageCampaign → AnyOneAllowed fallback → на сервере БЕЗ
+    пермщиков (или пока пермщик не in-game >60s) ЛЮБОЙ клиент может:
+    - EndGame() немедленно (сорвать раунд пати)
+    - если IsLoadedFriendlyOutpost && save: HandleSaveAndQuit +
+      SaveUtil.SaveGame — сохранить кампейн (безвредно, но рвёт сессию)
+  VoteType.EndRound существует ОТДЕЛЬНО (голосование), этот путь — прямой,
+  без голоса. Для соло (юзер) = норм; для публичного пермлесс-сервера =
+  дизайн-дыра грыза (любой новичок рвёт раунд). ★ уровень, but by design.
+  dosProtection.Pause при end — анти-«heavy packet strike».
+
+--- ✅ Structure.GetSection — bounds-checked (930-934) ---
+  `if (sectionIndex < 0 || sectionIndex >= Sections.Length) { return null; }`
+  Пятый кандидат в throw-семейство (wallSectionIndex байт) УМЕР: в
+  ChatMessage.ServerRead IsIgnoreOrder-ветке GetSection(null-safe). Чисто.
+
+--- ✅ SERVER_SETTINGS.ServerRead — жёсткий гейт + безопасные count-циклы ---
+  ServerSettings.cs:167: `if (!c.HasPermission(ManageSettings)) return;` —
+  ДО чтения чего-либо. Внутри: NetFlags → ExtraCargo → u32 count цикл
+  netProperties (админские свойства, лог изменений) → unknown key =
+  skip через BitPosition += 8*size. Админ сам себе мусор — не вектор.
+
+--- ★★ МЕХАНИКА: overread = IndexOutOfRangeException (не NetStructRead!) ---
+  MsgReader.ReadByte → NetBitWriter.ReadByte (Lidgren NetBitWriter.cs:39):
+    int bytePtr = readBitOffset >> 3;
+    if (startReadAtIndex == 0 && numberOfBits == 8) return fromBuffer[bytePtr];
+    byte returnValue = (byte)(fromBuffer[bytePtr] >> startReadAtIndex);  ← КИДАЕТ
+  Чтение за концом IReadMessage-буфера = ИСКЛЮЧЕНИЕ из массива.
+  NetException.Assert НЕ защищает (а если и компилируется в release —
+  рантаймовый array access всё равно кидает).
+  ДВА СТАНДАРТА в одном стеке: Lidgren ReadString за концом → null
+  («unfortunate; but we need to protect against DDOS», волна 448), а
+  байтовые чтения Barotrauma MsgReader → throw.
+  ПОСЛЕДСТВИЯ:
+  + ПОЗИТИВ: все u32/u16 count-циклы БЕЗОПАСНЫ от CPU-DoS — цикл умирает
+    на первом overread (SERVER_SETTINGS count, ReadSoldItems, ...),
+    исключение → peer catch-all → батч-дроп (паттерн 449/451). До этого я
+    боялся «count=4 млрд × чтение» — нет, первая же итерация за концом
+    буфера бросает.
+  − НЕГАТИВ: любой хендлер, читающий ровно до конца и потом ещё байт,
+    = ещё один источник батч-дропа (семейство теперь #5, но это самое
+    массовое — почти каждый битый пакет даёт overread!).
+
+--- ✅ TAKEOVERBOT — полностью ---
+  Покупка нового персонажа: гейт ManageMoney/ManageHires/ReplaceCostPercentage
+  <= 0 + TryHireCharacter(takeMoney: true, buyingNewCharacter: true) — цена
+  серверная. Существующий криан: botInfo.IsNewHire/IsOnReserveBench &&
+  Character==null → SpawnAndTakeOverBot (ванильный респавн-механик, любой
+  игрок может занять свободного бота). Ironman-гейт. Чисто.
+
+--- ИТОГ 456: диспетчер SERVER_COMMAND вычищен до конца (все case'ы).
+  Дыры диспетчера: SEND_BACKUP_INDICES (449), EVENTMANAGER (449),
+  VOTE-TRANSFER (455). ManageRound — дизайн-квирк пермлесс-серверов.
