@@ -3,9 +3,9 @@ Updated: 2026-08-26
 
 Total .cs files: 2518
 Total lines: 689676
-Done: 1010 files / 408027 lines
+Done: 1055 files / 411602 lines
 Partial: 0 files / 0 lines
-Not started: 1508 files / 281649 lines
+Not started: 1463 files / 278074 lines
 
 === RESEARCHED ===
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Camera.cs  442/442
@@ -30,6 +30,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Characters/Health/DamageModifier.cs  19/19
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Characters/Health/HealingCooldownClient.cs  20/20
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Characters/InteractionLabelManager.cs  343/343
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Characters/Jobs/JobPrefab.cs  86/86
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Characters/Limb.cs  1419/1419
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/ChatManager.cs  192/192
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/CircuitBox/CircuitBoxComponent.cs  117/117
@@ -50,9 +51,12 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Eos/EosAccount.cs  203/203
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Steam/EosEpicSecondaryLogin.cs  201/201
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Steam/EosSteamPrimaryLogin.cs  321/321
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/EventInput/EventInput.cs  84/84
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/EventInput/KeyboardDispatcher.cs  77/77
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/CheckObjectiveAction.cs  45/45
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/ConversationAction.cs  470/470
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/EventLogAction.cs  11/11
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/EventObjectiveAction.cs  74/74
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/HighlightAction.cs  48/48
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/InventoryHighlightAction.cs  58/58
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/MessageBoxAction.cs  78/78
@@ -138,6 +142,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GameSession/HintManager.cs  835/835
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GameSession/MedicalClinic.cs  415/415
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GameSession/ObjectiveManager.cs  632/632
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/GameSession/PvPMode.cs  84/84
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GameSession/ReadyCheck.cs  310/310
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/GameSession/RoundSummary.cs  967/967
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/CharacterInventory.cs  1262/1262
@@ -197,6 +202,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreaturePrefab.cs  177/177
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/CaveGenerator.cs  273/273
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/Level.cs  184/184
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelGenerationParameters.cs  74/74
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObject.cs  342/342
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObjectManager.cs  354/354
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObjectPrefab.cs  200/200
@@ -209,6 +215,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightSource.cs  1629/1629
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/LinkedSubmarine.cs  177/177
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Map/Map.cs  1347/1347
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs  81/81
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/MapEntity.cs  1388/1388
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/MapEntityPrefab.cs  121/121
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Map/RoundSound.cs  171/171
@@ -232,6 +239,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/ClientEntityEventManager.cs  297/297
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/NetStats.cs  95/95
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs  16/16
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs  83/83
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs  106/106
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamConnectSocket.cs  123/123
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamListenSocket.cs  178/178
@@ -268,6 +276,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/CharacterEditor/Wizard.cs  1179/1179
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs  100/100
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/EditorImage.cs  571/571
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs  75/75
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EditorNode.cs  694/694
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EventConversationNode.cs  398/398
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EventEditorNodeConnection.cs  330/330
@@ -287,7 +296,9 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Screens/TestScreen.cs  130/130
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Serialization/SerializableEntityEditor.cs  1757/1757
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Settings/MultiplayerPreferences.cs  112/112
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Settings/ServerListFilters.cs  72/72
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Settings/SettingsMenu.cs  1009/1009
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Social/FriendInfo.cs  73/73
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/EpicFriendProvider.cs  173/173
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Social/SocialOverlay.cs  1063/1063
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sounds/OggSound.cs  177/177
@@ -305,6 +316,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/SpamServerFilter.cs  444/444
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DecorativeSprite.cs  317/317
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/CustomDeformation.cs  126/126
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/Inflate.cs  73/73
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/JointBendDeformation.cs  142/142
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/PositionalDeformation.cs  109/109
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/SpriteDeformation.cs  270/270
@@ -313,6 +325,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/StatusEffects/StatusEffect.cs  303/303
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Steam/BulkDownloader.cs  176/176
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Steam/Lobby.cs  157/157
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Steam/SteamIcons.cs  87/87
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Steam/SteamManager.cs  160/160
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Steam/SteamTimelineManager.cs  345/345
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Steam/Workshop.cs  356/356
@@ -434,6 +447,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/Traitors/TraitorManager.cs  531/531
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/Utils/DoSProtection.cs  237/237
 [DONE   ] Barotrauma/BarotraumaServer/ServerSource/Utils/RateLimiter.cs  135/135
+[DONE   ] Barotrauma/BarotraumaServer/ServerSource/Utils/XnaToConsoleColor.cs  84/84
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/AchievementManager.cs  910/910
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/AIController.cs  571/571
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/AITarget.cs  318/318
@@ -454,10 +468,12 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveDeconstructItems.cs  133/133
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveEscapeHandcuffs.cs  107/107
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFire.cs  199/199
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFightIntruders.cs  83/83
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFindDivingGear.cs  272/272
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFindSafety.cs  602/602
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFindThieves.cs  220/220
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeak.cs  251/251
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeaks.cs  88/88
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItem.cs  787/787
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItems.cs  110/110
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGoTo.cs  990/990
@@ -486,6 +502,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/SwarmBehavior.cs  123/123
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAI.cs  534/534
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAIConfig.cs  103/103
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/AICharacter.cs  82/82
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/AnimController.cs  1453/1453
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/FishAnimController.cs  1035/1035
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/HumanoidAnimController.cs  1767/1767
@@ -499,6 +516,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/Affliction.cs  549/549
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionHusk.cs  512/512
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionPrefab.cs  1237/1237
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionSpaceHerpes.cs  72/72
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/CharacterHealth.cs  1530/1530
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/DamageModifier.cs  170/170
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Characters/HumanPrefab.cs  349/349
@@ -638,6 +656,8 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/AfflictionsFile.cs  114/114
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/CharacterFile.cs  118/118
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ContentFile.cs  152/152
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/GenericPrefabFile.cs  81/81
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OrdersFile.cs  71/71
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/RandomEventsFile.cs  106/106
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/UIStyleFile.cs  100/100
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentPackage/ContentPackage.cs  565/565
@@ -649,6 +669,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/DebugConsole.cs  3677/3677
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Decals/Decal.cs  178/178
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Decals/DecalManager.cs  101/101
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/PerkBase.cs  84/84
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/SpawnItemPerk.cs  210/210
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Enums.cs  779/779
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Eos/Session.cs  117/117
@@ -693,6 +714,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/LayerAction.cs  61/61
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MessageBoxAction.cs  86/86
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MissionAction.cs  236/236
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MissionStateAction.cs  77/77
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/ModifyLocationAction.cs  97/97
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MoneyAction.cs  82/82
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/NPCChangeTeamAction.cs  144/144
@@ -715,12 +737,15 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TriggerEventAction.cs  62/62
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TutorialCompleteAction.cs  35/35
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TutorialIconAction.cs  68/68
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/UIHighlightAction.cs  70/70
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/UnlockPathAction.cs  88/88
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitAction.cs  38/38
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitForItemFabricatedAction.cs  80/80
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitForItemUsedAction.cs  161/161
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventManager.cs  1325/1325
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventPrefab.cs  196/196
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/EventSet.cs  692/692
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/MalfunctionEvent.cs  78/78
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/Missions/AbandonedOutpostMission.cs  285/285
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/Missions/BeaconMission.cs  216/216
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/Missions/CargoMission.cs  364/364
@@ -741,6 +766,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/MonsterEvent.cs  782/782
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Events/ScriptedEvent.cs  530/530
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Extensions/IEnumerableExtensions.cs  233/233
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/ForbiddenWordFilter.cs  72/72
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameAnalytics/GameAnalyticsConsent.cs  388/388
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameAnalytics/GameAnalyticsManager.cs  624/624
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/AutoItemPlacer.cs  357/357
@@ -751,7 +777,10 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Reputation.cs  220/220
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Wallet.cs  237/237
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignMode.cs  1757/1757
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignModePresets.cs  77/77
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignSettings.cs  288/288
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameMode.cs  79/79
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MissionMode.cs  75/75
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MultiPlayerCampaign.cs  357/357
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/TestGameMode.cs  19/19
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/Tutorials/TutorialPrefab.cs  105/105
@@ -806,18 +835,24 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/BooleanOperatorComponent.cs  134/134
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ButtonTerminal.cs  177/177
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/CircuitBox.cs  847/847
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ColorComponent.cs  73/73
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Connection.cs  460/460
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConnectionPanel.cs  429/429
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConnectionSelectorComponent.cs  132/132
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/CustomInterface.cs  459/459
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DelayComponent.cs  141/141
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/EqualsComponent.cs  120/120
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/FunctionComponent.cs  81/81
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/LightComponent.cs  479/479
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MemoryComponent.cs  79/79
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MotionSensor.cs  367/367
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs  115/115
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RegExFindComponent.cs  210/210
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RelayComponent.cs  384/384
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Signal.cs  44/44
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SignalCheckComponent.cs  78/78
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SmokeDetector.cs  89/89
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/StringComponent.cs  76/76
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Terminal.cs  216/216
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/TrigonometricFunctionComponent.cs  137/137
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/WaterDetector.cs  129/129
@@ -836,6 +871,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/RelatedItem.cs  450/450
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/CoreEntityPrefab.cs  109/109
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraBehavior.cs  1353/1353
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraEventData.cs  79/79
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/State/BallastFloraStateMachine.cs  49/49
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/State/DefendWithPumpState.cs  126/126
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/State/GrowIdleState.cs  188/188
@@ -865,6 +901,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Levels/Ruins/RuinGenerator.cs  74/74
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/LinkedSubmarine.cs  515/515
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/Location.cs  1828/1828
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationConnection.cs  82/82
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationType.cs  755/755
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationTypeChange.cs  265/265
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/Map.cs  1840/1840
@@ -935,6 +972,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Networking/Voip/VoipQueue.cs  173/173
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Networking/Voting.cs  65/65
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/PerformanceCounter.cs  128/128
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Physics/Physics.cs  73/73
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Physics/PhysicsBody.cs  1040/1040
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/PlayerInput.cs  123/123
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Prefabs/IImplementsVariants.cs  184/184
@@ -944,6 +982,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ProcGen/Voronoi.cs  1014/1014
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/ProcGen/VoronoiElements.cs  333/333
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Screens/GameScreen.cs  342/342
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Screens/NetLobbyScreen.cs  89/89
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Serialization/Editable/ConditionallyEditable.cs  96/96
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Serialization/SerializableProperty/SerializableProperty.cs  1202/1202
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Serialization/StructSerialization.cs  233/233
@@ -960,8 +999,10 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Steam/Workshop.cs  643/643
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Tags.cs  173/173
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/LocalizedString.cs  195/195
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ReplaceLString.cs  75/75
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ServerMsgLString.cs  185/185
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/SplitLString.cs  93/93
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TagLString.cs  89/89
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/RichString.cs  203/203
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/TextManager.cs  635/635
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Text/TextPack.cs  252/252
@@ -970,12 +1011,15 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Traitors/TraitorManager.cs  49/49
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Upgrades/Upgrade.cs  401/401
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Upgrades/UpgradePrefab.cs  717/717
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/CrossThread.cs  83/83
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/CursedDictionary.cs  231/231
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/Homoglyphs.cs  1897/1897
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/IdRemap.cs  136/136
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/LinkedPairSet.cs  79/79
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/MTRandom.cs  149/149
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/Md5Hash.cs  174/174
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/Rand.cs  138/138
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/RichTextData.cs  88/88
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/SafeIO.cs  861/861
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/SaveUtil.cs  1044/1044
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Utils/SegmentTable.cs  330/330
@@ -1003,6 +1047,7 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Deploy/DeployAll/Deployables.cs  111/111
 [DONE   ] Deploy/DeployAll/DotnetCmd.cs  123/123
 [DONE   ] Deploy/DeployAll/EgsAssistant.cs  143/143
+[DONE   ] Deploy/DeployAll/GitCmd.cs  86/86
 [DONE   ] Deploy/DeployAll/SteamPipeAssistant.cs  248/248
 [DONE   ] Deploy/DeployAll/Util.cs  155/155
 [DONE   ] Libraries/Lidgren.Network/NetBuffer.Read.cs  679/679
@@ -1020,19 +1065,14 @@ Not started: 1508 files / 281649 lines
 [DONE   ] Libraries/Lidgren.Network/NetUnreliableUnorderedReceiver.cs  23/23
 
 === NOT STARTED ===
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Characters/Jobs/JobPrefab.cs  0/86
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/ContentManagement/ContentPackageManager.cs  0/62
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Decals/Decal.cs  0/35
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Epic/EosEpicPrimaryLogin.cs  0/70
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/EventInput/EventInput.cs  0/84
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/EventInput/KeyboardDispatcher.cs  0/77
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/EventObjectiveAction.cs  0/74
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Events/EventLog.cs  0/62
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GUI/GUIFrame.cs  0/35
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GameSession/Data/Wallet.cs  0/31
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GameSession/GameMode.cs  0/10
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GameSession/GameModes/Tutorials/TutorialMode.cs  0/30
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/GameSession/PvPMode.cs  0/84
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/GameSession/UpgradeManager.cs  0/29
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/EntitySpawnerComponent.cs  0/61
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Ladder.cs  0/49
@@ -1048,34 +1088,26 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/ItemEventData.cs  0/35
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Map/FireSource.cs  0/65
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/DestructibleLevelWall.cs  0/66
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelGenerationParameters.cs  0/74
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelTrigger.cs  0/19
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs  0/81
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Media/Video.Internal.cs  0/59
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/FileTransfer/ModReceiver.cs  0/8
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/NetEntityEvent.cs  0/24
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs  0/83
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/P2PSocket.cs  0/69
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/CompositeServerProvider.cs  0/35
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/ServerProvider.cs  0/17
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Networking/Voip/VoipConfig.cs  0/17
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs  0/75
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Screens/Screen.cs  0/69
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Settings/CompletedTutorials.cs  0/44
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Settings/DebugConsoleMapping.cs  0/58
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Settings/IgnoredHints.cs  0/44
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Settings/ServerListFilters.cs  0/72
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Social/FriendInfo.cs  0/73
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/CompositeFriendProvider.cs  0/46
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/FriendProvider.cs  0/25
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/SteamFriendProvider.cs  0/69
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Social/SocialExtensions.cs  0/34
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Sprite/ConditionalSprite.cs  0/13
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/Inflate.cs  0/73
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/NoiseDeformation.cs  0/66
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Sprite/SpriteSheet.cs  0/33
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Steam/RemoteStorageHelper.cs  0/34
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Steam/SteamIcons.cs  0/87
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/StoreIntegration/StoreIntegration.cs  0/70
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Text/LocalizedString/LimitLString.cs  0/34
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Text/LocalizedString/WrappedLString.cs  0/29
@@ -1097,12 +1129,9 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs  0/32
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs  0/39
 [NEW    ] Barotrauma/BarotraumaServer/ServerSource/Screens/UnimplementedScreen.cs  0/14
-[NEW    ] Barotrauma/BarotraumaServer/ServerSource/Utils/XnaToConsoleColor.cs  0/84
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/CachedDistance.cs  0/30
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ISteerable.cs  0/28
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFires.cs  0/59
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFightIntruders.cs  0/83
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeaks.cs  0/88
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerFixLeaks.cs  0/38
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerGlobal.cs  0/29
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerItem.cs  0/26
@@ -1110,14 +1139,12 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerPowerUpReactor.cs  0/19
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerRepairSystems.cs  0/41
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerSteer.cs  0/20
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AICharacter.cs  0/82
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/AIChatMessage.cs  0/31
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/CauseOfDeath.cs  0/37
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/CharacterHUD.cs  0/12
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/CorpsePrefab.cs  0/47
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionBleeding.cs  0/24
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionPsychosis.cs  0/22
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionSpaceHerpes.cs  0/72
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Buffs/BuffDurationIncrease.cs  0/59
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/Jobs/SkillPrefab.cs  0/51
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Characters/NPCPersonalityTrait.cs  0/47
@@ -1135,7 +1162,6 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/EnemySubmarineFile.cs  0/8
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/EventManagerSettingsFile.cs  0/17
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/FactionsFile.cs  0/18
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/GenericPrefabFile.cs  0/81
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/HashlessFile.cs  0/10
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ItemAssemblyFile.cs  0/18
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ItemFile.cs  0/18
@@ -1148,7 +1174,6 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCConversationsFile.cs  0/45
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCPersonalityTraitsFile.cs  0/12
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCSetsFile.cs  0/18
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OrdersFile.cs  0/71
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OtherFile.cs  0/14
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostConfigFile.cs  0/18
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostFile.cs  0/7
@@ -1176,24 +1201,15 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Decals/DecalPrefab.cs  0/48
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/DisembarkPerkPrefab.cs  0/58
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/GiveTalentPointPerk.cs  0/20
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/PerkBase.cs  0/84
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/SubItemSwapPerk.cs  0/61
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/UpgradeSubmarinePerk.cs  0/57
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/InventoryHighlightAction.cs  0/36
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MissionStateAction.cs  0/77
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/UIHighlightAction.cs  0/70
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitForItemFabricatedAction.cs  0/80
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/EventLog.cs  0/65
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/EventManagerSettings.cs  0/57
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Events/MalfunctionEvent.cs  0/78
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Extensions/StringExtensions.cs  0/18
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/ForbiddenWordFilter.cs  0/72
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignModePresets.cs  0/77
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CharacterCampaignData.cs  0/20
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CoOpMode.cs  0/11
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameMode.cs  0/79
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameModePreset.cs  0/60
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MissionMode.cs  0/75
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/PvPMode.cs  0/28
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/GameSession/SlideshowPrefab.cs  0/60
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/InputType.cs  0/31
@@ -1207,39 +1223,29 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/AndComponent.cs  0/10
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/OrComponent.cs  0/10
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/XorComponent.cs  0/10
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ColorComponent.cs  0/73
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConcatComponent.cs  0/46
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DemultiplexerComponent.cs  0/57
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DivideComponent.cs  0/18
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ExponentiationComponent.cs  0/44
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/FunctionComponent.cs  0/81
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/GreaterComponent.cs  0/53
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MemoryComponent.cs  0/79
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ModuloComponent.cs  0/42
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplexerComponent.cs  0/59
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplyComponent.cs  0/17
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/NotComponent.cs  0/40
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OxygenDetector.cs  0/32
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SignalCheckComponent.cs  0/78
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SmokeDetector.cs  0/89
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/StringComponent.cs  0/76
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SubtractComponent.cs  0/17
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/StatusHUD.cs  0/12
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/StartItemSet.cs  0/44
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraEventData.cs  0/79
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraPrefab.cs  0/31
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/DummyFireSource.cs  0/44
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/HullEventData.cs  0/66
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/IDamageable.cs  0/30
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationConnection.cs  0/82
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/Map/RadiationParams.cs  0/53
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/OrderTarget.cs  0/22
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Map/Outposts/NPCSet.cs  0/35
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Memento.cs  0/62
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Physics/Physics.cs  0/73
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Prefabs/Prefab.cs  0/63
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Prefabs/PrefabWithUintIdentifier.cs  0/19
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Screens/NetLobbyScreen.cs  0/89
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Screens/Screen.cs  0/56
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Serialization/Editable/Editable.cs  0/62
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Serialization/ISerializableEntity.cs  0/17
@@ -1256,16 +1262,12 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/JoinLString.cs  0/24
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/LowerLString.cs  0/20
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/RawLString.cs  0/13
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ReplaceLString.cs  0/75
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TagLString.cs  0/89
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TrimLString.cs  0/30
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/UpperLString.cs  0/25
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Timing.cs  0/60
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/AssemblyInfo.cs  0/69
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/CoordinateSpace2D.cs  0/26
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/CrossThread.cs  0/83
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/HttpUtility.cs  0/57
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/LinkedPairSet.cs  0/79
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/ListDictionary.cs  0/55
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs  0/17
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs  0/42
@@ -1273,10 +1275,8 @@ Not started: 1508 files / 281649 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs  0/6
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/ReadOnlyListExtensions.cs  0/26
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/RestFactory.cs  0/35
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/RichTextData.cs  0/88
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/Shapes/Triangle2D.cs  0/21
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Utils/TaskExtensions.cs  0/20
-[NEW    ] Deploy/DeployAll/GitCmd.cs  0/86
 [NEW    ] Deploy/DeployAll/Program.cs  0/67
 [NEW    ] Libraries/BarotraumaLibs/BarotraumaCore/Achievements/AchievementStats.cs  0/59
 [NEW    ] Libraries/BarotraumaLibs/BarotraumaCore/Debugging/DebugConsoleCore.cs  0/26

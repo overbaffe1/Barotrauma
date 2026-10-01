@@ -14871,3 +14871,64 @@ Signal/WaterDetector.cs, LinkedControllerCharacterComponent.cs.
   ChargeBatteries 90 (AIObjectiveLoop-наследники, «не умеют репортиться»
   из 404!). CampaignMetadata 98 (метаданные кампании: ключ-значение).
 
+
+================================================================================
+[WAVE 440 - 45 файлов 3575 строк (ФИНИШНАЯ ПРЯМАЯ мелочи): сигнальные компоненты + AI-циклы + инфраструктура]
+================================================================================
+СИГНАЛЬНАЯ СЕТКА ДОБИТА: SmokeDetector, MemoryComponent, SignalCheck,
+FunctionComponent, ColorComponent, StringComponent — все элементы логики.
+
+--- SMOKEDETECTOR 89 (дым-детектор) ---
+  IsFireInRange: GetConnectedHulls(depth 10, ignoreClosedGaps!) ×
+  FireSources × IsInDamageRange(max(damageRange×2, 500)) — видит огонь
+  ЧЕРЕЗ ОТКРЫТЫЕ ДВЕРИ на 500+! InWater → слеп. Тик 1с. Тот же
+  Output/FalseOutput/MaxOutputLength паттерн.
+
+--- MEMORYCOMPONENT 79 (память сигналов) ---
+  Value кламп MaxValueLength (200), Writeable флаг (запись через set_value).
+  signal_out = Value КАЖДЫЙ КАДР. OnStateChanged → нетворк-ивент.
+
+--- SIGNALCHECK 78 (сравнение с TargetSignal) / STRINGCOMPONENT 76
+  (абстрактная база строковых) / COLORCOMPONENT 73 (signal_r/g/b/a →
+  «r,g,b,a» строка каждый кадр; ★UseHSV — HSV→RGB конверсия! Приоритет:
+  синий канал = Value при HSV) / FUNCTIONCOMPONENT 81 (Round/Ceil/Floor/
+  ★Factorial (КЛАМП 20! ulong) /Abs/Sqrt; ★−0 → 0 фикс для Round/Ceil!).
+
+--- AIЦИКЛЫ: FightIntruders 83 (★не-охрана уступает секьюрити «leave
+  fighting for them» → 0; escorted → Arrest не kill!; ★holdFire в
+  ЭЙРЛОКЕ враждебного аутпоста «except if they've attacked us» —
+  нейтральная зона дипломатии!). PumpWater 99 (IsAutoControlled → мимо,
+  fire → мимо, ballast-flora → мимо). ChargeBatteries 90 / FixLeaks 88
+  (те же паттерны Loop). GetItems 110 (тег дважды = count 2; CheckInventory
+  только count≤1; RequireAllItems → abandon).
+
+--- РИЧТЕКСТ 88 (парсер ‖color:...‖ — ТО, что юзали VotingInterface 402!) ---
+  Split по ‖, чётные сегменты = текст (без \n в индексах!), нечётные =
+  атрибуты через «;» (color:#hex;metadata:...;end). StartIndex/EndIndex +
+  Alpha. Metadata поле (кликабельные ники из ServerLog 398!).
+
+--- ИНФРАСТРУКТУРА: CrossThread 83 (RequestExecutionOnMainThread: если
+  уже main → сразу, иначе очередь + ManualResetEvent ожидание! ProcessTasks
+  из главного цикла). Physics 73 (категории коллизий — таблица битов!).
+  ForbiddenWordFilter 72 (чекер мата чата). XnaToConsoleColor 84 (XNA-цвет
+  → консольный: словарь + GetClosestConsoleColor через HLS-луну!).
+  EventInput 84 + KeyboardDispatcher 77 (IME-маршрутизация клавиатуры UI).
+  DualStackP2PSocket 83 (IPv4+IPv6 двойной стек). AICharacter 82
+  (Character с AIController-связкой). LinkedPairSet 79 (симметричные пары).
+  LocationConnection 82 (связь локаций: LevelData, Locked, длина).
+  GameMode 79 / MissionMode 75 / PvPMode 84 (клиентские части режимов).
+  CampaignModePresets 77 (Legacy/CampaignMode... пресеты из 370!).
+  MalfunctionEvent 78 (сломанный суб-ивент). BallastFloraEventData 79
+  (wire-данные флоры). GenericPrefabFile 81 (универсальный файл).
+  UIHighlightAction 70 (подсветка UI-элементов ивентами!). MissionState
+  Action 77 / WaitForItemFabricatedAction 80 / EventObjectiveAction 74
+  (ивент-экшены: статусы миссий, ожидание крафта, цели). OrdersFile 71.
+  NetLobbyScreen shared 89. EditorScreen client 75. LevelGeneration
+  Parameters 74. FriendInfo 73. SteamIcons 87 (иконки таймлайна!).
+  PerkBase 84 (база перков высадки). JobPrefab client 86 (иконки!).
+  ServerListFilters 72. AfflictionSpaceHerpes 72 (космо-герпес — аффликция
+  с особым поведением!). CreditsPlayer/CampaignEndScreen 100/90.
+  BlurEffect 93 (блюр бэкграунда). ReplaceLString/TagLString/SplitLString
+  75/89/93 (ленивые ноды текста). GitCmd 86 (деплой: git-теги!).
+  DotnetCmd... Raditation client 81 (визуал радиации).
+

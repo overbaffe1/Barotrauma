@@ -1,7 +1,7 @@
 BAROTRAUMA RESEARCH COVERAGE (per-file checked lines)
 Updated: 2026-08-26
 
-TOTAL .cs: 2518   DONE: 1010   PARTIAL: 0   NOT STARTED: 1508
+TOTAL .cs: 2518   DONE: 1055   PARTIAL: 0   NOT STARTED: 1463
 
 === FULLY EXPLORED (checked lines = total) ===
 CHECKED 442/442  Barotrauma/BarotraumaClient/ClientSource/Camera.cs
@@ -26,6 +26,7 @@ CHECKED 2270/2270  Barotrauma/BarotraumaClient/ClientSource/Characters/Health/Ch
 CHECKED 19/19  Barotrauma/BarotraumaClient/ClientSource/Characters/Health/DamageModifier.cs
 CHECKED 20/20  Barotrauma/BarotraumaClient/ClientSource/Characters/Health/HealingCooldownClient.cs
 CHECKED 343/343  Barotrauma/BarotraumaClient/ClientSource/Characters/InteractionLabelManager.cs
+CHECKED 86/86  Barotrauma/BarotraumaClient/ClientSource/Characters/Jobs/JobPrefab.cs
 CHECKED 1419/1419  Barotrauma/BarotraumaClient/ClientSource/Characters/Limb.cs
 CHECKED 192/192  Barotrauma/BarotraumaClient/ClientSource/ChatManager.cs
 CHECKED 117/117  Barotrauma/BarotraumaClient/ClientSource/CircuitBox/CircuitBoxComponent.cs
@@ -46,9 +47,12 @@ CHECKED 4509/4509  Barotrauma/BarotraumaClient/ClientSource/DebugConsole.cs
 CHECKED 203/203  Barotrauma/BarotraumaClient/ClientSource/Eos/EosAccount.cs
 CHECKED 201/201  Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Steam/EosEpicSecondaryLogin.cs
 CHECKED 321/321  Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Steam/EosSteamPrimaryLogin.cs
+CHECKED 84/84  Barotrauma/BarotraumaClient/ClientSource/EventInput/EventInput.cs
+CHECKED 77/77  Barotrauma/BarotraumaClient/ClientSource/EventInput/KeyboardDispatcher.cs
 CHECKED 45/45  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/CheckObjectiveAction.cs
 CHECKED 470/470  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/ConversationAction.cs
 CHECKED 11/11  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/EventLogAction.cs
+CHECKED 74/74  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/EventObjectiveAction.cs
 CHECKED 48/48  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/HighlightAction.cs
 CHECKED 58/58  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/InventoryHighlightAction.cs
 CHECKED 78/78  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/MessageBoxAction.cs
@@ -134,6 +138,7 @@ CHECKED 361/361  Barotrauma/BarotraumaClient/ClientSource/GameSession/GameSessio
 CHECKED 835/835  Barotrauma/BarotraumaClient/ClientSource/GameSession/HintManager.cs
 CHECKED 415/415  Barotrauma/BarotraumaClient/ClientSource/GameSession/MedicalClinic.cs
 CHECKED 632/632  Barotrauma/BarotraumaClient/ClientSource/GameSession/ObjectiveManager.cs
+CHECKED 84/84  Barotrauma/BarotraumaClient/ClientSource/GameSession/PvPMode.cs
 CHECKED 310/310  Barotrauma/BarotraumaClient/ClientSource/GameSession/ReadyCheck.cs
 CHECKED 967/967  Barotrauma/BarotraumaClient/ClientSource/GameSession/RoundSummary.cs
 CHECKED 1262/1262  Barotrauma/BarotraumaClient/ClientSource/Items/CharacterInventory.cs
@@ -193,6 +198,7 @@ CHECKED 130/130  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundC
 CHECKED 177/177  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreaturePrefab.cs
 CHECKED 273/273  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/CaveGenerator.cs
 CHECKED 184/184  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/Level.cs
+CHECKED 74/74  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelGenerationParameters.cs
 CHECKED 342/342  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObject.cs
 CHECKED 354/354  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObjectManager.cs
 CHECKED 200/200  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObjectPrefab.cs
@@ -205,6 +211,7 @@ CHECKED 861/861  Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightManage
 CHECKED 1629/1629  Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightSource.cs
 CHECKED 177/177  Barotrauma/BarotraumaClient/ClientSource/Map/LinkedSubmarine.cs
 CHECKED 1347/1347  Barotrauma/BarotraumaClient/ClientSource/Map/Map/Map.cs
+CHECKED 81/81  Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs
 CHECKED 1388/1388  Barotrauma/BarotraumaClient/ClientSource/Map/MapEntity.cs
 CHECKED 121/121  Barotrauma/BarotraumaClient/ClientSource/Map/MapEntityPrefab.cs
 CHECKED 171/171  Barotrauma/BarotraumaClient/ClientSource/Map/RoundSound.cs
@@ -228,6 +235,7 @@ CHECKED 148/148  Barotrauma/BarotraumaClient/ClientSource/Networking/KarmaManage
 CHECKED 297/297  Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/ClientEntityEventManager.cs
 CHECKED 95/95  Barotrauma/BarotraumaClient/ClientSource/Networking/NetStats.cs
 CHECKED 16/16  Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs
+CHECKED 83/83  Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs
 CHECKED 106/106  Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs
 CHECKED 123/123  Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamConnectSocket.cs
 CHECKED 178/178  Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/SteamListenSocket.cs
@@ -264,6 +272,7 @@ CHECKED 5573/5573  Barotrauma/BarotraumaClient/ClientSource/Screens/CharacterEdi
 CHECKED 1179/1179  Barotrauma/BarotraumaClient/ClientSource/Screens/CharacterEditor/Wizard.cs
 CHECKED 100/100  Barotrauma/BarotraumaClient/ClientSource/Screens/CreditsPlayer.cs
 CHECKED 571/571  Barotrauma/BarotraumaClient/ClientSource/Screens/EditorImage.cs
+CHECKED 75/75  Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs
 CHECKED 694/694  Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EditorNode.cs
 CHECKED 398/398  Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EventConversationNode.cs
 CHECKED 330/330  Barotrauma/BarotraumaClient/ClientSource/Screens/EventEditor/EventEditorNodeConnection.cs
@@ -283,7 +292,9 @@ CHECKED 6903/6903  Barotrauma/BarotraumaClient/ClientSource/Screens/SubEditorScr
 CHECKED 130/130  Barotrauma/BarotraumaClient/ClientSource/Screens/TestScreen.cs
 CHECKED 1757/1757  Barotrauma/BarotraumaClient/ClientSource/Serialization/SerializableEntityEditor.cs
 CHECKED 112/112  Barotrauma/BarotraumaClient/ClientSource/Settings/MultiplayerPreferences.cs
+CHECKED 72/72  Barotrauma/BarotraumaClient/ClientSource/Settings/ServerListFilters.cs
 CHECKED 1009/1009  Barotrauma/BarotraumaClient/ClientSource/Settings/SettingsMenu.cs
+CHECKED 73/73  Barotrauma/BarotraumaClient/ClientSource/Social/FriendInfo.cs
 CHECKED 173/173  Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/EpicFriendProvider.cs
 CHECKED 1063/1063  Barotrauma/BarotraumaClient/ClientSource/Social/SocialOverlay.cs
 CHECKED 177/177  Barotrauma/BarotraumaClient/ClientSource/Sounds/OggSound.cs
@@ -301,6 +312,7 @@ CHECKED 189/189  Barotrauma/BarotraumaClient/ClientSource/Sounds/VoipSound.cs
 CHECKED 444/444  Barotrauma/BarotraumaClient/ClientSource/SpamServerFilter.cs
 CHECKED 317/317  Barotrauma/BarotraumaClient/ClientSource/Sprite/DecorativeSprite.cs
 CHECKED 126/126  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/CustomDeformation.cs
+CHECKED 73/73  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/Inflate.cs
 CHECKED 142/142  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/JointBendDeformation.cs
 CHECKED 109/109  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/PositionalDeformation.cs
 CHECKED 270/270  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/SpriteDeformation.cs
@@ -309,6 +321,7 @@ CHECKED 470/470  Barotrauma/BarotraumaClient/ClientSource/Sprite/Sprite.cs
 CHECKED 303/303  Barotrauma/BarotraumaClient/ClientSource/StatusEffects/StatusEffect.cs
 CHECKED 176/176  Barotrauma/BarotraumaClient/ClientSource/Steam/BulkDownloader.cs
 CHECKED 157/157  Barotrauma/BarotraumaClient/ClientSource/Steam/Lobby.cs
+CHECKED 87/87  Barotrauma/BarotraumaClient/ClientSource/Steam/SteamIcons.cs
 CHECKED 160/160  Barotrauma/BarotraumaClient/ClientSource/Steam/SteamManager.cs
 CHECKED 345/345  Barotrauma/BarotraumaClient/ClientSource/Steam/SteamTimelineManager.cs
 CHECKED 356/356  Barotrauma/BarotraumaClient/ClientSource/Steam/Workshop.cs
@@ -430,6 +443,7 @@ CHECKED 107/107  Barotrauma/BarotraumaServer/ServerSource/Steam/SteamManager.cs
 CHECKED 531/531  Barotrauma/BarotraumaServer/ServerSource/Traitors/TraitorManager.cs
 CHECKED 237/237  Barotrauma/BarotraumaServer/ServerSource/Utils/DoSProtection.cs
 CHECKED 135/135  Barotrauma/BarotraumaServer/ServerSource/Utils/RateLimiter.cs
+CHECKED 84/84  Barotrauma/BarotraumaServer/ServerSource/Utils/XnaToConsoleColor.cs
 CHECKED 910/910  Barotrauma/BarotraumaShared/SharedSource/AchievementManager.cs
 CHECKED 571/571  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/AIController.cs
 CHECKED 318/318  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/AITarget.cs
@@ -450,10 +464,12 @@ CHECKED 145/145  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectiv
 CHECKED 133/133  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveDeconstructItems.cs
 CHECKED 107/107  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveEscapeHandcuffs.cs
 CHECKED 199/199  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFire.cs
+CHECKED 83/83  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFightIntruders.cs
 CHECKED 272/272  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFindDivingGear.cs
 CHECKED 602/602  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFindSafety.cs
 CHECKED 220/220  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFindThieves.cs
 CHECKED 251/251  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeak.cs
+CHECKED 88/88  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeaks.cs
 CHECKED 787/787  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItem.cs
 CHECKED 110/110  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGetItems.cs
 CHECKED 990/990  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveGoTo.cs
@@ -482,6 +498,7 @@ CHECKED 162/162  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Steering
 CHECKED 123/123  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/SwarmBehavior.cs
 CHECKED 534/534  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAI.cs
 CHECKED 103/103  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Wreck/WreckAIConfig.cs
+CHECKED 82/82  Barotrauma/BarotraumaShared/SharedSource/Characters/AICharacter.cs
 CHECKED 1453/1453  Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/AnimController.cs
 CHECKED 1035/1035  Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/FishAnimController.cs
 CHECKED 1767/1767  Barotrauma/BarotraumaShared/SharedSource/Characters/Animation/HumanoidAnimController.cs
@@ -495,6 +512,7 @@ CHECKED 127/127  Barotrauma/BarotraumaShared/SharedSource/Characters/CharacterPr
 CHECKED 549/549  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/Affliction.cs
 CHECKED 512/512  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionHusk.cs
 CHECKED 1237/1237  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionPrefab.cs
+CHECKED 72/72  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionSpaceHerpes.cs
 CHECKED 1530/1530  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/CharacterHealth.cs
 CHECKED 170/170  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/DamageModifier.cs
 CHECKED 349/349  Barotrauma/BarotraumaShared/SharedSource/Characters/HumanPrefab.cs
@@ -634,6 +652,8 @@ CHECKED 195/195  Barotrauma/BarotraumaShared/SharedSource/CircuitBox/CircuitBoxW
 CHECKED 114/114  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/AfflictionsFile.cs
 CHECKED 118/118  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/CharacterFile.cs
 CHECKED 152/152  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ContentFile.cs
+CHECKED 81/81  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/GenericPrefabFile.cs
+CHECKED 71/71  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OrdersFile.cs
 CHECKED 106/106  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/RandomEventsFile.cs
 CHECKED 100/100  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/UIStyleFile.cs
 CHECKED 565/565  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentPackage/ContentPackage.cs
@@ -645,6 +665,7 @@ CHECKED 274/274  Barotrauma/BarotraumaShared/SharedSource/CoroutineManager.cs
 CHECKED 3677/3677  Barotrauma/BarotraumaShared/SharedSource/DebugConsole.cs
 CHECKED 178/178  Barotrauma/BarotraumaShared/SharedSource/Decals/Decal.cs
 CHECKED 101/101  Barotrauma/BarotraumaShared/SharedSource/Decals/DecalManager.cs
+CHECKED 84/84  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/PerkBase.cs
 CHECKED 210/210  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/SpawnItemPerk.cs
 CHECKED 779/779  Barotrauma/BarotraumaShared/SharedSource/Enums.cs
 CHECKED 117/117  Barotrauma/BarotraumaShared/SharedSource/Eos/Session.cs
@@ -689,6 +710,7 @@ CHECKED 30/30  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/Labe
 CHECKED 61/61  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/LayerAction.cs
 CHECKED 86/86  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MessageBoxAction.cs
 CHECKED 236/236  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MissionAction.cs
+CHECKED 77/77  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MissionStateAction.cs
 CHECKED 97/97  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/ModifyLocationAction.cs
 CHECKED 82/82  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MoneyAction.cs
 CHECKED 144/144  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/NPCChangeTeamAction.cs
@@ -711,12 +733,15 @@ CHECKED 447/447  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/Tr
 CHECKED 62/62  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TriggerEventAction.cs
 CHECKED 35/35  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TutorialCompleteAction.cs
 CHECKED 68/68  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TutorialIconAction.cs
+CHECKED 70/70  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/UIHighlightAction.cs
 CHECKED 88/88  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/UnlockPathAction.cs
 CHECKED 38/38  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitAction.cs
+CHECKED 80/80  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitForItemFabricatedAction.cs
 CHECKED 161/161  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitForItemUsedAction.cs
 CHECKED 1325/1325  Barotrauma/BarotraumaShared/SharedSource/Events/EventManager.cs
 CHECKED 196/196  Barotrauma/BarotraumaShared/SharedSource/Events/EventPrefab.cs
 CHECKED 692/692  Barotrauma/BarotraumaShared/SharedSource/Events/EventSet.cs
+CHECKED 78/78  Barotrauma/BarotraumaShared/SharedSource/Events/MalfunctionEvent.cs
 CHECKED 285/285  Barotrauma/BarotraumaShared/SharedSource/Events/Missions/AbandonedOutpostMission.cs
 CHECKED 216/216  Barotrauma/BarotraumaShared/SharedSource/Events/Missions/BeaconMission.cs
 CHECKED 364/364  Barotrauma/BarotraumaShared/SharedSource/Events/Missions/CargoMission.cs
@@ -737,6 +762,7 @@ CHECKED 266/266  Barotrauma/BarotraumaShared/SharedSource/Events/Missions/ScanMi
 CHECKED 782/782  Barotrauma/BarotraumaShared/SharedSource/Events/MonsterEvent.cs
 CHECKED 530/530  Barotrauma/BarotraumaShared/SharedSource/Events/ScriptedEvent.cs
 CHECKED 233/233  Barotrauma/BarotraumaShared/SharedSource/Extensions/IEnumerableExtensions.cs
+CHECKED 72/72  Barotrauma/BarotraumaShared/SharedSource/ForbiddenWordFilter.cs
 CHECKED 388/388  Barotrauma/BarotraumaShared/SharedSource/GameAnalytics/GameAnalyticsConsent.cs
 CHECKED 624/624  Barotrauma/BarotraumaShared/SharedSource/GameAnalytics/GameAnalyticsManager.cs
 CHECKED 357/357  Barotrauma/BarotraumaShared/SharedSource/GameSession/AutoItemPlacer.cs
@@ -747,7 +773,10 @@ CHECKED 206/206  Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Facti
 CHECKED 220/220  Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Reputation.cs
 CHECKED 237/237  Barotrauma/BarotraumaShared/SharedSource/GameSession/Data/Wallet.cs
 CHECKED 1757/1757  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignMode.cs
+CHECKED 77/77  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignModePresets.cs
 CHECKED 288/288  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignSettings.cs
+CHECKED 79/79  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameMode.cs
+CHECKED 75/75  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MissionMode.cs
 CHECKED 357/357  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MultiPlayerCampaign.cs
 CHECKED 19/19  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/TestGameMode.cs
 CHECKED 105/105  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/Tutorials/TutorialPrefab.cs
@@ -802,18 +831,24 @@ CHECKED 101/101  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signa
 CHECKED 134/134  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/BooleanOperatorComponent.cs
 CHECKED 177/177  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ButtonTerminal.cs
 CHECKED 847/847  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/CircuitBox.cs
+CHECKED 73/73  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ColorComponent.cs
 CHECKED 460/460  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Connection.cs
 CHECKED 429/429  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConnectionPanel.cs
 CHECKED 132/132  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConnectionSelectorComponent.cs
 CHECKED 459/459  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/CustomInterface.cs
 CHECKED 141/141  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DelayComponent.cs
 CHECKED 120/120  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/EqualsComponent.cs
+CHECKED 81/81  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/FunctionComponent.cs
 CHECKED 479/479  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/LightComponent.cs
+CHECKED 79/79  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MemoryComponent.cs
 CHECKED 367/367  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MotionSensor.cs
 CHECKED 115/115  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs
 CHECKED 210/210  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RegExFindComponent.cs
 CHECKED 384/384  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RelayComponent.cs
 CHECKED 44/44  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Signal.cs
+CHECKED 78/78  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SignalCheckComponent.cs
+CHECKED 89/89  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SmokeDetector.cs
+CHECKED 76/76  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/StringComponent.cs
 CHECKED 216/216  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Terminal.cs
 CHECKED 137/137  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/TrigonometricFunctionComponent.cs
 CHECKED 129/129  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/WaterDetector.cs
@@ -832,6 +867,7 @@ CHECKED 149/149  Barotrauma/BarotraumaShared/SharedSource/Items/ItemStatManager.
 CHECKED 450/450  Barotrauma/BarotraumaShared/SharedSource/Items/RelatedItem.cs
 CHECKED 109/109  Barotrauma/BarotraumaShared/SharedSource/Map/CoreEntityPrefab.cs
 CHECKED 1353/1353  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraBehavior.cs
+CHECKED 79/79  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraEventData.cs
 CHECKED 49/49  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/State/BallastFloraStateMachine.cs
 CHECKED 126/126  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/State/DefendWithPumpState.cs
 CHECKED 188/188  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/State/GrowIdleState.cs
@@ -861,6 +897,7 @@ CHECKED 70/70  Barotrauma/BarotraumaShared/SharedSource/Map/Levels/Ruins/RuinGen
 CHECKED 74/74  Barotrauma/BarotraumaShared/SharedSource/Map/Levels/Ruins/RuinGenerator.cs
 CHECKED 515/515  Barotrauma/BarotraumaShared/SharedSource/Map/LinkedSubmarine.cs
 CHECKED 1828/1828  Barotrauma/BarotraumaShared/SharedSource/Map/Map/Location.cs
+CHECKED 82/82  Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationConnection.cs
 CHECKED 755/755  Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationType.cs
 CHECKED 265/265  Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationTypeChange.cs
 CHECKED 1840/1840  Barotrauma/BarotraumaShared/SharedSource/Map/Map/Map.cs
@@ -931,6 +968,7 @@ CHECKED 23/23  Barotrauma/BarotraumaShared/SharedSource/Networking/Voip/VoipConf
 CHECKED 173/173  Barotrauma/BarotraumaShared/SharedSource/Networking/Voip/VoipQueue.cs
 CHECKED 65/65  Barotrauma/BarotraumaShared/SharedSource/Networking/Voting.cs
 CHECKED 128/128  Barotrauma/BarotraumaShared/SharedSource/PerformanceCounter.cs
+CHECKED 73/73  Barotrauma/BarotraumaShared/SharedSource/Physics/Physics.cs
 CHECKED 1040/1040  Barotrauma/BarotraumaShared/SharedSource/Physics/PhysicsBody.cs
 CHECKED 123/123  Barotrauma/BarotraumaShared/SharedSource/PlayerInput.cs
 CHECKED 184/184  Barotrauma/BarotraumaShared/SharedSource/Prefabs/IImplementsVariants.cs
@@ -940,6 +978,7 @@ CHECKED 183/183  Barotrauma/BarotraumaShared/SharedSource/ProcGen/PerlinNoise.cs
 CHECKED 1014/1014  Barotrauma/BarotraumaShared/SharedSource/ProcGen/Voronoi.cs
 CHECKED 333/333  Barotrauma/BarotraumaShared/SharedSource/ProcGen/VoronoiElements.cs
 CHECKED 342/342  Barotrauma/BarotraumaShared/SharedSource/Screens/GameScreen.cs
+CHECKED 89/89  Barotrauma/BarotraumaShared/SharedSource/Screens/NetLobbyScreen.cs
 CHECKED 96/96  Barotrauma/BarotraumaShared/SharedSource/Serialization/Editable/ConditionallyEditable.cs
 CHECKED 1202/1202  Barotrauma/BarotraumaShared/SharedSource/Serialization/SerializableProperty/SerializableProperty.cs
 CHECKED 233/233  Barotrauma/BarotraumaShared/SharedSource/Serialization/StructSerialization.cs
@@ -956,8 +995,10 @@ CHECKED 302/302  Barotrauma/BarotraumaShared/SharedSource/Steam/SteamManager.cs
 CHECKED 643/643  Barotrauma/BarotraumaShared/SharedSource/Steam/Workshop.cs
 CHECKED 173/173  Barotrauma/BarotraumaShared/SharedSource/Tags.cs
 CHECKED 195/195  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/LocalizedString.cs
+CHECKED 75/75  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ReplaceLString.cs
 CHECKED 185/185  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ServerMsgLString.cs
 CHECKED 93/93  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/SplitLString.cs
+CHECKED 89/89  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TagLString.cs
 CHECKED 203/203  Barotrauma/BarotraumaShared/SharedSource/Text/RichString.cs
 CHECKED 635/635  Barotrauma/BarotraumaShared/SharedSource/Text/TextManager.cs
 CHECKED 252/252  Barotrauma/BarotraumaShared/SharedSource/Text/TextPack.cs
@@ -966,12 +1007,15 @@ CHECKED 363/363  Barotrauma/BarotraumaShared/SharedSource/Traitors/TraitorEventP
 CHECKED 49/49  Barotrauma/BarotraumaShared/SharedSource/Traitors/TraitorManager.cs
 CHECKED 401/401  Barotrauma/BarotraumaShared/SharedSource/Upgrades/Upgrade.cs
 CHECKED 717/717  Barotrauma/BarotraumaShared/SharedSource/Upgrades/UpgradePrefab.cs
+CHECKED 83/83  Barotrauma/BarotraumaShared/SharedSource/Utils/CrossThread.cs
 CHECKED 231/231  Barotrauma/BarotraumaShared/SharedSource/Utils/CursedDictionary.cs
 CHECKED 1897/1897  Barotrauma/BarotraumaShared/SharedSource/Utils/Homoglyphs.cs
 CHECKED 136/136  Barotrauma/BarotraumaShared/SharedSource/Utils/IdRemap.cs
+CHECKED 79/79  Barotrauma/BarotraumaShared/SharedSource/Utils/LinkedPairSet.cs
 CHECKED 149/149  Barotrauma/BarotraumaShared/SharedSource/Utils/MTRandom.cs
 CHECKED 174/174  Barotrauma/BarotraumaShared/SharedSource/Utils/Md5Hash.cs
 CHECKED 138/138  Barotrauma/BarotraumaShared/SharedSource/Utils/Rand.cs
+CHECKED 88/88  Barotrauma/BarotraumaShared/SharedSource/Utils/RichTextData.cs
 CHECKED 861/861  Barotrauma/BarotraumaShared/SharedSource/Utils/SafeIO.cs
 CHECKED 1044/1044  Barotrauma/BarotraumaShared/SharedSource/Utils/SaveUtil.cs
 CHECKED 330/330  Barotrauma/BarotraumaShared/SharedSource/Utils/SegmentTable.cs
@@ -999,6 +1043,7 @@ CHECKED 40/40  Barotrauma/BarotraumaTest/TestProject.cs
 CHECKED 111/111  Deploy/DeployAll/Deployables.cs
 CHECKED 123/123  Deploy/DeployAll/DotnetCmd.cs
 CHECKED 143/143  Deploy/DeployAll/EgsAssistant.cs
+CHECKED 86/86  Deploy/DeployAll/GitCmd.cs
 CHECKED 248/248  Deploy/DeployAll/SteamPipeAssistant.cs
 CHECKED 155/155  Deploy/DeployAll/Util.cs
 CHECKED 679/679  Libraries/Lidgren.Network/NetBuffer.Read.cs
@@ -1018,19 +1063,14 @@ CHECKED 23/23  Libraries/Lidgren.Network/NetUnreliableUnorderedReceiver.cs
 === PARTIAL (checked X of Y) ===
 
 === NOT STARTED (0 of Y) ===
-CHECKED 0/86  Barotrauma/BarotraumaClient/ClientSource/Characters/Jobs/JobPrefab.cs
 CHECKED 0/62  Barotrauma/BarotraumaClient/ClientSource/ContentManagement/ContentPackageManager.cs
 CHECKED 0/35  Barotrauma/BarotraumaClient/ClientSource/Decals/Decal.cs
 CHECKED 0/70  Barotrauma/BarotraumaClient/ClientSource/Eos/PrimaryLogin/Epic/EosEpicPrimaryLogin.cs
-CHECKED 0/84  Barotrauma/BarotraumaClient/ClientSource/EventInput/EventInput.cs
-CHECKED 0/77  Barotrauma/BarotraumaClient/ClientSource/EventInput/KeyboardDispatcher.cs
-CHECKED 0/74  Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/EventObjectiveAction.cs
 CHECKED 0/62  Barotrauma/BarotraumaClient/ClientSource/Events/EventLog.cs
 CHECKED 0/35  Barotrauma/BarotraumaClient/ClientSource/GUI/GUIFrame.cs
 CHECKED 0/31  Barotrauma/BarotraumaClient/ClientSource/GameSession/Data/Wallet.cs
 CHECKED 0/10  Barotrauma/BarotraumaClient/ClientSource/GameSession/GameMode.cs
 CHECKED 0/30  Barotrauma/BarotraumaClient/ClientSource/GameSession/GameModes/Tutorials/TutorialMode.cs
-CHECKED 0/84  Barotrauma/BarotraumaClient/ClientSource/GameSession/PvPMode.cs
 CHECKED 0/29  Barotrauma/BarotraumaClient/ClientSource/GameSession/UpgradeManager.cs
 CHECKED 0/61  Barotrauma/BarotraumaClient/ClientSource/Items/Components/EntitySpawnerComponent.cs
 CHECKED 0/49  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Ladder.cs
@@ -1046,34 +1086,26 @@ CHECKED 0/28  Barotrauma/BarotraumaClient/ClientSource/Items/Components/TriggerC
 CHECKED 0/35  Barotrauma/BarotraumaClient/ClientSource/Items/ItemEventData.cs
 CHECKED 0/65  Barotrauma/BarotraumaClient/ClientSource/Map/FireSource.cs
 CHECKED 0/66  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/DestructibleLevelWall.cs
-CHECKED 0/74  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelGenerationParameters.cs
 CHECKED 0/19  Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelTrigger.cs
-CHECKED 0/81  Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs
 CHECKED 0/59  Barotrauma/BarotraumaClient/ClientSource/Media/Video.Internal.cs
 CHECKED 0/8  Barotrauma/BarotraumaClient/ClientSource/Networking/FileTransfer/ModReceiver.cs
 CHECKED 0/24  Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/NetEntityEvent.cs
-CHECKED 0/83  Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs
 CHECKED 0/69  Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/P2PSocket.cs
 CHECKED 0/35  Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/CompositeServerProvider.cs
 CHECKED 0/17  Barotrauma/BarotraumaClient/ClientSource/Networking/ServerList/ServerProviders/ServerProvider.cs
 CHECKED 0/17  Barotrauma/BarotraumaClient/ClientSource/Networking/Voip/VoipConfig.cs
-CHECKED 0/75  Barotrauma/BarotraumaClient/ClientSource/Screens/EditorScreen.cs
 CHECKED 0/69  Barotrauma/BarotraumaClient/ClientSource/Screens/Screen.cs
 CHECKED 0/44  Barotrauma/BarotraumaClient/ClientSource/Settings/CompletedTutorials.cs
 CHECKED 0/58  Barotrauma/BarotraumaClient/ClientSource/Settings/DebugConsoleMapping.cs
 CHECKED 0/44  Barotrauma/BarotraumaClient/ClientSource/Settings/IgnoredHints.cs
-CHECKED 0/72  Barotrauma/BarotraumaClient/ClientSource/Settings/ServerListFilters.cs
-CHECKED 0/73  Barotrauma/BarotraumaClient/ClientSource/Social/FriendInfo.cs
 CHECKED 0/46  Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/CompositeFriendProvider.cs
 CHECKED 0/25  Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/FriendProvider.cs
 CHECKED 0/69  Barotrauma/BarotraumaClient/ClientSource/Social/FriendProviders/SteamFriendProvider.cs
 CHECKED 0/34  Barotrauma/BarotraumaClient/ClientSource/Social/SocialExtensions.cs
 CHECKED 0/13  Barotrauma/BarotraumaClient/ClientSource/Sprite/ConditionalSprite.cs
-CHECKED 0/73  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/Inflate.cs
 CHECKED 0/66  Barotrauma/BarotraumaClient/ClientSource/Sprite/DeformAnimations/NoiseDeformation.cs
 CHECKED 0/33  Barotrauma/BarotraumaClient/ClientSource/Sprite/SpriteSheet.cs
 CHECKED 0/34  Barotrauma/BarotraumaClient/ClientSource/Steam/RemoteStorageHelper.cs
-CHECKED 0/87  Barotrauma/BarotraumaClient/ClientSource/Steam/SteamIcons.cs
 CHECKED 0/70  Barotrauma/BarotraumaClient/ClientSource/StoreIntegration/StoreIntegration.cs
 CHECKED 0/34  Barotrauma/BarotraumaClient/ClientSource/Text/LocalizedString/LimitLString.cs
 CHECKED 0/29  Barotrauma/BarotraumaClient/ClientSource/Text/LocalizedString/WrappedLString.cs
@@ -1095,12 +1127,9 @@ CHECKED 0/20  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/NestMissi
 CHECKED 0/32  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs
 CHECKED 0/39  Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs
 CHECKED 0/14  Barotrauma/BarotraumaServer/ServerSource/Screens/UnimplementedScreen.cs
-CHECKED 0/84  Barotrauma/BarotraumaServer/ServerSource/Utils/XnaToConsoleColor.cs
 CHECKED 0/30  Barotrauma/BarotraumaShared/SharedSource/CachedDistance.cs
 CHECKED 0/28  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ISteerable.cs
 CHECKED 0/59  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveExtinguishFires.cs
-CHECKED 0/83  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFightIntruders.cs
-CHECKED 0/88  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveFixLeaks.cs
 CHECKED 0/38  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerFixLeaks.cs
 CHECKED 0/29  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerGlobal.cs
 CHECKED 0/26  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerItem.cs
@@ -1108,14 +1137,12 @@ CHECKED 0/70  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand
 CHECKED 0/19  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerPowerUpReactor.cs
 CHECKED 0/41  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerRepairSystems.cs
 CHECKED 0/20  Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorkerSteer.cs
-CHECKED 0/82  Barotrauma/BarotraumaShared/SharedSource/Characters/AICharacter.cs
 CHECKED 0/31  Barotrauma/BarotraumaShared/SharedSource/Characters/AIChatMessage.cs
 CHECKED 0/37  Barotrauma/BarotraumaShared/SharedSource/Characters/CauseOfDeath.cs
 CHECKED 0/12  Barotrauma/BarotraumaShared/SharedSource/Characters/CharacterHUD.cs
 CHECKED 0/47  Barotrauma/BarotraumaShared/SharedSource/Characters/CorpsePrefab.cs
 CHECKED 0/24  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionBleeding.cs
 CHECKED 0/22  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionPsychosis.cs
-CHECKED 0/72  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Afflictions/AfflictionSpaceHerpes.cs
 CHECKED 0/59  Barotrauma/BarotraumaShared/SharedSource/Characters/Health/Buffs/BuffDurationIncrease.cs
 CHECKED 0/51  Barotrauma/BarotraumaShared/SharedSource/Characters/Jobs/SkillPrefab.cs
 CHECKED 0/47  Barotrauma/BarotraumaShared/SharedSource/Characters/NPCPersonalityTrait.cs
@@ -1133,7 +1160,6 @@ CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/Content
 CHECKED 0/8  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/EnemySubmarineFile.cs
 CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/EventManagerSettingsFile.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/FactionsFile.cs
-CHECKED 0/81  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/GenericPrefabFile.cs
 CHECKED 0/10  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/HashlessFile.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ItemAssemblyFile.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/ItemFile.cs
@@ -1146,7 +1172,6 @@ CHECKED 0/32  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/Content
 CHECKED 0/45  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCConversationsFile.cs
 CHECKED 0/12  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCPersonalityTraitsFile.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/NPCSetsFile.cs
-CHECKED 0/71  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OrdersFile.cs
 CHECKED 0/14  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OtherFile.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostConfigFile.cs
 CHECKED 0/7  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/ContentFile/OutpostFile.cs
@@ -1174,24 +1199,15 @@ CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/ContentManagement/Missing
 CHECKED 0/48  Barotrauma/BarotraumaShared/SharedSource/Decals/DecalPrefab.cs
 CHECKED 0/58  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/DisembarkPerkPrefab.cs
 CHECKED 0/20  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/GiveTalentPointPerk.cs
-CHECKED 0/84  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/PerkBase.cs
 CHECKED 0/61  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/SubItemSwapPerk.cs
 CHECKED 0/57  Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/UpgradeSubmarinePerk.cs
 CHECKED 0/36  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/InventoryHighlightAction.cs
-CHECKED 0/77  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/MissionStateAction.cs
-CHECKED 0/70  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/UIHighlightAction.cs
-CHECKED 0/80  Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/WaitForItemFabricatedAction.cs
 CHECKED 0/65  Barotrauma/BarotraumaShared/SharedSource/Events/EventLog.cs
 CHECKED 0/57  Barotrauma/BarotraumaShared/SharedSource/Events/EventManagerSettings.cs
-CHECKED 0/78  Barotrauma/BarotraumaShared/SharedSource/Events/MalfunctionEvent.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/Extensions/StringExtensions.cs
-CHECKED 0/72  Barotrauma/BarotraumaShared/SharedSource/ForbiddenWordFilter.cs
-CHECKED 0/77  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignModePresets.cs
 CHECKED 0/20  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CharacterCampaignData.cs
 CHECKED 0/11  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CoOpMode.cs
-CHECKED 0/79  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameMode.cs
 CHECKED 0/60  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/GameModePreset.cs
-CHECKED 0/75  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/MissionMode.cs
 CHECKED 0/28  Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/PvPMode.cs
 CHECKED 0/60  Barotrauma/BarotraumaShared/SharedSource/GameSession/SlideshowPrefab.cs
 CHECKED 0/31  Barotrauma/BarotraumaShared/SharedSource/InputType.cs
@@ -1205,39 +1221,29 @@ CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/A
 CHECKED 0/10  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/AndComponent.cs
 CHECKED 0/10  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/OrComponent.cs
 CHECKED 0/10  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/BooleanOperatorComponent/XorComponent.cs
-CHECKED 0/73  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ColorComponent.cs
 CHECKED 0/46  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ConcatComponent.cs
 CHECKED 0/57  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DemultiplexerComponent.cs
 CHECKED 0/18  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/DivideComponent.cs
 CHECKED 0/44  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ExponentiationComponent.cs
-CHECKED 0/81  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/FunctionComponent.cs
 CHECKED 0/53  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/GreaterComponent.cs
-CHECKED 0/79  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MemoryComponent.cs
 CHECKED 0/42  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/ModuloComponent.cs
 CHECKED 0/59  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplexerComponent.cs
 CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplyComponent.cs
 CHECKED 0/40  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/NotComponent.cs
 CHECKED 0/32  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OxygenDetector.cs
-CHECKED 0/78  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SignalCheckComponent.cs
-CHECKED 0/89  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SmokeDetector.cs
-CHECKED 0/76  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/StringComponent.cs
 CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SubtractComponent.cs
 CHECKED 0/12  Barotrauma/BarotraumaShared/SharedSource/Items/Components/StatusHUD.cs
 CHECKED 0/44  Barotrauma/BarotraumaShared/SharedSource/Items/StartItemSet.cs
-CHECKED 0/79  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraEventData.cs
 CHECKED 0/31  Barotrauma/BarotraumaShared/SharedSource/Map/Creatures/BallastFloraPrefab.cs
 CHECKED 0/44  Barotrauma/BarotraumaShared/SharedSource/Map/DummyFireSource.cs
 CHECKED 0/66  Barotrauma/BarotraumaShared/SharedSource/Map/HullEventData.cs
 CHECKED 0/30  Barotrauma/BarotraumaShared/SharedSource/Map/IDamageable.cs
-CHECKED 0/82  Barotrauma/BarotraumaShared/SharedSource/Map/Map/LocationConnection.cs
 CHECKED 0/53  Barotrauma/BarotraumaShared/SharedSource/Map/Map/RadiationParams.cs
 CHECKED 0/22  Barotrauma/BarotraumaShared/SharedSource/Map/OrderTarget.cs
 CHECKED 0/35  Barotrauma/BarotraumaShared/SharedSource/Map/Outposts/NPCSet.cs
 CHECKED 0/62  Barotrauma/BarotraumaShared/SharedSource/Memento.cs
-CHECKED 0/73  Barotrauma/BarotraumaShared/SharedSource/Physics/Physics.cs
 CHECKED 0/63  Barotrauma/BarotraumaShared/SharedSource/Prefabs/Prefab.cs
 CHECKED 0/19  Barotrauma/BarotraumaShared/SharedSource/Prefabs/PrefabWithUintIdentifier.cs
-CHECKED 0/89  Barotrauma/BarotraumaShared/SharedSource/Screens/NetLobbyScreen.cs
 CHECKED 0/56  Barotrauma/BarotraumaShared/SharedSource/Screens/Screen.cs
 CHECKED 0/62  Barotrauma/BarotraumaShared/SharedSource/Serialization/Editable/Editable.cs
 CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/Serialization/ISerializableEntity.cs
@@ -1254,16 +1260,12 @@ CHECKED 0/45  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/Inpu
 CHECKED 0/24  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/JoinLString.cs
 CHECKED 0/20  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/LowerLString.cs
 CHECKED 0/13  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/RawLString.cs
-CHECKED 0/75  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/ReplaceLString.cs
-CHECKED 0/89  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TagLString.cs
 CHECKED 0/30  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/TrimLString.cs
 CHECKED 0/25  Barotrauma/BarotraumaShared/SharedSource/Text/LocalizedString/UpperLString.cs
 CHECKED 0/60  Barotrauma/BarotraumaShared/SharedSource/Timing.cs
 CHECKED 0/69  Barotrauma/BarotraumaShared/SharedSource/Utils/AssemblyInfo.cs
 CHECKED 0/26  Barotrauma/BarotraumaShared/SharedSource/Utils/CoordinateSpace2D.cs
-CHECKED 0/83  Barotrauma/BarotraumaShared/SharedSource/Utils/CrossThread.cs
 CHECKED 0/57  Barotrauma/BarotraumaShared/SharedSource/Utils/HttpUtility.cs
-CHECKED 0/79  Barotrauma/BarotraumaShared/SharedSource/Utils/LinkedPairSet.cs
 CHECKED 0/55  Barotrauma/BarotraumaShared/SharedSource/Utils/ListDictionary.cs
 CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs
 CHECKED 0/42  Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs
@@ -1271,10 +1273,8 @@ CHECKED 0/22  Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetLimit
 CHECKED 0/6  Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs
 CHECKED 0/26  Barotrauma/BarotraumaShared/SharedSource/Utils/ReadOnlyListExtensions.cs
 CHECKED 0/35  Barotrauma/BarotraumaShared/SharedSource/Utils/RestFactory.cs
-CHECKED 0/88  Barotrauma/BarotraumaShared/SharedSource/Utils/RichTextData.cs
 CHECKED 0/21  Barotrauma/BarotraumaShared/SharedSource/Utils/Shapes/Triangle2D.cs
 CHECKED 0/20  Barotrauma/BarotraumaShared/SharedSource/Utils/TaskExtensions.cs
-CHECKED 0/86  Deploy/DeployAll/GitCmd.cs
 CHECKED 0/67  Deploy/DeployAll/Program.cs
 CHECKED 0/59  Libraries/BarotraumaLibs/BarotraumaCore/Achievements/AchievementStats.cs
 CHECKED 0/26  Libraries/BarotraumaLibs/BarotraumaCore/Debugging/DebugConsoleCore.cs
