@@ -16155,3 +16155,67 @@ Barotrauma разложен по винтикам от handshake до титро
 --- ✅ PetManager не существует как сетевой хендлер (pets = AI-персонажи),
   FILE-UPLOAD с клиента нет (ModSender = server→client),
   Hyper.ComponentModel = перф-кэш (457).
+===============================================================================
+[WAVE 459 — KARMA: СЕРВЕР-ВЫВОДНАЯ, НО... (квирки + комбо с найденными дырами)]
+===============================================================================
+
+--- ✅ ВЕРДИКТ: у KarmaManager НЕТ прямого клиентского входа ---
+  Все On* хендлеры питаются СЕРВЕРНЫМИ событиями: OnCharacterHealthChanged
+  (серверный дамаг), OnStructureHealthChanged, OnItemRepaired, OnReactor*,
+  OnWireDisconnected (ConnectionPanel сервер-валидация 448), OnItemTakenFromPlayer
+  (Inventory.ServerEventRead 450: yoinker = аутентифицированный sender —
+  ФРЕЙМ невозможен), OnBallastFloraDamaged, OnSpamFilterTriggered.
+  Клиент не может послать «+карма» или «фреймни соседа». Прилично.
+
+--- ★ КВИРК 1: у ИТЕМОВ нет карма-штрафа за урон (только у структур!) ---
+  OnStructureHealthChanged — карма за СТЕНЫ (штраф, кап
+  MaxStructureDamageKarmaDecreasePerSecond). OnItemRepaired — карма за
+  починку предметов. OnItemDAMAGE — НЕТ такого хендлера. Стреляешь по
+  собственным насосам/реактору-декоя/сонару → карму не трогаешь.
+  + OnItemRepaired: repairAmount × 0.03 ×2 (скиллы) — фарм-луп «сломал
+  предмет (бесплатно по карме) → починил (+карма)». Польза нулевая (карма
+  выше 50 не даёт ничего, только нет herpes), но ирония: комбо с
+  Repairable QTE-trust (448 — клиент верит QTESuccess) = ускоренный фарм.
+
+--- ★ КВИРК 2: окно реталиации = 120 сек свободы ---
+  AllowedRetaliationTime default 120! Если тебя ОДИН раз зацепил дружественный
+  огонь (случайный осколок, кривой сварщик) → его LastAttackTime в твоей
+  памяти → ТЫ 2 МИНУТЫ лупишь его БЕЗ карма-штрафа и стан не считается
+  (damage=min(damage,0), stun=0). Осознанный френдли-фаер = лицензия на грызню.
+  Дизайн-решение, но окно честно огромное.
+
+--- ★ КВИРК 3: карма-скейлинг жертв с низким кармом ---
+  damage *= InverseLerp(0, 50, targetClient.Karma) — у героя с кармой 0
+  штраф за его избиение = 0. Низкокармовые (уже herpes) = бесплатная
+  боксёрская груша для всей пати. Спираль нищеты по дизайну.
+
+--- ★ КВИРК 4: herpes-обфускация (сознательный анти-метагейминг) ---
+  Комментарий: «increase the strength of the herpes affliction in steps
+  instead of linearly otherwise clients could determine their exact karma
+  value from the strength». Ступени 100/60/30. Девы ЛОМАЮТ собственный
+  канал обратной связи, чтобы игроки не читали карму по силе герпеса.
+  Клиент-проверяемая величина = преднамеренно квантованная. Респект паранойе.
+
+--- ★ КВИРК 5: клоун = половина всех штрафов ---
+  AdjustKarma: клон-костюм → amount *= 0.5 (штрафы И награды, но штрафы
+  важнее). OnCharacterHealthChanged дополнительно ×0.5 по урону/стану
+  по клону. Грифить в клоунском костюме — официально дешевле.
+
+--- ★ КВИРК 6 (латентный NRE) ---
+  OnCharacterHealthChanged: `attacker?.Info?.Job.Prefab.Identifier` —
+  цепочка `Info?.Job.Prefab` БЕЗ `?.` после Job! Job==null при Info!=null →
+  NullReferenceException в серверном дамаг-пути (Update без try/catch!).
+  Триггер: персонаж с Info без Job ломает структуру своей команды (маловероятно:
+  у игроков/наёмников Job всегда есть; у существ Info==null → `?.` спасает).
+  Паттерн повторен в 4 местах (securityofficer/medicaldoctor/mechanic/engineer).
+
+--- ✅ Анти-накрутка: StructureDamage штраф (0.1) ровно 2x StructureRepair
+  награды (0.05) → луп «сломал стену-починил» NET-отрицательный. Карма-кик:
+  Karma<KickBanThreshold → kick с resetKarma:true, KarmaKickCount>KicksBeforeBan
+  → autoban. TestMode ветка для девов («BANNED! (not really...)»).
+
+--- КОМБО С НАЙДЕННЫМ: 453 (фри-хил клиникой) — лечение поднимает karma
+  ТОЛЬКО через игровой heal-path, клиника его минует → халявная карма-ферма
+  врача невозможна, но и штраф за гриф-снятие баффов пати через клинику
+  НЕ ПРИМЕНЯЕТСЯ (клиника не зовёт OnCharacterHealthChanged) → 453 остаётся
+  безнаказанным по карме. Карма не видит клинику вообще.
