@@ -15809,3 +15809,80 @@ Barotrauma разложен по винтикам от handshake до титро
   Ремедиум для девов: в SellItems если FindEntityByID fails → continue ДО
   оплаты; Origin=Character → проверить предмет в инвентаре клиента; buyback
   → TryPurchase ПЕРЕД store.Balance +=; AnyOneAllowed — дыра в перм-модели.
+===============================================================================
+[WAVE 453 — ★★★★★ FREE MEDICAL CLINIC ПОДТВЕРЖДЁН (цель из самого первого задания!)]
+===============================================================================
+
+--- ★★★★★ MEDICAL CLINIC: цена лечения = КЛИЕНТСКОЕ ПОЛЕ → лечение за 0mk ---
+  MedicalClinic.ServerRead (server:55): 6 хендлеров, из них важны:
+  ADD_PENDING → ProcessNewAddition:
+    NetCrewMember newCrewMember = INetSerializableStruct.Read<NetCrewMember>(inc);
+    InsertPendingCrewMember(newCrewMember);   ← СТРУКТУРА КЛИЕНТА В PENDING БЕЗ
+                                               ЕДИНОЙ ПРОВЕРКИ
+  HEAL_PENDING → ProcessHealing → HealAllPending(client):
+    totalCost = GetTotalCost() = Σ affliction.Price   ← ЦЕНЫ ИЗ КЛИЕНТСКОЙ
+                                                        СТРУКТУРЫ
+    if (IsOutpostInCombat()) return Refused;          ← см. ниже
+    if (!TryPurchase(client, totalCost)) return InsufficientFunds;  ← 0 = free
+    foreach: ReduceAfflictionOnAllLimbs(affliction.Identifier,
+              affliction.Prefab?.MaxStrength ?? ...)  ← ЛЕЧИТ ЗАЯВЛЕННОЕ до нуля
+
+  ПРОВОД (NetAffliction, MedicalClinic.cs:57, все [NetworkSerialize]):
+    Identifier, ushort Strength, int VitalityDecrease, ushort Price
+    ← ВСЁ КЛИЕНТСКОЕ. Price — ushort! SetAffliction (серверный расчёт цены)
+    вызывается ТОЛЬКО при построении сервером; клиентский путь ставит любые.
+
+  ЧЕГО НЕТ В InsertPendingCrewMember/HealAllPending:
+  - проверки что аффликция ЕСТЬ на персонаже (лечим что захотим!)
+  - пересчёта цены сервером (GetAllAfflictions/IsHealable — только для
+    серверных списков, клиентский путь их МИНУЕТ → IsHealable-фильтр ОБХОЖДЕН)
+  - проверки «цель = отправитель» (цель = ЛЮБОЙ Team1: GetCrewCharacters =
+    CharacterList TeamID==Team1, матч по CharacterInfoID из пакета)
+
+  ★ ISOUTPOSTINCOMBAT ВНЕ АУТПОСТА = FALSE (MedicalClinic.cs:172):
+    if (Level.Loaded is not Outpost) { return false; }  ← «не в бою» вне
+    аутпоста → heal ПРОХОДИТ ГДЕ УГОДНО: посреди раунда, на вреке, в бездне.
+    НИКАКОГО гейта «ты должен быть в аутпосте» в heal-пути НЕТ вообще.
+
+  ЭКСПЛОЙТ-РЕЦЕПТ (MEDICAL header):
+  1) ADD_PENDING: NetCrewMember { CharacterInfoID = <свой ID>,
+     Afflictions = [ {Identifier="internaldamage", Strength=100,
+     VitalityDecrease=0, Price=0}, {Identifier="huskinfection", Price=0}, ... ] }
+  2) HEAL_PENDING → totalCost=0 → TryPurchase(0)=true → полная очистка тела
+     от перечисленного, БЕСПЛАТНО, В ЛЮБОМ МЕСТЕ КАРТЫ.
+  ВАРИАНТЫ: лечение ЛЮБОГО тиммейта (Free Medic), снятие husk-инфекции
+  (в ванили лечится только калемс-антибиотиками!), снятие ПОЗИТИВНЫХ
+  аффликций = ГРИФ (сорвать баффы/тоник-эффекты у всей пати одним пакетом).
+  Единственный тормоз: босс-бой в аутпосте (Refused) + rate limiter (спам).
+  Аутпост-бой останавливает только аутпостный бой; на карте — ничего.
+
+  Продажная сторона от 452 + лечебная от 453 = кампейн полностью из
+  доверенных клиентских значений по деньгам: цена продажи (0 предмет = цена),
+  цена лечения (поле Price), buyback-баланс.
+
+--- ★ FireCharacter БЕЗ РЕФАНДА (лупа найма нет) ---
+  CrewManager.FireCharacter → RemoveCharacterInfo. Деньги не возвращаются.
+  Найм-луп невозможен.
+
+--- ★ PurchaseItemSwap ЧИСТ ---
+  UpgradeManager.cs:304: цена = itemToInstall.SwappableItem.GetPrice(location)
+  × linkedItems.Count — платишь полную цену устанавливаемого. itemToInstall
+  клиентский, но: category-чек по тегам + Prefab.SwappableItem конфиг +
+  AvailableSwaps → бесплатный свап только на предконфигурированные вары
+  (vanilla механика «поменять ствол»). HasPermissionToManageUpgrades
+  (ManageUpgrades || AnyOneAllowed fallback). isNetworkMessage=true → price=0
+  — ветка CLIENT-only (сервер шлёт эхо). underpay/overpay нет.
+
+--- ★ КВОРК ПРЕЦЕДЕНСА (не вектор) ---
+  MultiPlayerCampaign ServerRead (shared, buy crate):
+    int alreadyPurchasedQuantity =
+      GetBuyCrateItem(...)?.Quantity ?? 0 + GetPurchasedItemCount(...);
+  C#: `+` выше `??` → парсится как `crateQty ?? (0 + purchasedCount)`.
+  Если в crate УЖЕ лежит предмет → купленный-в-этом-раунде счётчик
+  ИГНОРИРУЕТСЯ. Латентно (crate чистится перед чтением), но мина: добавить
+  закупку до клампа — и лимит стока считается мимо persistent-записей.
+
+--- ПАТТЕРН ВОЛНЫ: «цена — это данные клиента». Кампейн-экономика в трёх
+  местах (продажа 452, лечение 453, [цены закупок серверные]) берёт деньги
+  из пакетов, а не из расчётов сервера. Ремедиум: пересчитывать стоимость
+  сервером по идентификаторам, принимать от клиента ТОЛЬКО «что», не «сколько».
