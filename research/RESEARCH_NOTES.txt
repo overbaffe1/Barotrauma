@@ -16061,3 +16061,43 @@ Barotrauma разложен по винтикам от handshake до титро
 --- ИТОГ 456: диспетчер SERVER_COMMAND вычищен до конца (все case'ы).
   Дыры диспетчера: SEND_BACKUP_INDICES (449), EVENTMANAGER (449),
   VOTE-TRANSFER (455). ManageRound — дизайн-квирк пермлесс-серверов.
+===============================================================================
+[WAVE 457 — CAMPAIGN_SETUP_INFO: ЗАГРУЗКА СЕЙВА С dosProtection.Pause]
+===============================================================================
+
+--- ★★★ CAMPAIGN_SETUP_INFO load-ветка: клиентский путь + ИММУНИТЕТ К DoS ---
+  GameServer.cs:934 (isNew=false):
+    string savePath = inc.ReadString();        ← клиентский путь (опять!)
+    bool isBackup = inc.ReadBoolean();
+    uint backupIndex = isBackup ? ReadUInt32() : 0;
+    гейт: AllowedToManageCampaign(ManageRound)  ← пермлесс = ЛЮБОЙ
+    using (dosProtection.Pause(connectedClient))   ← ★ ВРЕМЯ ПАРСА НЕ СЧИТАЕТСЯ
+    {
+        backupPath = SaveUtil.GetBackupPath(savePath, backupIndex);  // .{name}.save.bk{index}
+        MultiPlayerCampaign.LoadCampaign(dataPath, connectedClient);  ← ПОЛНАЯ
+        ЗАГРУЗКА КАМПЕЙНА: чтение+декомпрессия+XML-парс+инициализация
+    }
+  DoSProtection.Pause ДОКУМЕНТИРОВАН как «мы знаем, что пакет тяжёлый, но
+  не хотим стриков» — сюда пихнули КЛИЕНТСКИЙ путь. На пермлесс-сервере:
+  спам CAMPAIGN_SETUP_INFO(load) с путями к большим сейвам → сервер
+  парсит их ПОЛНОСТЬЮ без единого стрика. Файл-oracle по латентности
+  (валидный сейв = тяжёлый парс, невалидный = быстрый отказ).
+  Отправка BACKUP_INDICES (449) хотя бы считалась; этот путь — с иммунитетом.
+  + симметрично 456: гейт ManageRound на пермлесс-сервере = все.
+  SaveUtil.GetBackupPath: только конкатенация, валидации пути нет.
+  (создание новой кампании isNew=true: та же схема, CampaignSettings
+  клиентские, но MaxMissionCount клампится [NetworkSerialize(1..10)] —
+  фреймворк-клампы снова спасают там, где их вспомнили поставить).
+
+--- ★ ClientReadLobby — аккуратно ---
+  SyncIds: ВСЕ ID через NetIdUtils.Clamp(получено, min, max) — клиент не
+  может перекрутить sync-курсоры. characterDiscarded → DiscardClientCharacterData
+  (свой перс). Кампания-ID mismatch → коррекция счётчиков клиенту.
+
+--- ✅ Hyper "PropertySync" — ЛОЖНАЯ ТРЕВОГА ---
+  Libraries/Hyper.ComponentModel = HyperDescriptor (кэширование
+  TypeDescriptor'ов для рефлексии, перф-оптимизация SerializableProperty).
+  НЕ сетевой протокол. Клиентского пути записи свойств через Hyper нет.
+
+--- ClientReadIngame: TeamID назначает СЕРВЕР (PvP → AssignClientToPvpTeamMidgame,
+  иначе Team1 принудительно). Клиент свою команду в игре не выбирает. Чисто.
