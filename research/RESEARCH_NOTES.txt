@@ -16310,3 +16310,74 @@ Barotrauma разложен по винтикам от handshake до титро
   слой (SharedRead) с трещинами: byte-overread (#6), null-cast (#7),
   dict-утечка. Фиксы девам: Math.Min(end, capacity) + Remove(sender) в
   OnClientDisconnect + null-чек каста.
+===============================================================================
+[WAVE 462 — МЕЛКИЕ ХВОСТЫ + ФИНАЛЬНЫЙ ДАЙДЖЕСТ 462 ВОЛН]
+===============================================================================
+
+--- ✅ HealingCooldown (сервер) — на месте ---
+  Item.Treatment (450) упоминал IsOnCooldown: сервер 0.4s (чуть меньше
+  клиентских 0.5s под лаг) на Client-ключе, RemoveExpired на каждом чеке.
+  Спам Treatment-ивентами без кулдауна невозможен. Чисто.
+  (Микро-утечка того же сорта, что receivedItemIds: дисконнект-чистки нет,
+  но expired-remove фактический, окно 0.4с — несущественно.)
+
+--- ✅ KarmaManager.OnClientDisconnected — clientMemories ЧИСТИТСЯ.
+  (В отличие от Inventory.receivedItemIds, 461.)
+  OnRoundEnded: ResetKarma → memories clear, Karma = max(50, Karma) —
+  фарму ниже-пятидесяти разбег — нет: подняли минимум, не опустили.
+
+--- ★ ФИНАЛЬНЫЙ ДАЙДЖЕСТ (все волны, ранжировано) ---
+  ★★★★★ КРИТ (эксплуатируемо в лайве, экономика/приватность):
+   1. [452] Продажа несуществующих предметов: без владения-чека,
+      Origin=Character+ID=0 = оплата без удаления; ID=чужого предмета =
+      кража-удаление; buyback пополняет магазин БЕСПЛАТНО при фейле
+      TryPurchase = вечный двигатель. Формат в NOTES 452.
+   2. [453] Free Medical Clinic: NetAffliction.Price из пакета → лечение
+      за 0mk в любом месте (вне аутпоста combat=false), husk-cure,
+      гриф-снятие баффов, карма слепа. МОДУЛЬ ГОТОВ: FreeHealModule.cs.
+   3. [447] Holdable attach unit-mismatch 150x (171 sim = 17100 display):
+      аттач сквозь стены + cross-sub (чужая суба/аутпост/скала) +
+      содержимое инвентаря летит с предметом. Planter = кража грядок.
+   4. [447] Steering posToMaintain без валидации → автопилот в любую
+      точку карты.
+   5. [447] Turret/сигнальная шина: position_in/trigger_in без дистанции/
+      отправителя; wifi = неаутентифицированный вход в шину; ItemComponent
+      base: activate/use/trigger_in → item.Use для ЛЮБОГО компонента.
+  ★★★★ ВЫСОКИЙ (софт-DoS / постоянный ущерб):
+   6. [451] VOIP: 1 байт TOC (40/60ms > 960) → OpusException → батч-дроп
+      тика (спам = систематическая потеря INPUT/EVENTS/CHAT всех).
+   7. [455] Vote-Transfer amount<0: TryDeduct(-X) pumps отправителя,
+      жертва в вечный минус (сейв), From=null = БАНК.
+   8. [448] Wifi set_range NaN → радиус ∞ (комбо с #5: контроль турели
+      из любого конца карты).
+   9. [448] ReadPropertyChange: float/Vector2 БЕЗ клампов в любые
+      InGameEditable свойства (Delay/Frequency/Range...) при живом
+      CanClientAccess; string[]-бомба мертва только из-за OfType-квирка.
+  10. [457] CAMPAIGN_SETUP_INFO load: клиентский savePath +
+      dosProtection.Pause = тяжёлый парс без стриков (пермлесс).
+  11. [458] Resync-тоггл: ENDROUND_SELF+UPDATE_INGAME = ре-сериализация
+      всего uniqueEvents-бэклога на каждый цикл.
+  ★★★ СРЕДНИЙ:
+  12. [449] SEND_BACKUP_INDICES: клиентский путь → Directory.GetFiles +
+      N XML-парсов за 1 пакет (DoS-амплитфикация, file-oracle).
+  13. [449] EventManager Options[сырой байт] → throw → батч-дроп.
+  14. [451] PrefabCollection[unknown id] (Order) → throw → батч-дроп.
+  15. [447] Wire node positions без клампа (визуальный спам через стены).
+  16. [450] SpectatePos NaN от мёртвого спектатора = все персонажи
+      навсегда активны (CPU); живым закрыто геттером-щитом.
+  17. [448] Pump set_speed NaN: сеттер проверяет СТАРОЕ значение → яд
+      застревает навсегда (насос-зомби).
+  18. [449] Engine/Reactor NaN сигналы: энергосеть отравлена, физика
+      спасена случайным ифом; реактор «бессмертен» (meltdown false).
+  ★★ НИЗКИЙ (гриф/жалобы, не экономика):
+  19. [456] ManageRound на пермлесс-сервере = любой рвёт раунд.
+  20. [448] Repairable QTESuccess верится клиенту (мини-чит ремонта).
+  21. [448] CircuitBox MoveComponent без Locked + AddWire бесплатно.
+  22. [461] Inventory: byte-overread (#6), null-cast NRE (#7), дикт-утечка.
+  23. [459] Карма-квирки: реталиация 120с, клон -50%, ItemDamage без штрафа.
+  24. [460] — чисто; [455] консоль — чисто; [449] чат — чисто; [450]
+      Hull/Inventory-apply — чисто; инпут — образцово.
+  ОБЩИЙ КОРНЕВОЙ ПАТТЕРН: «клиент шлёт ЧТО, сервер считает СКОЛЬКО»
+  соблюдён везде, КРОМЕ продажи/клиники; «всё после CanClientAccess —
+  доверенное»; throw→catch-all→батч-дроп (7 экземпляров); NaN-инъекция
+  (TryParse без IsValid) — 5+ экземпляров; Unit mismatch display↔sim.
