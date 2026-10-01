@@ -1156,3 +1156,6 @@
 - MonoGame форкнут, XNA форкнут, OpenAL Soft форкнут, Lidgren форкнут —
   Баротраума это матрёшка из форков с подводной лодкой внутри.
 - Все дороги ведут к ZlibStream: контент, спрайты, сейвы — всё сжато.
+- Holdable ServerEventRead: MaxAttachDistance в display pixels клампится
+  на sim coordinates. Ratio 100:1 = «радиус рук» превращается в «радиус
+  километров». Классический unit mismatch. Я проглядел. Юзер — нет.

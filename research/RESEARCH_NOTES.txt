@@ -15194,3 +15194,85 @@ Barotrauma разложен по винтикам от handshake до титро
   автогенератором (5K строк PNG/JPEG!). GraphicsDevice: DirectX (Windows),
   OpenGL (Linux/Mac) — два полных бэкенда. Effect = HLSL/FX скомпилированные
   (watershader/deformshader/SolidColor из игровых волн!).
+
+================================================================================
+[★★★★ КРИТИЧЕСКИЕ ДЫРЫ НАЙДЕНЫ (юзер ткнул носом) — волна 447]
+================================================================================
+
+--- ДЫРА #1: Holdable.ServerEventRead — ATTACH UNIT MISMATCH ---
+  MaxAttachDistance = DefaultInteractDistance * 0.95 = 114 ДИСПЛЕЙНЫХ пикселей
+  ServerEventRead клампит offset.ClampLength(MaxAttachDistance * 1.5f) = 171
+  НО simPosition в SIM-ЮНИТАХ! ConvertUnits: ratio = 100 display : 1 sim
+  171 sim units = 17,100 display pixels! Factor of ~150x!!!
+  Горшок/декор/любой attachable предмет зааттачивается В ЛЮБОЕ МЕСТО.
+  CanClientAccess проверяет только sub-membership, не дистанцию.
+
+--- ДЫРА #2: Wire.ServerEventRead — НЕТ ДИСТАНЦИОННОГО ЧЕКА ВООБЩЕ ---
+  Единственная проверка = CanClientAccess (sub + permission)
+  НЕТ проверки дистанции до connection panel!
+  Клиент может менять wire nodes/подключать/отключать С ДРУГОГО КОНЦА СУБА.
+
+--- ДЫРА #3 (потенциальная): Planter наследует Holdable → ДЫРА #1 применима.
+
+--- ПРИЧИНА ПРОПУСКА: читал код как документацию (что он делает), а не
+  как trust boundary анализ (что он ПОЗВОЛЯЕТ). Наличие клампа ≠ корректный
+  кламп. Unit mismatch display↔sim — классический баг при смешивании систем
+  координат. CanClientAccess ≠ дистанционная проверка.
+
+
+================================================================================
+[WAVE 447 - ★★★★ TRUST BOUNDARY АУДИТ: все ServerEventRead с unit-mismatch и отсутствующими чеками]
+================================================================================
+ПРИЧИНА ПРОПУСКА В РАННИХ ВОЛНАХ: читал код как документацию («что делает»),
+не как trust boundary («что позволяет»). Исправляю системный аудит.
+
+--- ★★★★ ДЫРА #1: Holdable.ServerEventRead — 150x UNIT MISMATCH ---
+  MaxAttachDistance = DefaultInteractDistance × 0.95 = 120 × 0.95 = 114
+  Это ДИСПЛЕЙНЫЕ ПИКСЕЛИ (радиус рук).
+  ServerEventRead: offset.ClampLength(MaxAttachDistance × 1.5) = 171
+  НО simPosition в SIM-ЮНИТАХ! ConvertUnits: 1 sim = 100 display.
+  171 SIM units = 17,100 display pixels = ВЕСЬ СУБ × 10.
+  Кламп должен быть 1.14 sim units. Реальный кламп = 171 sim units.
+  Фактор 150x. Горшок/свет/декор зааттачивается В ЛЮБОЕ МЕСТО суба.
+  Плантер наследует Holdable → растение тоже!
+  CanClientAccess проходит (стоишь у ПАНЕЛИ), attach улетает на ДРУГУЮ
+  СТОРОНУ СУБА.
+
+--- ★★★ ДЫРА #2: Steering.ServerEventRead — posToMaintain БЕЗ ВАЛИДАЦИИ ---
+  newPosToMaintain = new Vector2(msg.ReadSingle(), msg.ReadSingle());
+  НЕТ IsValid, НЕТ дистанционного чека, НЕТ clamp.
+  → Автопилот может навестись на ЛЮБУЮ точку карты.
+  → Бот поведёт суб туда, игнорируя радиацию/чудовищ/стены.
+  CanClientAccess проходит (стоишь у нав-терминала).
+  steeringInput клампится (±100) — это ок.
+  posToMaintain — это ГОЛЫЕ f32 из сети в координаты мира.
+
+--- ★★★ ДЫРА #3: Turret position_in — БЕЗ ДИСТАНЦИОННОГО ЧЕКА ---
+  ReceiveSignal("position_in"): targetRotation = newRotation.
+  Проверки: IsValid (NaN), всё. НЕТ проверки кто отправитель, НЕТ
+  дистанции, НЕТ проверки "находится ли персонаж у турели".
+  → Wi-fi компонент на другой частоте = управление турелью ИЗ ЛЮБОГО МЕСТА.
+  → Это ПУТЬ ОБОХОДА CanClientAccess: сигнал идёт через провода, не через
+    network event, поэтому CanClientAccess вообще не вызывается!
+
+--- ★★ ДЫРА #4: Wire.ServerEventRead — node positions БЕЗ КЛАМПА ---
+  CanClientAccess проходит (стоишь у панели).
+  lastNodePos = raw f32×2 из сети.
+  Ноды провода МОГУТ БЫТЬ В ЛЮБОЙ ТОЧКЕ МИРА.
+  Провода рисуются через стены, в другие субы, в уровень.
+
+--- ★★ ДЫРА #5: Fabricator — recipeHash БЕЗ валидации принадлежности ---
+  ServerEventRead: recipeHash (u32) → fabricationRecipes[recipeHash].
+  fabricationRecipes содержит ВСЕ рецепты ЭТОГО фабрикатора.
+  CanClientAccess проходит.
+  StartFabricating → MoveIngredientsToInputContainer:
+  тянет ингредиенты СО ВСЕГО СУБА (не из инвентаря игрока!).
+  Если ингредиентов НЕТ → fabrication ВСЁ РАВНО ЗАПУСКАЕТСЯ.
+  По завершении спавнит предмет даже если ингредиентов не было
+  (chosenIngredients просто пустой для этого слота).
+  → Может крафтить предметы без ингредиентов если они не на субе!
+
+--- ПАТТЕРН: CanClientAccess — ЕДИНСТВЕННЫЙ серверный чек для большинства
+  ServerEventRead. Он проверяет: sub-membership + CanInteractWith (дистанция
+  в display units). ПОСЛЕ него сервер доверяет ВСЕМ данным из пакета.
+
