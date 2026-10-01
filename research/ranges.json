@@ -176,7 +176,7 @@
   "Barotrauma/BarotraumaServer/ServerSource/Networking/FileTransfer/FileSender.cs": [
     [
       1,
-      439
+      440
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Networking/Primitives/Peers/Server/ServerPeer.cs": [
@@ -699,6 +699,10 @@
     [
       1,
       65
+    ],
+    [
+      85,
+      110
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Networking/Client.cs": [
@@ -3076,7 +3080,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Reactor.cs": [
     [
       1,
-      893
+      900
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Wire.cs": [
@@ -4678,7 +4682,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Engine.cs": [
     [
       1,
-      296
+      320
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Items/Components/Machines/Engine.cs": [

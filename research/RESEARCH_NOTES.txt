@@ -15448,3 +15448,117 @@ Barotrauma разложен по винтикам от handshake до титро
   float-ветвь). Грепать "TryParse(NumberStyles" по всем ReceiveSignal — почти
   все НЕ проверяют IsValid после парса. Единственный, кто проверил — Turret
   position_in (MathUtils.IsValid(newRotation)).
+===============================================================================
+[WAVE 449 — SIGNAL BUS NaN-SCAN + CHARACTER INPUT + CHAT + PACKET DISPATCH AUDIT]
+===============================================================================
+
+--- ★★★ ФЛАГМАН ВОЛНЫ: SEND_BACKUP_INDICES — клиентский ПУТЬ на сервере БЕЗ гейтов ---
+  GameServer.cs:1040 SendBackupIndices:
+    string savePath = inc.ReadString();            ← СЫРОЙ путь от клиента
+    var indexData = SaveUtil.GetIndexData(savePath);  ← БЕЗ перм, БЕЗ рейт-лимита,
+                                                      БЕЗ санитизации
+  SaveUtil.GetIndexData(fullPath) (SaveUtil.cs:943):
+    path = GetDirectoryName(fullPath); fileName = GetFileNameWithoutExtension(fullPath);
+    GetBackupPaths → Directory.GetFiles(path, $".{baseName}.save.bk*")
+    → КАЖДЫЙ найденный файл: ExtractGameSessionRootElementFromSaveFile =
+      ОТКРЫТЬ + ДЕКОМПРЕССИТЬ + РАСПАРСИТЬ XML (синхронно!)
+  → клиент-точка: Directory.GetFiles по ЛЮБОМУ пути, доступному серверу
+  Эффекты:
+  - DoS: путь в папку с кучей *.save.bk (дефолтная saves-папка busy-сервера!) →
+    N парсов за 1 пакет. DoSProtection лимитирует КОЛИЧЕСТВО пакетов/сек, НЕ
+    стоимость → амплитфикация живёт: 1 пакет = N parse-ов.
+  - Bandwidth amplification: запрос ~50 байт → ответ WriteNetSerializableStruct
+    со ВСЕМИ индексами (index+location+saveTime+levelType на файл).
+  - Слабый file-existence oracle (тайминг: парс vs пусто).
+  - Лог-спам: ThrowError на битые пути/файлы.
+  НЕ крашится: GetBackupPaths ловит Exception → пустой массив; peer-level
+  catch-all ловит остальное. Просто «дорогой пакет».
+
+--- ★★ EventManager.EVENTMANAGER_RESPONSE — Options[selectedOption] СЫРОЙ БАЙТ ---
+  EventManager.cs:28 ServerRead: selectedOption = inc.ReadByte() (255=ignore).
+  EventManager.cs:87: convAction.SelectedOption = selectedOption;
+    if (Options.Any() && !GetEndingOptions().Contains(selectedOption))
+        { var option = convAction.Options[selectedOption];  ← ИНДЕКС БЕЗ КЛАМПА
+  selectedOption до 254, Options обычно 2-4 → ArgumentOutOfRangeException.
+  Гейт TargetClients.Contains(sender) ЕСТЬ (чужой диалог не тронешь), НО
+  свой-то диалог клиент может послать любой байт.
+  ПОСЛЕДСТВИЯ: не краш — LidgrenServerPeer.Update ловит Exception целиком
+  (LidgrenServerPeer.cs:122-137) → GameAnalytics error + ПРОПУСК ОСТАТКА БАТЧА
+  сообщений. Error-log spam + дроп легитимных пакетов в том же батче.
+  ПАТТЕРН: «последний рубеж обороны» (peer catch-all) превращает все
+  throw-баги в «лог-спам + дроп батча», девы этим живут.
+
+--- ★★★ CHARACTER INPUT — ОБРАЗЦОВО (опровергнут телепорт/aim-спуф) ---
+  CharacterNetworking.cs:189 ServerReadInput: клиент шлёт ТОЛЬКО:
+    u16 networkUpdateID, byte inputCount, потом на инпут:
+    ranged(0,0xFFFF) InputNetFlags + u16 intAim + u16 interact (при action-флагах).
+  ПОЗИЦИЙ НЕТ. Движение сервер симулирует сам из флагов.
+  aim (UpdateNetInput:124): угол = intAim/65535*2π;
+    cursorPosition = AimRefPosition + dir * 500.0f  ← КУРСОР СЧИТАЕТ СЕРВЕР,
+    фиксированная дистанция 500 sim. Клиентский курсор НЕ верится.
+  interact: FindEntityByID → CanInteractWith(item) серверный дистанционный чек;
+    для персонажей CanInteractWith(character, maxDist: 250).
+    Фейл → коррекция позиции предмета клиенту (PositionUpdateInterval=0 + эвент).
+  Queue-гигиена: >60 инпутов → RemoveRange до 30; idle-инпуты схлопываются.
+  ВЫВОД: инпут-траст-граница написана ПРАВИЛЬНО. Единственное что клиент
+  контролирует — флаги и угол. Уважение.
+
+--- ★★★ CHAT — ЗАГЕЙЧЕН ДОСТОЙНО (опровергнут ghosting/радио-спуф) ---
+  ChatMessage.ServerRead (server:19): type/chatMode через ReadRangedInteger,
+  txt=ReadString→SanitizeText→КЛАМП MaxLength=200→спам-фильтр
+  (Levenshtein-похожесть, similarity>5 → блок; ChatSpamCount>3 → КИК).
+  SendChatMessage (GameServer.cs:3797):
+  - "/radio","/r","/d","/dead", /имя-игрока (private) — префиксы парсятся
+    СЕРВЕРОМ, клиентский chatMode маппится в type.
+  - Мёртвый/без-персонажа/SpeechImpediment>=100 → ПРИНУДИТЕЛЬНО Dead-канал.
+  - Private только когда ОБА мертвы. Alive+alive private → отказ.
+  - Order-сообщения: SpeechImpediment>=100 или IsDead → отказ.
+  ВЫВОД: ghosting через чат не пройдёт. Радио живого = vanilla-фича (headset
+  НЕ проверяется предметно — но так и задумано).
+
+--- ★★★ NaN-СКАН СИГНАЛЬНОЙ ШИНЫ (продолжение волны 448) ---
+  Engine.cs:276 set_force: Clamp(tempForce,-100,100) → NaN ПРОХОДИТ в
+    lastReceivedTargetForce → targetForce → Force=Lerp(...)=NaN.
+    ФИЗИКА СПАСЕНА СЛУЧАЙНО: if (Math.Abs(Force) > 1.0f) — Abs(NaN)>1=false →
+    Submarine.ApplyForce НЕ вызывается. НО: currPowerConsumption =
+    Pow(|NaN|/100, exp)*consumption = NaN → ЭНЕРГОСЕТЬ ОТРАВЛЕНА (вне ифа!).
+    Яд персистентен: lastReceivedTargetForce.HasValue до следующего валидного
+    set_force. User=signal.sender → сила умножается на скилл рулевого.
+  Reactor.cs:867 set_fissionrate / :875 set_turbineoutput: Clamp(0,100) → NaN
+    → signalControlledTarget* → (Update:272) TargetFissionRate { get; set; }
+    автосвойство БЕЗ валидации → NaN в ядро. Meltdown-чеки
+    (temperature > Max) с NaN = всегда false → «БЕССМЕРТНЫЙ» реактор с NaN
+    температурой/выходом → сетевое отравление как у движка.
+  PowerContainer.cs:380 set_rate: ЕДИНСТВЕННЫЙ с MathUtils.IsValid(tempSpeed)!
+    if (!IsValid) return; — доказательство что девы ЗНАЮТ паттерн, применяют
+    точечно (батарейка защищена, движок/реактор/насос/рация — нет).
+  PowerDistributor.cs:97: ТОЖЕ IsValid (второй чистый).
+  ConnectionSelector set_connection: SelectedConnection setter клампит
+    Max(0,..)/Min(count-1) — чисто.
+  Wifi set_channel: int.TryParse → Channel setter clamp(0,10000) — чисто.
+  Итог по шине: NaN = «энергетическое оружие»: движок/реактор отравляются
+    навсегда (до валидного сигнала), физика суба — нет.
+
+--- ★ СИГНАЛЬНАЯ ШИНА ИНФРАСТРУКТУРА ---
+  Item.SendSignal (Item.cs:3075): stepsTaken>5 → дедуп по LastSentSignalRecipients
+  (>2 дублей = стоп); >10 → одноразовый coroutine-делэй (антилуп). Connection.SendSignal
+  → SendSignalIntoConnection → ic.ReceiveSignal(signal, conn) — БЕЗ try/catch
+  (Connection.cs:372-381) — любое исключение компонента летит до peer catch-all,
+  дропая остаток батча пакетов. Чат в шину: wifi LinkToChat, максимум 200 симв.
+
+--- ★ ЧИСТЫЕ ПАКЕТЫ (диспетчер ClientPacketHeader) ---
+  FILE_REQUEST/FileSender.ReadFileRequest: суб = имя+MD5 матчинг по
+    SavedSubmarines (пути клиент НЕ контролирует); кампейн = только текущий
+    сейв (by design); мод = матчинг по хэшу пакетов + AllowModDownloads.
+  UPDATE_CHARACTERINFO: charInfoRateLimiter, SanitizeName+IsNameValid, цвета
+    валидируются по палитре персонажа, кампейн-перс защищён от подмены
+    («existing campaign data → ignore modifications»), JobVariants → preferences.
+  ENDROUND_SELF: InGame=false (безобидно). READY_CHECK: Start только при
+    отсутствии активного, Update только для участников.
+  VOICE: VoiceChatEnabled+!Muted+SessionId match.
+  MEDICAL → MedicalClinic.ServerRead (кампейн-гейт).
+
+--- ПАТТЕРН ВОЛНЫ: «дорогой пакет» + «сырой индекс/путь» —
+  DoSProtection считает пакеты, не стоимость. Любой пакет, который за
+  константу времени делает N дисковых/парс-операций = амплитфикатор.
+  Второй паттерн: catch-all на peer-уровне маскирует исключения как лог-спам.
