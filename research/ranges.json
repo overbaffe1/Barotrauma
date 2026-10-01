@@ -5766,5 +5766,17 @@
       1,
       117
     ]
+  ],
+  "Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs": [
+    [
+      1,
+      115
+    ]
+  ],
+  "Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs": [
+    [
+      1,
+      116
+    ]
   ]
 }

@@ -34,7 +34,7 @@
 - После каждой волны: `python3 research/mark.py "<относительный путь>" "1-N"`
   для каждого прочитанного файла, дописать блок `[WAVE N — title]` в конец
   `research/RESEARCH_NOTES.txt`, потом `python3 research/generate.py` из корня репо.
-- НОМЕР ВОЛНЫ: последняя — 436 (волны ~0.2-2K строк). СЛЕДУЮЩАЯ — 437. АРХИВ обновлён на волне 435 (835K) — следующий ~445. РАЗМЕР ВОЛНЫ ~800-1500 строк.
+- НОМЕР ВОЛНЫ: последняя — 437 (волны ~0.2-2K строк). СЛЕДУЮЩАЯ — 438. АРХИВ обновлён на волне 435 (835K) — следующий ~445. РАЗМЕР ВОЛНЫ ~800-1500 строк.
 - АУДИТЫ ДЫР: юзер просил не забывать — периодически (примерно раз в 3-4 волны)
   включать в волну скриптовый аудит гейтов/пакетов. Проведено: #1 (386, ServerEventRead
   гейты), #2 (387, все прямые клиент→сервер пакеты), #3 (390, server→client файлы:
@@ -56,9 +56,9 @@
   репозиторий https://github.com/overbaffe1/BarotraumaMod (клонится через git;
   raw.githubusercontent заблокирован, используй api.github.com).
 
-## СТАТУС (после волны 436)
-- ГОТОВО файлов: 958 (~401,930 строк). ЧАСТИЧНЫХ: 0. Не начато: 1560.
-- Охват: 58.28% (401.9K/689.7K) — ★400K СТРОК ВЗЯТО!
+## СТАТУС (после волны 437)
+- ГОТОВО файлов: 960 (~402,161 строк). ЧАСТИЧНЫХ: 0. Не начато: 1558.
+- Охват: 58.31% (402.2K/689.7K) — ★400K СТРОК ВЗЯТО!
 - Архив barotrauma_research.zip обновлён на волне 435 (835K) — следующий ~445.
 - Архив barotrauma_research.zip обновлён на волне 395 (692K, = research/ + промт.txt).
 - ★ ВАЖНО: реальный остаток по НЕ-Libraries сорсам — всего 487 файлов / ~55.8K строк
@@ -396,3 +396,4 @@
 - Волна 434 (2 файла 240): EqualsComponent 120 (копия Boolean 426 с строковым сравнением (строгое! «5»≠«5.0»); тот же TimeFrame×2 refresh) + Biome 120 (★AdjustedMaxDifficulty = max−0.1 (граница биома чуть раньше видимой — разгадка ERROR-глубиномера 363!); ★SubmarineAvailability: доступность субов ПО БИОМУ с каскадом override'ов (точный→location→class, без явного=все); Experience формула 0.09+MinDiff×0.0025; OldIdentifier миграция). Кандидаты 435: следующая пачка + АРХИВ.
 - Волна 435 (2 файла 237): CharacterFile 118 (★ClearCaches Ragdoll+AnimationParams при load/unload (оверрайды требуют сброса, «play safe»); ★Preload: сбор ВСЕХ texture-путей рэгдолла (normal/deform/damaged/декор) + [GENDER]-пути ПРОПУСКАЮТСЯ «don't know which gender yet»!; ErrorCatcher-отклонение из 421) + VideoSound 119 (Queue<short[]> под mutex, FillStreamBuffer копит до заполнения, категория «video», Play пересоздаёт канал). Кандидаты 436: следующая пачка.
 - Волна 436 (2 файла 234): EosSession 117 (EOS-сервер-лист: сессии ТОЛЬКО публичные (!IsPublic → Leave); ★race-гвард TaskPool.IsTaskRunning + SessionAlreadyExists = НЕ ошибка (идемпотентность!); Attributes = сервер-лист: HostAddress (EosP2P по PUID!), Port, SteamP2PEndpoint (кросс-стор!), contentpackage{i} ПО ОДНОМУ (лимиты EOS)) + GUICanvas 117 (★★дети как WeakReference — канвас НЕ держит живые UI, GC решает!; RecalculateSize: RelativeSize ≥1 растягивается по оси (Both/X/Y) — ультравайд-фикс; Size = Width/GUI.UIWidth виртуальная ширина). Кандидаты 437: следующая пачка.
+- Волна 437 (2 файла 231): Oscillator 115 (КЛАСТЕР финал: 5 волн Pulse/Saw/Sine/Square/Triangle; ★Frequency кламп 240 Гц «prevent players from wrecking the performance» — анти-DDoS!; Saw/Sine шлют каждый кадр float) + ButtonTerminal client 116 (кнопки из XML-стилей, ★Inventory.RectTransform ПЕРЕНАЗНАЧАЕТСЯ в контейнер терминала (AllowUIOverlap!); индикатор зел/красн/Selected; ClientEventRead → SendSignal ignoreState:true — серверное эхо срабатывает всегда). Кандидаты 438: следующая пачка.

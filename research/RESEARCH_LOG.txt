@@ -3,9 +3,9 @@ Updated: 2026-08-26
 
 Total .cs files: 2518
 Total lines: 689676
-Done: 958 files / 401930 lines
+Done: 960 files / 402161 lines
 Partial: 0 files / 0 lines
-Not started: 1560 files / 287746 lines
+Not started: 1558 files / 287515 lines
 
 === RESEARCHED ===
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Camera.cs  442/442
@@ -166,6 +166,7 @@ Not started: 1560 files / 287746 lines
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/RepairTool.cs  154/154
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Repairable.cs  470/470
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Rope.cs  291/291
+[DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs  116/116
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/CircuitBox.cs  635/635
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Connection.cs  597/597
 [DONE   ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ConnectionPanel.cs  284/284
@@ -772,6 +773,7 @@ Not started: 1560 files / 287746 lines
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/EqualsComponent.cs  120/120
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/LightComponent.cs  479/479
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MotionSensor.cs  367/367
+[DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs  115/115
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RegExFindComponent.cs  210/210
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RelayComponent.cs  384/384
 [DONE   ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Signal.cs  44/44
@@ -994,7 +996,6 @@ Not started: 1560 files / 287746 lines
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Quality.cs  0/21
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/RemoteController.cs  0/23
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Scanner.cs  0/29
-[NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs  0/116
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ConnectionSelectorComponent.cs  0/12
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/MemoryComponent.cs  0/12
 [NEW    ] Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Terminal.cs  0/184
@@ -1209,7 +1210,6 @@ Not started: 1560 files / 287746 lines
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplexerComponent.cs  0/59
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplyComponent.cs  0/17
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/NotComponent.cs  0/40
-[NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs  0/115
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OxygenDetector.cs  0/32
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SignalCheckComponent.cs  0/78
 [NEW    ] Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SmokeDetector.cs  0/89

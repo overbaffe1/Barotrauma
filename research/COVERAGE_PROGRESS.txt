@@ -1,7 +1,7 @@
 BAROTRAUMA RESEARCH COVERAGE (per-file checked lines)
 Updated: 2026-08-26
 
-TOTAL .cs: 2518   DONE: 958   PARTIAL: 0   NOT STARTED: 1560
+TOTAL .cs: 2518   DONE: 960   PARTIAL: 0   NOT STARTED: 1558
 
 === FULLY EXPLORED (checked lines = total) ===
 CHECKED 442/442  Barotrauma/BarotraumaClient/ClientSource/Camera.cs
@@ -162,6 +162,7 @@ CHECKED 193/193  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Proje
 CHECKED 154/154  Barotrauma/BarotraumaClient/ClientSource/Items/Components/RepairTool.cs
 CHECKED 470/470  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Repairable.cs
 CHECKED 291/291  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Rope.cs
+CHECKED 116/116  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs
 CHECKED 635/635  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/CircuitBox.cs
 CHECKED 597/597  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Connection.cs
 CHECKED 284/284  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ConnectionPanel.cs
@@ -768,6 +769,7 @@ CHECKED 141/141  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signa
 CHECKED 120/120  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/EqualsComponent.cs
 CHECKED 479/479  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/LightComponent.cs
 CHECKED 367/367  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MotionSensor.cs
+CHECKED 115/115  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs
 CHECKED 210/210  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RegExFindComponent.cs
 CHECKED 384/384  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RelayComponent.cs
 CHECKED 44/44  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Signal.cs
@@ -992,7 +994,6 @@ CHECKED 0/21  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Power/Po
 CHECKED 0/21  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Quality.cs
 CHECKED 0/23  Barotrauma/BarotraumaClient/ClientSource/Items/Components/RemoteController.cs
 CHECKED 0/29  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Scanner.cs
-CHECKED 0/116  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs
 CHECKED 0/12  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ConnectionSelectorComponent.cs
 CHECKED 0/12  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/MemoryComponent.cs
 CHECKED 0/184  Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Terminal.cs
@@ -1207,7 +1208,6 @@ CHECKED 0/42  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/M
 CHECKED 0/59  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplexerComponent.cs
 CHECKED 0/17  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplyComponent.cs
 CHECKED 0/40  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/NotComponent.cs
-CHECKED 0/115  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs
 CHECKED 0/32  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OxygenDetector.cs
 CHECKED 0/78  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SignalCheckComponent.cs
 CHECKED 0/89  Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/SmokeDetector.cs

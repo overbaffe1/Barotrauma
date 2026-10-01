@@ -14661,3 +14661,28 @@ Signal/WaterDetector.cs, LinkedControllerCharacterComponent.cs.
   (Both/X/Y) — полные экраны правильно на 21:9!
   Size = GraphicsWidth / GUI.UIWidth (виртуальная ширина UI).
 
+
+================================================================================
+[WAVE 437 - Oscillator 115 + ButtonTerminal client 116]
+================================================================================
+ФАЙЛЫ: Signal/OscillatorComponent.cs, Signal/ButtonTerminal.cs (client).
+
+--- OSCILLATOR (генератор волн; финал сигнальных компонентов!) ---
+  5 типов: Pulse (периодический «1»), Sawtooth (0→1 линейно), Sine (−1..1),
+  Square (0/1), Triangle (треугольник −1..1 через PositiveModulo-формулу).
+  ★ Frequency КЛАМП 240 Гц: «to prevent players from wrecking the
+  performance» — 4 сигнала/кадр максимум! Анти-спам на уровне компонента.
+  set_frequency/set_wavetype сигналы (Enum.TryParse по имени!).
+  Sawtooth/Square/Sine шлют КАЖДЫЙ КАДР (float-значения!).
+
+--- BUTTONTREMINAL CLIENT (кнопки из стилей + слот-контейнер!) ---
+  Кнопки = GUIButton С КАРТИНКОЙ ИЗ СТИЛЯ (terminalButtonStyles), UserData =
+  индекс → EventData. ★ Inventory РЕКТАНГЛ ПЕРЕНАЗНАЧАЕТСЯ в
+  containerHolder (AllowUIOverlap = true!) — слот контейнера ВНУТРИ
+  интерфейса терминала. Индикатор: зелёный = активен+есть предмет,
+  красный = неактивен, Selected-стейт = предмет внутри.
+  OnAddedToGUIUpdateList-хук: кнопки enabled только при IsActivated.
+  MP: кнопка → CreateClientEvent(EventData(index)); ClientEventRead →
+  SendSignal(ignoreState: true!) — серверное эхо СРАБАТЫВАЕТ даже при
+  неактивном терминале (кнопка нажата = сигнал уходит, консистентность).
+

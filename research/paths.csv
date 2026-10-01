@@ -183,7 +183,7 @@ Barotrauma/BarotraumaClient/ClientSource/Items/Components/RepairTool.cs,154,done
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Repairable.cs,470,done,470
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Rope.cs,291,done,291
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Scanner.cs,29,new,0
-Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs,116,new,0
+Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ButtonTerminal.cs,116,done,116
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/CircuitBox.cs,635,done,635
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/Connection.cs,597,done,597
 Barotrauma/BarotraumaClient/ClientSource/Items/Components/Signal/ConnectionPanel.cs,284,done,284
@@ -1004,7 +1004,7 @@ Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MotionSensor.cs
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplexerComponent.cs,59,new,0
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MultiplyComponent.cs,17,new,0
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/NotComponent.cs,40,new,0
-Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs,115,new,0
+Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OscillatorComponent.cs,115,done,115
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/OxygenDetector.cs,32,new,0
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RegExFindComponent.cs,210,done,210
 Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/RelayComponent.cs,384,done,384
