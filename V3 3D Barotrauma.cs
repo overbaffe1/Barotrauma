@@ -529,7 +529,7 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
-            if (keyboard.IsKeyDown(Keys.F9) && previousKeyboard.IsKeyUp(Keys.F9))
+            if (keyboard.IsKeyDown(Keys.F2) && previousKeyboard.IsKeyUp(Keys.F2))
             {
                 debugDoors = !debugDoors;
                 nextDoorLog = 0; // print immediately on toggle
@@ -2320,22 +2320,41 @@ namespace BaroDepth
 
             private void DrawItems(RenderMode mode)
             {
-                if (debugDoors && now > nextDoorLog)
+                // Door diagnostics: ALWAYS log to file + console once per 2 s
+                // while FP is on. No toggle needed.
+                if (now > nextDoorLog)
                 {
                     nextDoorLog = now + 2.0;
                     int doorsTotal = 0, doorsDrawn = 0, doorsOpen = 0, doorsNoStamp = 0, doorsCulled = 0;
+                    string sample = "";
                     foreach (Item item in items)
                     {
                         var dr = item?.GetComponent<Door>();
                         if (dr == null) continue;
                         doorsTotal++;
                         if (DoorOpen(dr)) { doorsOpen++; continue; }
-                        if (Placement(item).Banks == 0) { doorsCulled++; continue; }
+                        var layer = Placement(item);
+                        if (layer.Banks == 0) { doorsCulled++; continue; }
                         staticStamps.TryGetValue(item, out Stamp st2);
-                        if (st2?.HasImage != true) { doorsNoStamp++; continue; }
+                        bool hasImg = st2?.HasImage == true;
+                        if (!hasImg) { doorsNoStamp++; continue; }
                         doorsDrawn++;
+                        if (sample.Length < 140) sample += "; " + item.Prefab?.Identifier + "#" + item.ID + " z=" + layer.Z.ToString("0") + " hd=" + layer.HalfDepth.ToString("0") + " os=" + dr.OpenState.ToString("0.00");
                     }
-                    Log($"doors: {doorsTotal} total, {doorsDrawn} drawn, {doorsOpen} open, {doorsNoStamp} no-stamp, {doorsCulled} culled", Color.Cyan);
+                    string line = "doors: total=" + doorsTotal + " drawn=" + doorsDrawn + " open=" + doorsOpen
+                        + " noStamp=" + doorsNoStamp + " culled=" + doorsCulled + " sample[" + sample + "]";
+                    Log(line, Color.Cyan);
+                    try
+                    {
+                        string folder = Path.GetDirectoryName(SettingsStore.ActivePath ?? Path.Combine(SettingsStore.UserFolder, "BaroDepth.xml"));
+                        if (folder != null)
+                        {
+                            Directory.CreateDirectory(folder);
+                            File.AppendAllText(Path.Combine(folder, "BaroDepth.debug.log"),
+                                DateTime.Now.ToString("HH:mm:ss") + " " + line + "\r\n");
+                        }
+                    }
+                    catch { }
                 }
                 foreach (Item item in items)
                 {
