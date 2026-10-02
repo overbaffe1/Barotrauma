@@ -1679,9 +1679,14 @@ namespace BaroDepth
                             leaf = doorItem.Sprite;
                             if (leaf?.Texture != null && !leaf.Texture.IsDisposed)
                             {
-                                var tex = leaf.Texture;
-                                var fullRect = new Rectangle(0, 0, tex.Width, tex.Height);
-                                captureBatch.Draw(tex, fullRect, leaf.SourceRect, Color.White);
+                                // Closed pose across the FULL stamp bounds, in
+                                // world space (capture batch has CaptureTransform).
+                                // door.Draw would slice+shift by openState — never
+                                // use it for the capture.
+                                var bnd = stamp.Bounds;
+                                var dest = new Rectangle((int)bnd.Left, -(int)bnd.Top,
+                                    (int)bnd.Width, (int)bnd.Height);
+                                captureBatch.Draw(leaf.Texture, dest, leaf.SourceRect, Color.White);
                             }
                             stamp.CapturedDoorState = 0.0; // always closed pose
                         }
@@ -2288,10 +2293,13 @@ namespace BaroDepth
             private static Bounds2 DoorProxy(Item item)
             {
                 Bounds2 b = EntityBounds(item);
-                // Small control hotspot at the frame, NOT an invisible box sealing the aperture.
-                Vector2 center = b.Center;
+                // Closed: the whole door face is clickable (hatches included).
                 Door door = item.GetComponent<Door>();
-                if (door != null && door.IsHorizontal)
+                if (door == null || door.OpenState < 0.02f) return b;
+                // Open: small hotspot at the frame so the doorway stays passable
+                // for clicks meant for objects behind it.
+                Vector2 center = b.Center;
+                if (door.IsHorizontal)
                 return new Bounds2(center.X - 7f, b.Top - 13f, center.X + 7f, b.Top - 3f);
                 return new Bounds2(b.Left + 3f, center.Y - 9f, b.Left + 13f, center.Y + 9f);
             }
