@@ -57,6 +57,7 @@ namespace BaroDepth
         private Vector2 savedCursor;
         private Point savedMouse;
         private bool ready;
+        private static bool debugDoors;
         private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
             "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
         private bool warmupQueued = true;
@@ -527,6 +528,8 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
+            if (keyboard.IsKeyDown(Keys.NumPad7) && previousKeyboard.IsKeyUp(Keys.NumPad7))
+            { debugDoors = !debugDoors; Log("door debug: " + (debugDoors ? "ON" : "OFF")); }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
             if (toggleXray && !UiOwnsInput())
@@ -2308,8 +2311,28 @@ namespace BaroDepth
                 return new Bounds2(b.Left + 3f, center.Y - 9f, b.Left + 13f, center.Y + 9f);
             }
 
+            private static bool debugDoors;
+            private static double nextDoorLog;
+
             private void DrawItems(RenderMode mode)
             {
+                if (debugDoors && now > nextDoorLog)
+                {
+                    nextDoorLog = now + 2.0;
+                    int doorsTotal = 0, doorsDrawn = 0, doorsOpen = 0, doorsNoStamp = 0, doorsCulled = 0;
+                    foreach (Item item in items)
+                    {
+                        var dr = item?.GetComponent<Door>();
+                        if (dr == null) continue;
+                        doorsTotal++;
+                        if (DoorOpen(dr)) { doorsOpen++; continue; }
+                        if (Placement(item).Banks == 0) { doorsCulled++; continue; }
+                        staticStamps.TryGetValue(item, out Stamp st2);
+                        if (st2?.HasImage != true) { doorsNoStamp++; continue; }
+                        doorsDrawn++;
+                    }
+                    Log($"doors: {doorsTotal} total, {doorsDrawn} drawn, {doorsOpen} open, {doorsNoStamp} no-stamp, {doorsCulled} culled", Color.Cyan);
+                }
                 foreach (Item item in items)
                 {
                     if (item == null || item.Removed || item.ParentInventory != null || Placement(item).Banks == 0) continue;
