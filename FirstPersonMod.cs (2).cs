@@ -6671,7 +6671,7 @@ namespace FirstPersonMod
                                 tint,
                                 Math.Max(scTop, 0.01f),
                                 (int)stLeft,
-                                ,
+                                0,
                                 overlapPx: 6,
                                 centerBand: true);
                         }

@@ -1870,9 +1870,8 @@ namespace BaroDepth
                     float l = b.Left + offset.X, r = b.Right + offset.X;
                     float t = b.Top + offset.Y, bottom = b.Bottom + offset.Y;
                     float wallZ = halfDepth + 2f;
-                    // Back copy: real wall, writes depth. Front copy: decorative
-                    // overlay, depth TESTED but NOT written — otherwise it
-                    // z-fights with itself across frames (ceiling flicker).
+                    // Only the FAR copy (behind the eye). The near copy z-fights
+                    // with item cards and flickers on ceiling/wall seams.
                     float z = wallZ;
                     Color tint = new Color(126, 151, 169);
                     Texture2D surfaceTex = surfaceTexture ? PickSurfaceTexture(b) : null;
@@ -1881,10 +1880,6 @@ namespace BaroDepth
                         new Vector3(l, bottom, -z), new Vector3(r, bottom, -z),
                         b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
                         tint, false, Matrix.Identity, true);
-                    DrawQuadFrontNoWrite(surfaceTex, new Vector3(l, t, z), new Vector3(r, t, z),
-                        new Vector3(l, bottom, z), new Vector3(r, bottom, z),
-                        b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
-                        tint);
                 }
             }
 
