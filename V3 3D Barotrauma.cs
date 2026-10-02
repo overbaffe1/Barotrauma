@@ -57,6 +57,8 @@ namespace BaroDepth
         private Vector2 savedCursor;
         private Point savedMouse;
         private bool ready;
+        private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
+            "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
         private bool warmupQueued = true;
 
         private enum ViewMode { Normal, Full, Xray }
