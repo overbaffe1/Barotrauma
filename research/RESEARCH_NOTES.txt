@@ -17225,3 +17225,34 @@ Barotrauma разложен по винтикам от handshake до титро
   захватов за кадр; CaptureBudgetMs до 20мс.
   Пример быстрой конфигурации:
   <Global jobsPerFrame="8" captureBudgetMs="12" contourRefreshScale="4" ... />
+===============================================================================
+[WAVE 481 — V3 ФИКСЫ #3: ЛЮК-CLOSED-POSE + КАТ-ФИКС ПРОПАЖИ]
+===============================================================================
+
+--- ЮЗЕР: (1) всё иногда пропадает, xray-подобно; (2) F5 медленно, F7
+    быстро; (3) люк всё ещё растяг — «текстурки лево-право ходят» ---
+
+--- ЛЮК: НАСТОЯЩИЙ КОРЕНЬ — door.Draw РЕЖЕТ ТЕКСТУРУ ПО openState ---
+  Door.Draw → getSourceRect(sprite, openState, horizontal):
+    horizontal: srcX += size.X * openState; width *= (1-openState)
+  т.е. при openState>0 door.Draw рисует ТОЛЬКО ВИДИМЫЙ СЛАЙС листа,
+  смещённый на сдвиг открытия. Захват этого = пол-листа, растянутого
+  на полный фрейм. Плюс pos сдвигается по openState (лист уезжает).
+  ФИКС: CaptureEntity для дверей рисует doorSprite НАПРЯМУЮ:
+    полный tex, leaf.SourceRect, Color.White — ЗАКРЫТАЯ поза навсегда.
+  stamp.CapturedDoorState = 0.0 константа. DrawItems: убрана openState-
+  синхронизация; полностью открытый люк НЕ рисуется (DoorOpen continue).
+  Revision() убран Door openState (поза не меняется).
+  PrepareEntity: isDoor-ветки убраны (двери = обычные entities).
+
+--- «ВСЁ ПРОПАДАЕТ»: мой eviction-гейт переполнял кэш ---
+  Я в 477 запретил time-eviction при warmupAll → кэш набирал ВСЕ комнаты
+  → bytes > MaxCacheBytes → EnsureStampTexture false на ВСЁ → новые
+  объекты не получали текстуры, старые дальние выкидывались по лимиту →
+  «вижу только некоторые предметы, как xray». ФИКС: eviction-гейт
+  ОТКАТЕН (обычная LRU работает), WarmupAll делает TrimCache каждые
+  32 захвата чтобы кэш не блокировал проход.
+
+--- F5-медленность: закрыта в 480 (warmupQueued в Enable()),
+  подтверждена юзером (F7 мгновенно = механизм warmup работает, просто
+  F5 не запускал его).

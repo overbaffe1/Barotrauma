@@ -589,6 +589,7 @@ namespace BaroDepth
             yaw = (character.AnimController?.Dir ?? 1f) >= 0f ? 0f : MathHelper.Pi;
             pitch = 0f;
             enabled = true;
+            warmupQueued = true;   // F5: full capture immediately, not a slow warm-up
             discardNextMouseDelta = true;
             Log("ON / " + ModeName(mode) + (warnedAboutCursor ? " / aim hook unavailable" : ""), Color.LimeGreen);
         }
@@ -1417,8 +1418,7 @@ namespace BaroDepth
                         value = value * 397 ^ item.Rotation.GetHashCode();
                         value = value * 397 ^ item.SpriteColor.GetHashCode();
                         value = value * 397 ^ item.SpriteDepth.GetHashCode();
-                        Door door = item.GetComponent<Door>();
-                        if (door != null) value = value * 397 ^ (int)(MathHelper.Clamp(door.OpenState, 0f, 1f) * 64f);
+
                     }
                     return value;
                 }
@@ -1544,19 +1544,24 @@ namespace BaroDepth
                 settings.CaptureBudgetMs = double.MaxValue;
                 try
                 {
-                    // Warm EVERY eligible loaded object, not only this frame's
-                    // capture pool, so remote rooms are volumetric too.
+                    // Warm EVERY eligible loaded object from the FULL entity
+                    // list, not the distance-culled per-frame pools, so all
+                    // rooms are volumetric even in Normal view.
                     var targets = new List<MapEntity>();
-                    foreach (Item item in items)
-                        if (CaptureEligible(item) && captureSet.Contains(item)) targets.Add(item);
-                    foreach (Structure structure in structures)
-                        if (CaptureEligible(structure) && captureSet.Contains(structure)) targets.Add(structure);
+                    foreach (MapEntity entity in MapEntity.MapEntityList)
+                    {
+                        if (entity == null || entity.Removed) continue;
+                        bool eligible = (entity is Item it && it.ParentInventory == null)
+                                     || entity is Structure;
+                        if (eligible && CaptureEligible(entity)) targets.Add(entity);
+                    }
 
                     int warmed = 0;
                     foreach (MapEntity entity in targets)
                     {
                         Stamp stamp = GetStamp(entity);
                         if (stamp == null || !stamp.Bounds.Valid || stamp.HasImage) continue;
+                        if (warmed % 32 == 31) TrimCache(); // keep room in the cache
                         int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
                         PrepareEntity(entity, entity is Item, RenderMode.Contours,
                             WarmupTextureSize > 0 ? WarmupTextureSize : settings.FullTextureSize, ref jobs, timer);
@@ -1572,15 +1577,12 @@ namespace BaroDepth
                 Stamp stamp = GetStamp(entity);
                 if (!stamp.Bounds.Valid || now < stamp.RetryAfter) return;
                 int revision = Revision(entity);
-                bool isDoor = entity is Item doorItem && doorItem.GetComponent<Door>() != null;
                 float distanceSq = stamp.Bounds.DistanceSquared(eye);
-                double interval = isDoor
-                    ? 0.0   // doors re-capture immediately: stale open-state = stretch
-                    : distanceSq < 300f * 300f ? 0.18 : distanceSq < 800f * 800f ? 0.5 : 8.0;
+                double interval = distanceSq < 300f * 300f ? 0.18 : distanceSq < 800f * 800f ? 0.5 : 8.0;
                 interval /= MathF.Max(0.1f, contourRefreshScale);
                 bool upgrade = stamp.HasImage && stamp.Quality < quality;
                 bool dirty = !stamp.HasImage || revision != stamp.ShapeRevision || upgrade ||
-                    (dynamicImage && (isDoor || now - stamp.LastCapture > interval));
+                    (dynamicImage && now - stamp.LastCapture > interval);
                 if (!dirty && stamp.OutlineAttempted) return;
                 if (!WithinBudget(jobs, timer)) return;
                 jobs++; long oldBytes = stamp.Bytes;
@@ -1665,11 +1667,21 @@ namespace BaroDepth
                         begun = true;
                         if (entity is Item doorItem && doorItem.GetComponent<Door>() is Door door)
                         {
-                            // The Item base sprite is often only a placeholder/frame. Extruding
-                            // it produced the two white plates. Capture ONLY the native door leaf.
-                            if (door.OpenState < 0.999f)
-                            door.Draw(captureBatch, false, -1f, Color.White); // no tint: yellow SpriteColor washes the leaf
-                            stamp.CapturedDoorState = door.OpenState;
+                            // The Item base sprite is often only a placeholder/frame.
+                            // door.Draw slices and shifts the leaf by openState; capturing
+                            // it mid-open yields a sliced leaf stretched over the full
+                            // frame. Capture the leaf at its CLOSED pose instead: the
+                            // full SourceRect drawn at the frame center.
+                            Sprite leaf = doorSpriteField?.GetValue(door) as Sprite;
+                            if (leaf == null || leaf.Texture == null || leaf.Texture.IsDisposed)
+                            leaf = doorItem.Sprite;
+                            if (leaf?.Texture != null && !leaf.Texture.IsDisposed)
+                            {
+                                var tex = leaf.Texture;
+                                var fullRect = new Rectangle(0, 0, tex.Width, tex.Height);
+                                captureBatch.Draw(tex, fullRect, leaf.SourceRect, Color.White);
+                            }
+                            stamp.CapturedDoorState = 0.0; // always closed pose
                         }
                         else if (entity is Item item && itemDrawWithTint != null)
                         {
@@ -1790,7 +1802,7 @@ namespace BaroDepth
                 removals.Clear();
                 foreach (var pair in staticStamps)
                 {
-                    if (pair.Key.Removed || (!fullView && settings.WarmupAll == false && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
+                    if (pair.Key.Removed || (!fullView && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
                     else cacheBytes += pair.Value.Bytes;
                 }
                 foreach (MapEntity entity in removals) { staticStamps[entity].Dispose(); staticStamps.Remove(entity); }
@@ -2297,16 +2309,9 @@ namespace BaroDepth
                     if (!Visible(b, 0f, depth)) continue;
                     if (stamp != null) { stamp.LastSeen = now; stamp.LastDrawn = now; }
                     if (xrayView) { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 125)); continue; }
-                    bool synced = stamp?.HasImage == true && Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02;
-                    if (!synced && stamp != null && stamp.Bounds.Valid)
-                    {
-                        // Doors must re-stamp immediately: a stale frame at the
-                        // wrong open state is what read as a "yellow stretch".
-                        int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
-                        PrepareEntity(item, true, RenderMode.Contours, settings.DetailTextureSize, ref jobs, timer);
-                        synced = Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02;
-                    }
-                    if (synced)
+                    // The stamp always holds the CLOSED leaf (captured once);
+                    // openState only decides whether the door is drawn at all.
+                    if (stamp?.HasImage == true)
                     DrawVolume(stamp, b, 0f, depth, RenderMode.Contours, false);
                     else AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110));
                 }
