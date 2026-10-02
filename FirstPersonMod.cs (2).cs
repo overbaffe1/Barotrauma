@@ -2918,7 +2918,9 @@ namespace FirstPersonMod
                         Mult(ceilRef.SpriteColor, 0.82f),
                         Math.Max(scC, 0.01f),
                         (int)roomLeft,
-                        0);
+                        0,
+                            overlapPx: 6,
+                            centerBand: true);
         
                     fpBatch.End();
                 }
@@ -2960,7 +2962,9 @@ namespace FirstPersonMod
                         Mult(floorRef.SpriteColor, 0.72f),
                         Math.Max(scF, 0.01f),
                         (int)roomLeft,
-                        0);
+                        0,
+                            overlapPx: 6,
+                            centerBand: true);
         
                     fpBatch.End();
                 }
@@ -3008,7 +3012,9 @@ namespace FirstPersonMod
                         tint,
                         scale,
                         dest.X,
-                        0);
+                        0,
+                            overlapPx: 6,
+                            centerBand: true);
                     break;
 
                 case 1:
@@ -3084,35 +3090,48 @@ namespace FirstPersonMod
             Color tint,
             float scale,
             int phaseX = 0,
-            int phaseY = 0)
+            int phaseY = 0,
+            int overlapPx = 0,
+            bool centerBand = false)
         {
             if (dest.Width <= 0 || dest.Height <= 0 || tex == null || tex.IsDisposed) return;
-        
-            int tileW = Math.Max((int)(src.Width * scale), 1);
-            int tileH = Math.Max((int)(src.Height * scale), 1);
-        
-            // Непрерывная фаза (чтобы не было "полосок" по секциям)
-            int startX = dest.X - MathUtils.PositiveModulo(dest.X + phaseX, tileW);
-            int startY = dest.Y - MathUtils.PositiveModulo(dest.Y + phaseY, tileH);
-        
-            for (int x = startX; x < dest.Right; x += tileW)
+
+            Rectangle band = centerBand ? GetCenterBand(src) : src;
+
+            int tileW = Math.Max((int)(band.Width * scale), 1);
+            int tileH = Math.Max((int)(band.Height * scale), 1);
+
+            // Overlap: каждый следующий тайл рисуется с нахлёстом на предыдущий,
+            // чтобы прозрачные углы круглых/неровных текстур не оставляли дыр.
+            int ovX = Math.Min(overlapPx, tileW - 1);
+            int ovY = Math.Min(overlapPx, tileH - 1);
+            int stepW = Math.Max(1, tileW - ovX);
+            int stepH = Math.Max(1, tileH - ovY);
+
+            int startX = dest.X - MathUtils.PositiveModulo(dest.X + phaseX, stepW);
+            int startY = dest.Y - MathUtils.PositiveModulo(dest.Y + phaseY, stepH);
+
+            for (int x = startX; x < dest.Right; x += stepW)
             {
                 int drawX = Math.Max(x, dest.X);
                 int drawW = Math.Min(x + tileW, dest.Right) - drawX;
                 if (drawW <= 0) continue;
-        
-                int srcX = src.X + (int)((drawX - x) / scale);
+
+                // Смещение внутри тайла — исходные UV скейлятся от полного тайла
+                int offX = drawX - x;
+                int srcX = band.X + (int)(offX / scale);
                 int srcW = Math.Max(1, (int)(drawW / scale));
-        
-                for (int y = startY; y < dest.Bottom; y += tileH)
+
+                for (int y = startY; y < dest.Bottom; y += stepH)
                 {
                     int drawY = Math.Max(y, dest.Y);
                     int drawH = Math.Min(y + tileH, dest.Bottom) - drawY;
                     if (drawH <= 0) continue;
-        
-                    int srcY = src.Y + (int)((drawY - y) / scale);
+
+                    int offY = drawY - y;
+                    int srcY = band.Y + (int)(offY / scale);
                     int srcH = Math.Max(1, (int)(drawH / scale));
-        
+
                     sb.Draw(
                         tex,
                         new Rectangle(drawX, drawY, drawW, drawH),
@@ -6652,7 +6671,9 @@ namespace FirstPersonMod
                                 tint,
                                 Math.Max(scTop, 0.01f),
                                 (int)stLeft,
-                                0);
+                                ,
+                                overlapPx: 6,
+                                centerBand: true);
                         }
                         else
                         {
@@ -6699,7 +6720,9 @@ namespace FirstPersonMod
                             sameBrightness ? tint : tintD,
                             Math.Max(scL, 0.01f),
                             zStart,
-                            -(int)stTop);
+                            -(int)stTop,
+                            overlapPx: 6,
+                            centerBand: true);
                     }
                     else
                     {
@@ -6728,7 +6751,9 @@ namespace FirstPersonMod
                             sameBrightness ? tint : tintD,
                             Math.Max(scR, 0.01f),
                             zStart,
-                            -(int)stTop);
+                            -(int)stTop,
+                            overlapPx: 6,
+                            centerBand: true);
                     }
                     else
                     {
@@ -6909,16 +6934,20 @@ namespace FirstPersonMod
                     int drawW = w;
                     int drawH = h;
 
-                    if (isHatchDoor)
+                    if (isHatchDoor && ok)
                     {
-                        drawW = (int)(baseW * sf);
-                        drawH = (int)baseH;
-                        drawL = newL;
-                        drawR = newL + drawW;
-                        dT = newT;
-                        dB = newT - baseH;
-                        h = drawH;
-                        w = drawW;
+                        // Люк: сохраняем АСПЕКТ спрайта, не сжимаем по openState.
+                        // Ширина = высота × (srcW/srcH) — пиксель-перфект, без
+                        // жёлтого растяга. Открытие просто уменьшает видимость.
+                        float aspect = (float)src.Width / (float)src.Height;
+                        int naturalW = (int)(dH * aspect);
+                        if (naturalW > 0)
+                        {
+                            drawW = naturalW;
+                            w = naturalW;
+                            drawL = centerX - naturalW / 2f;
+                            drawR = drawL + naturalW;
+                        }
                     }
 
                     float zFront = scaledZStart + scaledZLen;
