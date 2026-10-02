@@ -16627,3 +16627,87 @@ Barotrauma разложен по винтикам от handshake до титро
   [Editable] — значит НЕ попадает в серверный список → не редактируется
   пакетом. Ок.)
   Karma: струкутурный ремонт +карма — StructureRepairKarmaIncrease 0.05.
+===============================================================================
+[WAVE 468 — ИМБАЛАНС-СВИП #2: ТАЛАНТЫ, ITEM-СТАТЫ, МИССИИ, ГЕНЫ]
+===============================================================================
+
+--- ★★★★ ГЛАВНОЕ: crew-МУЛЬТИПЛИКАТИВНЫЙ стекинг машинных статов ---
+  CharacterAbilityGiveItemStatToTags.ApplyEffect (shared:40):
+    foreach Item.ItemList → item.teamID == мой → HasTag(tags) →
+    item.StatManager.ApplyStat(stat, stackable, save, value, talent);
+  CharacterAbilityGiveItemStat — то же для одного item'а.
+  ★ stackable ДЕФОЛТ = true (оба класса, :16/:20) →
+  TalentStatIdentifier.CreateStackable(stat, talentId, characterId) —
+  ключ НА КАЖДОГО персонажа с талантом!
+  ItemStatManager.GetAdjustedValueMultiplicative (:120):
+    total = original; foreach entry: total *= value;   ← МУЛЬТИПЛИКАЦИЯ!
+  → 2 механика с талантом «+25% EngineSpeed» на субе:
+    force = base × 1.25 × 1.25 = 1.5625x. Пять = 1.25^5 = 3.05x.
+  Работает на: EngineSpeed, EngineMaxSpeed, PumpSpeed, ReactorMaxOutput,
+  BatteryCapacity, FabricationSpeed, DeconstructorSpeed — ВСЯ машина-экосистема.
+  Комментарий «Always use the highest value for non-stackable» — девы знали
+  про проблему, но дефолт stackable=true = имба-путь по умолчанию.
+  (Ванильные значения в talents-XML, которых нет в репо; механика 100% кодовая.)
+  ФИКС девам: default false или суммы вместо произведений.
+
+--- ★★★ САБОТАЖ-ФАРМ (467, углубление): число-в-число ---
+  Ремонт: ApplySkillGain(5.0) → 5/max(skill,15)^1.5, maxGain=2.
+  Саботаж: IncreaseSkillLevel(3.0/max(skill,1)) — ДЕЛИТЕЛЬ СЛАБЫЙ
+  (^1.5 vs линейный) И cap'а нет. skill=1: 3.0 за каждый RequiredSkill
+  за секунды работы. Реактор (Mechanical+Electrical+...) × 3 = 9+ очков
+  за один саботаж. Двойной профит: саботаж + карма-починка потом.
+
+--- ★★ ПЛАНТЕРО-ГЕНЕТИКА: экспоненциальные растения ---
+  Growable.ProductSpawnChance × spawnChanceMultiplier — шанс продукта
+  за тик; Planter.Update: Fertilizer > 0 → delay /= 2 (тик каждые 0.5с!)
+  при расходе удобрения deltaTime/10 (100 ед. = 1000 сек удвоенных тиков).
+  GrowthSpeed XML-ный (1 = тик/10с) + удобрение ×2 + ProductSpawnChance
+  на каждый тик = комбинаторика авторов, но КОД КЛАМПОВ НЕ ИМЕЕТ:
+  GrowthSpeed/Fertilizer числа без clamp (только Math.Clamp(0, Capacity)).
+  Modded имба тривиальна: seed с GrowthSpeed=1000.
+
+--- ★★ ТАЛАНТ-АБИЛИТИИ (server-side классы) ---
+  PsychoClown: ChangeStat(stat, -lastValue) потом +min..max по силе
+    аффликции — «чем пьянее, тем сильнее» с AllowClientSimulation=true.
+    Комментарий в коде: «managing state this way seems liable to cause
+    bugs» — девы сами признали шаткость (пример: ресинк lastValue после
+    кика/диконнекта = дрейф стата).
+  AlienHoarder: DamageMultiplier += perItem × кол-во предметов с тегом
+    в инвентаре (Math.Min с max). Тащи 50 хлама = +damage кап-линейно.
+  Multitasker: КАЖДЫЙ НОВЫЙ скилл-гейн != lastSkillIdentifier →
+    IncreaseSkillLevel(+1.0 плоских очков) gainedFromAbility. Ротация
+    задач = конвейер очков (пока скиллы разные). После одного прохода
+    по 5 скиллам +5 уровней, дальше по +1 на новую ротацию.
+  Apprenticeship: СОСЕД по crew получает +1.0 плоского скилла на КАЖДЫЙ
+    чужой скилл-гейн (AbilitySkillGain.Character != Character). Пока
+    teammates качаются — ты качаешься плоскими +1. Комбо двух
+    Apprenticeship = взаимный конвейер.
+  BountyHunter: GiveMoney(vitalityPercentage × target.MaxVitality) на
+    OnKillCharacter — деньги за килы, у боссов жирные выплаты.
+  WarStories: спавнит предмет с quality 0-3 по GetSavedStatValue
+    (StatTypes.None, customStat) — статы сохраняются между кампаниями
+    (SavedStatValue) → прогрессивная имба по мере кампании.
+  ByTheBook: за КАЖДОГО связанного (LockHands) человека на главном субе:
+    moneyAmount ВСЕЙ команде GiveExperience — «привяжи 5 чужих = пати
+    XP×5». Забавно-гриферски: связывать врагов ради опыта.
+  InsurancePolicy: interval-абилка (AppliesEffectOnIntervalUpdate=true):
+    totalAmount = moneyPerMission × MissionsCompletedSinceDeath КАЖДЫЙ
+    интервал, пока условия группы истинны → если condition «висит»
+    дольше одного тика — многократные выплаты (зависит от XML-гейта).
+  GivePermanentStat: PermanentStat → SaveStatValues (сохраняются!),
+    maxValue кламп есть; placeholder [LocationName] — статы на локацию.
+  GiveStat: ChangeStat(statType, value) в InitializeAbility — безальтернативный
+    постоянный буст; нет де-инициализации (стат остаётся навсегда — by design).
+
+--- ✅ ЧЕСТНОЕ (проверено калькулятором, гипотезы умерли) ---
+  Traitor exp-steal: stealAmount = gain × nonTraitorCount × pct/100,
+  totalExpSteal НОРМАЛИЗУЕТСЯ к 100% (каждый процент делится на сумму)
+  → пул КОНСЕРВИРОВАН: 2 трейтора по 75% = каждый +3x, нон-трейторы
+  −100% (6x) = баланс. НЕ имба. (Комментарий девов прямо объясняет.)
+  Репутация-модификаторы (467): продажа rep=−100 → ×0 → floor 1mk,
+  покупка ×2 — штрафы честные.
+  Oscillator Frequency clamp 240Hz («4 signals per frame») — защита
+  от сигнального лаг-спама на месте.
+
+--- ✅ ИНФА 466-доп: TalentMenu rename кнопка — RenamingEnabled; в лобби
+  тоже можно менять имя пока не dead permanently (NetLobbyScreen:2539).

@@ -3684,7 +3684,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CharacterAbilityGivePermanentStat.cs": [
     [
       1,
-      116
+      125
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CharacterAbilityGiveReputation.cs": [
@@ -3822,13 +3822,13 @@
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityAlienHoarder.cs": [
     [
       1,
-      39
+      40
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityApprenticeship.cs": [
     [
       1,
-      21
+      22
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityAtmosMachine.cs": [
@@ -3840,31 +3840,31 @@
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityBountyHunter.cs": [
     [
       1,
-      22
+      25
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityByTheBook.cs": [
     [
       1,
-      46
+      70
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityInsurancePolicy.cs": [
     [
       1,
-      24
+      30
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityMultitasker.cs": [
     [
       1,
-      23
+      25
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityPsychoClown.cs": [
     [
       1,
-      44
+      45
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityRegenerateLoot.cs": [
@@ -3888,7 +3888,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/Abilities/CustomAbilities/CharacterAbilityWarStories.cs": [
     [
       1,
-      74
+      80
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/Talents/TalentMigration.cs": [
@@ -5544,7 +5544,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Items/ItemStatManager.cs": [
     [
       1,
-      149
+      160
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorker.cs": [
