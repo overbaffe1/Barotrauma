@@ -16975,3 +16975,81 @@ Barotrauma разложен по винтикам от handshake до титро
   рисуется 3D-объёмом (v2-подход тяжёлый), свет выключается (LosEnabled).
   ЭКСТЕНШН-ТОЧКИ: limbThickness (NumPad8), clipScale (NumPad2),
   RecacheWalls (раз в 0.5с), xrayStyleClip флаг (сейчас false).
+===============================================================================
+[WAVE 475 — V3 "BaroDepth 0.3" (2811 строк + BaroDepth.xml): РАЗБОР ВЕРСИИ ЮЗЕРА]
+===============================================================================
+
+--- ОБЩЕЕ: это НЕ эволюция v1/v2, а ТРЕТИЙ, архитектурно взрослый мод ---
+  Namespace BaroDepth, класс FirstPerson3D. 2811 строк против 9.6K v2 —
+  но по архитектуре это САМЫЙ зрелый из трёх:
+
+  ★ АРХИТЕКТУРА (честный honest-подход):
+  - НЕ трогает Camera.Transform, LightManager, физику, суставы — «мы
+    заменяем только завершённую картинку мира» (DrawMap After).
+  - Рендер в offscreen RenderTarget 'scene' + один блит на экран.
+  - ViewProj с глазом в (0,0,0)-относительных координатах: eye вычитается,
+    всё рисуется относительно головы (нет больших float'ов = нет jitter).
+
+  ★ ГЛАВНАЯ ФИШКА — STAMP-СИСТЕМА (то, чего нет в v1/v2/Lite):
+  - Каждый MapEntity ПЕРЕЗАПИСЫВАЕТСЯ в свой RenderTarget ('stamp') через
+    captureCamera (настоящий Camera игры, zoom = размер RT), из кадра
+    строится МАСКА по альфе (BuildOutline: сетка с шагом, усреднение цвета
+    ячеек, AnchorUV = ближайший к центру непрозрачный пиксель) и ЭКСТРУДИРОВАННЫЙ
+    МЕШ-КОНТУР (Mesh Sides с вершинами по границе маски!) — предметы
+    получают НАСТОЯЩУЮ форму, а не коробку!
+  - Лимбы персонажей: CaptureCharacter в RT 320px, квантование размеров
+    до 32px (анти-реаллокация при анимации).
+  - Кэш: TrimCache с лимитом байт (CacheMiB=192), LRU по LastDrawn/LastSeen,
+    авто-удаление removed. JobsPerFrame=4 + CaptureBudgetMs=4 — прогрев
+    НЕ фризит кадр (постепенный захват).
+  - DepthScale/RoomHalfDepth/LayerSpread/SurfaceInset — вся геометрия
+    глубины настраивается из BaroDepth.xml С ХОТ-РЕЛОДОМ (F7)!
+  - ObjectRule: per-prefab/entityId/editorId+submarine правила (offset/
+    depth/scale/side both-positive-negative-hide) с резолвом по специфичности.
+  - F8: экспорт CSV+XML шаблонов ВСЕХ объектов (id/editorId/prefab/depth/
+    frontZ/offset/side/clamped) — тюнинг глубины по таблице!
+
+  ★ READDEPTH: юзает SpriteDepth/GetRealDepth (рефлексия, мой совет 472
+  принят!) — «GetDrawDepth содержит batching/ID micro-offsets, они для
+  draw order, не для физической дистанции» — точный вывод, совпадает
+  с моим анализом GetDrawDepth (MapEntity.cs:111).
+
+  ★ ДВИЖЕНИЕ: нативное (не трогает Keys вообще!) — камера следует за
+  головой; UpdateLocalCursor After (рефлексия, сигнатура-чек) — aim по
+  3D-пику луча из мыши; LMB-интеракт: CommitInteraction на ControlLocalPlayer
+  After → owner.FocusedItem = target + EmulateInput(Select) +
+  рефлексия Item.TryInteract (сигнатурный поиск по именам параметров!)
+  + ВАЖНЫЙ КОММЕНТ: «Do NOT clear Select after the call: that discarded
+  the server-side action» — юзер уже наступал на это (373-я бы сказала:
+  сервер ждёт Select-бит в сети!).
+
+  ★ XRAY (F6 Normal/Full/Xray): wireframe-боксы сквозь стены,
+  fullView расширяет range до 24000 и farPlane — «вид изнутри на весь суб».
+  DrawWater: плоскость воды по WaterVolume хулла на глубине коридора.
+
+  ★ ДЫРЫ/РИСКИ V3 (честно):
+  1) UpdateLocalCursor/ControlLocalPlayer/GetRealDepth — рефлексия по
+     сигнатурам: обновление игры = тихая поломка (есть WarnOnce/Fail с
+     автодизейблом — деградация мягкая).
+  2) Stamp-RT на каждый entity — VRAM-давление (192MiB кэш), но TrimCache
+     дисциплинированный.
+  3) взаимодействия через TryInteract рефлексию — обходит Inventory-
+     проверку юзера? Нет: CanInteractWith(target) вызывается ДО — гейт
+     честный.
+  4) BaroDepth.xml UserFolder путь — LabApplicationData, не mod-folder:
+     настройки вне воркспейса мода (осознанно: F7 hot reload).
+
+--- СРАВНЕНИЕ ТРЁХ ВЕРСИЙ ---
+  v1 True3DMod (822): эксперименты с 8 рендерами, noclip, без формы.
+  v2 FirstPersonCamera (9665): Keys.Held инъекция, перегружен фиксам
+     рэгдолла, экструзия коробками, 300+ хоткеев.
+  V3 BaroDepth 0.3 (2811): STAMP-захват+маски+контурные меши, XML-тюнинг
+     с хот-релоадом, нативное движение, TryInteract, кэш-дисциплина,
+     Xray. ЛУЧШАЯ база для развития.
+  МОЯ Lite (1024): учебный минимум (Keys.Held, hull-комната, коробки).
+
+--- ВЕРДИКТ: V3 — правильная архитектура. Рекомендации не нужны —
+  наоборот: это референс. Единственный запрос:Stamp'ы статичных структур
+  можно было бы вообще не пересобирать при повороте камеры (они уже
+  кэшированы) — так и сделано. Осталось: Stamp-меш для LIMB'ов персонажей
+  (сейчас квадратные RT) — следующий шаг качества.
