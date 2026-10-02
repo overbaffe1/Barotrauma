@@ -58,6 +58,7 @@ namespace BaroDepth
         private Point savedMouse;
         private bool ready;
         private static bool debugDoors;
+        private static double nextDoorLog;
         private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
             "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
         private bool warmupQueued = true;
