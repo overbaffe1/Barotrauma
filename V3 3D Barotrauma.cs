@@ -528,8 +528,12 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
-            if (keyboard.IsKeyDown(Keys.NumPad7) && previousKeyboard.IsKeyUp(Keys.NumPad7))
-            { debugDoors = !debugDoors; Log("door debug: " + (debugDoors ? "ON" : "OFF"), Color.Cyan); }
+            if (keyboard.IsKeyDown(Keys.F9) && previousKeyboard.IsKeyUp(Keys.F9))
+            {
+                debugDoors = !debugDoors;
+                nextDoorLog = 0; // print immediately on toggle
+                Log("door debug: " + (debugDoors ? "ON" : "OFF"), Color.Cyan);
+            }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
             if (toggleXray && !UiOwnsInput())
@@ -2311,7 +2315,6 @@ namespace BaroDepth
                 return new Bounds2(b.Left + 3f, center.Y - 9f, b.Left + 13f, center.Y + 9f);
             }
 
-            private static bool debugDoors;
             private static double nextDoorLog;
 
             private void DrawItems(RenderMode mode)
