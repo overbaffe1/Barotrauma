@@ -529,7 +529,7 @@ namespace BaroDepth
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
             if (keyboard.IsKeyDown(Keys.NumPad7) && previousKeyboard.IsKeyUp(Keys.NumPad7))
-            { debugDoors = !debugDoors; Log("door debug: " + (debugDoors ? "ON" : "OFF")); }
+            { debugDoors = !debugDoors; Log("door debug: " + (debugDoors ? "ON" : "OFF"), Color.Cyan); }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
             if (toggleXray && !UiOwnsInput())
