@@ -24,6 +24,7 @@
 
     <!-- Все распределительные коробки: ближе на 8 единиц, итоговая толщина 16*0.25=4. -->
     <Object prefab="opdeco_hrflyers" offset="8" depth="17" />
+    <!-- Платформы (за люками) рисуются плоскими карточками автоматически (IsPlatform). -->
     <Object prefab="ladder" offset="8" depth="37" />
     <Object prefab="outpostreactor" offset="8" depth="35" />
     <Object prefab="op_cafeteriabench" offset="8" depth="35" />

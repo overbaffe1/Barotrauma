@@ -2263,6 +2263,15 @@ namespace BaroDepth
                     if (structure == null || structure.Removed || Placement(structure).Banks == 0) continue;
                     staticStamps.TryGetValue(structure, out Stamp stamp);
                     Bounds2 b = RenderBounds(structure, stamp);
+                    if (structure.IsPlatform)
+                    {
+                        // Hatches/walkways sit on invisible platforms. Platforms
+                        // are paper-thin décor: draw as a flat card with the
+                        // original texture, no extrusion, no stretch.
+                        if (xrayView) { AddWireBox(b, 0f, 4f, new Color(60, 111, 141, 60)); continue; }
+                        DrawCard(stamp?.Texture, b, 0f, 1f, Color.White);
+                        continue;
+                    }
                     if (!structure.HasBody)
                     {
                         if (xrayView)
@@ -2319,11 +2328,29 @@ namespace BaroDepth
                     if (!Visible(b, 0f, depth)) continue;
                     if (stamp != null) { stamp.LastSeen = now; stamp.LastDrawn = now; }
                     if (xrayView) { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 125)); continue; }
-                    // The stamp always holds the CLOSED leaf (captured once);
-                    // openState only decides whether the door is drawn at all.
-                    if (stamp?.HasImage == true)
-                    DrawVolume(stamp, b, 0f, depth, RenderMode.Contours, false);
-                    else AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110));
+                    // The stamp always holds the CLOSED leaf (captured once).
+                    // Animate by sliding the volume: horizontal doors slide X,
+                    // vertical ones slide Y — matching the 2D door motion.
+                    if (stamp?.HasImage != true)
+                    { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110)); continue; }
+
+                    float slide = door.OpenState * Math.Max(b.Width, b.Height);
+                    Bounds2 anim = b;
+                    if (door.IsHorizontal)
+                    {
+                        bool flip = item.FlippedX;
+                        float shift = flip ? slide : -slide;
+                        anim = new Bounds2(b.Left + shift, b.Bottom, b.Right + shift, b.Top);
+                    }
+                    else
+                    {
+                        float shift = door.OpenState * b.Height;
+                        anim = new Bounds2(b.Left, b.Bottom + shift, b.Right, b.Top + shift);
+                    }
+                    // Fade the leaf out near the fully-open end so the aperture
+                    // ends up clear instead of holding a solid door in the wall.
+                    var animTint = Color.White * (1f - door.OpenState * 0.9f);
+                    DrawVolumeTinted(stamp, anim, 0f, depth, RenderMode.Contours, animTint);
                 }
             }
 
@@ -2336,6 +2363,17 @@ namespace BaroDepth
                     else DrawSlices(stamp.Texture, stamp.Bounds, 0f,
                         MathHelper.Clamp(stamp.Bounds.Height * 0.075f, 10f, 35f), mode == RenderMode.Slices ? 11 : 5, true);
                 }
+            }
+
+            private void DrawVolumeTinted(Stamp stamp, Bounds2 bounds, float z, float depth, RenderMode mode, Color tint)
+            {
+                if (stamp == null || !stamp.HasImage || stamp.Texture == null || stamp.Texture.IsDisposed)
+                {
+                    DrawBoxSides(bounds, z, depth, tint);
+                    return;
+                }
+                DrawCard(stamp.Texture, bounds, z - depth, 1f, tint);
+                DrawCard(stamp.Texture, bounds, z + depth, 1f, tint);
             }
 
             private void DrawVolume(Stamp stamp, Bounds2 bounds, float z, float depth, RenderMode mode, bool taper)
@@ -2477,6 +2515,10 @@ namespace BaroDepth
                     float fraction = MathHelper.Clamp(hull.WaterVolume / ((float)r.Width * r.Height), 0f, 1f);
                     Vector2 d = SubDrawCorrection(hull.Submarine) - eye;
                     float y = r.Y - r.Height + r.Height * fraction + d.Y;
+                    // Keep the waterline off exact wall lines: coplanar quads
+                    // flicker (z-fighting) at the floor/ceiling seam.
+                    y = MathHelper.Clamp(y, r.Bottom - r.Height * 0.999f + d.Y, r.Bottom - 1f + d.Y);
+                    y += 0.5f;
                     DrawQuad(white, new Vector3(r.X + d.X, y, -waterDepth), new Vector3(r.Right + d.X, y, -waterDepth),
                         new Vector3(r.X + d.X, y, waterDepth), new Vector3(r.Right + d.X, y, waterDepth),
                         0, 0, 1, 1, new Color(37, 128, 165, 105), false, Matrix.Identity, false, true);
