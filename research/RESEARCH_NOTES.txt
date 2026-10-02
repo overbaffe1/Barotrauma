@@ -16781,3 +16781,37 @@ Barotrauma разложен по винтикам от handshake до титро
 
 --- ★ PressureProtection = Math.Max по всем вещам (не стэк) — честно.
 --- ✅ Welder fuel drain — XML StatusEffects (контент, не код). Пропущено.
+===============================================================================
+[WAVE 471 — АПГРЕЙДЫ/СУБЫ: NEGATIVE PRICE = СЕРВЕР ПЛАТИТ ТЕБЕ ЗА ПОКУПКУ]
+===============================================================================
+
+--- ★★★★ NEGATIVE SHIP/UPGRADE PRICES — TryDeduct(-X) = ЗАРПЛАТА ЗА ПОКУПКУ ---
+  UpgradePrefab.GetBuyPrice (:43):
+    price *= 1f − characterList.Max(ShipyardBuyMultiplier)      ← БЕЗ FLOOR!
+    (плюс Affiliated-версия, умножается ВТОРОЙ раз)
+  SubmarineInfo.GetPrice (:921) — ТОТ ЖЕ паттерн для покупки СУБМАРИНЫ,
+  тоже без floor.
+  Floor Math.Max(price,1) есть ТОЛЬКО у item-цен (Location.cs:368/403),
+  у апгрейдов и суб его НЕТ.
+  При ShipyardBuyMultiplier стате ≥100%: price ≤ 0 →
+  MultiPlayerCampaign.TryPurchase(client, отрицательная):
+    TryDeduct(−X) → CanAfford: Balance ≥ −X ВСЕГДА true →
+    Deduct(−X) → КОШЕЛЁК РАСТЁТ. И апгрейд/суб УХОДИТ ТЕБЕ.
+  Комбо с 468 (статы из wearables+holdables+saved суммируются) и
+  GivePermanentStat (SAVED, навсегда) — >100% достижимо.
+  ★ ДЕВЫ ЗНАЮТ: UpgradeManager.cs:225 — явный лог «Upgrade price is
+  less than 0!» с аналитикс-словарём (Level/Reputation/BasePrice).
+  Логируют. НЕ клампят. tryPurchase с отрицательной ценой проходит.
+  ФИКС: Math.Max(price, 0) перед TryPurchase — одна строка, как у item-цен.
+  ВЕРДИКТ: ★★★★ (нужен стат >100%, но механика в коде прямая).
+
+--- ★ АПГРЕЙД-МАТЕМАТИКА: линейность, не компаунд ---
+  CalculateUpgradeFloat: 'x'/'*' → value × (mult × level); '%' →
+  (1 + amount/100 × level) × value — ЛИНЕЙНО по уровню (не value×mult^level).
+  Автор контента с x1.2 на 5 уровней получает 6.0x (600%), а не 2.49x —
+  ловушка для авторов контента, в ваниле умеренно.
+  GetMaxLevelForCurrentSub: tier-ограничения есть.
+
+--- ★ InsurancePolicy-риск (468) доп: AppliesEffectOnIntervalUpdate=true,
+  ApplyEffect на каждый тик interval-группы при живом condition —
+  полный вердикт после XML (нет в репо). Кодовая сторона — многократна.
