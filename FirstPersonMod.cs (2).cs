@@ -11,7 +11,7 @@ using FarseerPhysics;
 using FarseerPhysics.Dynamics;
 namespace FirstPersonMod
 {
-    public partial class FirstPersonCamera : ACsMod
+    public class FirstPersonCamera : ACsMod
     {
         private const float MOUSE_SENSITIVITY = 0.003f;
         private static bool isFirstPerson = false;
@@ -8886,7 +8886,7 @@ namespace FirstPersonMod
             // Обычные плоские сущности на зад/перед стенах
             if (UseEditorDepth)
             {
-                // SpriteDepth из редактора → настоящая Z (см. FirstPersonDepthPatch.cs)
+                // SpriteDepth из редактора → настоящая Z (методы в конце этого файла)
                 DrawWallEntitiesEditorDepth(camPos, cam);
             }
             else
@@ -9676,6 +9676,178 @@ namespace FirstPersonMod
             Matrix m = BuildWallMatrix(0f);
             transformField.SetValue(cam, m);
             if (shaderTransformField != null) shaderTransformField.SetValue(cam, m);
+        }
+
+        // =====================================================================
+        // EDITOR DEPTH → Z (SpriteDepth из редактора как настоящая Z-координата)
+        // Вкл/выкл: NumPad9 в режиме FP. Заменяет фиксированные ±layerDepth на
+        // непрерывный параллакс по редакторскому параметру.
+        // =====================================================================
+        public static bool UseEditorDepth = false;
+
+        /// <summary>Полос глубины (Begin/End на полосу). 16 = незаметный оверхед.</summary>
+        private const int EditorDepthBands = 16;
+
+        /// <summary>Насколько темнеют дальние полосы (0.55 = дальние на 45% темнее).</summary>
+        private const float EditorDepthFadeMin = 0.55f;
+
+        private const float EditorMinSpriteDepth = 0.001f;
+        private const float EditorMaxSpriteDepth = 0.999f;
+
+        /// <summary>
+        /// SpriteDepth 0.001..0.999 → −layerDepth..+layerDepth.
+        /// 0.5 = экранная плоскость (z=0), меньше = дальше, больше = ближе.
+        /// </summary>
+        private static float GetEntityEditorDepthZ(MapEntity e)
+        {
+            float d = MathHelper.Clamp(e.SpriteDepth, EditorMinSpriteDepth, EditorMaxSpriteDepth);
+            return (d - 0.5f) * 2f * layerDepth;
+        }
+
+        private static int DepthToBand(float z)
+        {
+            float t = (z + layerDepth) / (2f * layerDepth);   // 0..1
+            return MathHelper.Clamp((int)(t * EditorDepthBands), 0, EditorDepthBands - 1);
+        }
+
+        private static float BandToZ(int band)
+        {
+            float t = (band + 0.5f) / EditorDepthBands;       // центр полосы
+            return (t - 0.5f) * 2f * layerDepth;
+        }
+
+        /// <summary>
+        /// Замена пары DrawWallEntities(±layerDepth): все structure/item
+        /// распределяются по полосам редакторской глубины и рисуются
+        /// дальние→ближние. Двери/лестницы/angled продолжают идти
+        /// своими отдельными проходами (как в Draw3DWorld).
+        /// </summary>
+        private static void DrawWallEntitiesEditorDepth(Vector2 camPos, Camera cam)
+        {
+            // --- 1. Раскидываем видимые сущности по бакетам ---
+            var buckets = new List<MapEntity>[EditorDepthBands];
+            for (int i = 0; i < EditorDepthBands; i++) { buckets[i] = new List<MapEntity>(); }
+
+            foreach (var entity in MapEntity.MapEntityList)
+            {
+                try
+                {
+                    // те же фильтры, что в DrawWallEntities:
+                    // angled/special shell идут отдельным angled-проходом
+                    bool drawable;
+                    float z;
+
+                    if (entity is Structure st &&
+                        st.HasBody && st.Submarine != null &&
+                        !IsAngledStructure(st) && !IsSpecialAngledShell(st) &&
+                        ShouldDrawEntity(st, camPos))
+                    {
+                        drawable = true;
+                        z = GetEntityEditorDepthZ(st);
+                    }
+                    else if (entity is Item item &&
+                             (item.ParentInventory == null || item.ParentInventory is CharacterInventory) &&
+                             ShouldDrawEntity(item, camPos))
+                    {
+                        drawable = true;
+                        z = GetEntityEditorDepthZ(item);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    z = MathHelper.Clamp(z, -layerDepth, layerDepth);
+                    buckets[DepthToBand(z)].Add(entity);
+                }
+                catch { }
+            }
+
+            // --- 2. Рисуем полосы: дальние → ближние ---
+            for (int band = 0; band < EditorDepthBands; band++)
+            {
+                if (buckets[band].Count == 0) { continue; }
+
+                float z = BandToZ(band);
+                float fade = MathHelper.Lerp(EditorDepthFadeMin, 1f, (band + 1f) / EditorDepthBands);
+                var tint = new Color(fade, fade, fade);
+
+                fpBatch.Begin(
+                    SpriteSortMode.BackToFront,
+                    BlendState.NonPremultiplied,
+                    SamplerState.LinearWrap,
+                    null,
+                    RasterizerState.CullNone,
+                    null,
+                    BuildWallMatrix(z));
+
+                foreach (var entity in buckets[band])
+                {
+                    try
+                    {
+                        if (entity is Structure st)
+                        {
+                            // Structure.Draw не принимает цвет — временно
+                            // подменяем SpriteColor и восстанавливаем
+                            Color saved = st.SpriteColor;
+                            var faded = new Color(
+                                (int)(saved.R * fade),
+                                (int)(saved.G * fade),
+                                (int)(saved.B * fade));
+                            st.SpriteColor = faded;
+                            try
+                            {
+                                st.Draw(fpBatch, false, true);
+                                st.Draw(fpBatch, false, false);
+                            }
+                            finally
+                            {
+                                st.SpriteColor = saved;
+                            }
+                        }
+                        else if (entity is Item item)
+                        {
+                            item.Draw(fpBatch, false, true, tint);
+                            item.Draw(fpBatch, false, false, tint);
+                        }
+                    }
+                    catch { }
+                }
+
+                fpBatch.End();
+            }
+        }
+
+        /// <summary>
+        /// Отладочная гистограмма: распределение сущностей по полосам (раз в сек).
+        /// Вызывать из think-хука при UseEditorDepth == true.
+        /// </summary>
+        private static DateTime _lastDepthLog = DateTime.MinValue;
+        internal static void DebugLogEditorDepthBands()
+        {
+            DateTime now = DateTime.UtcNow;
+            if ((now - _lastDepthLog).TotalSeconds < 1.0) { return; }
+            _lastDepthLog = now;
+
+            int[] counts = new int[EditorDepthBands];
+            foreach (var entity in MapEntity.MapEntityList)
+            {
+                try
+                {
+                    bool drawable = (entity is Structure st && st.HasBody && st.Submarine != null) ||
+                                    (entity is Item it && it.ParentInventory == null);
+                    if (!drawable) { continue; }
+                    counts[DepthToBand(GetEntityEditorDepthZ(entity))]++;
+                }
+                catch { }
+            }
+
+            string bars = "";
+            for (int i = 0; i < EditorDepthBands; i++)
+            {
+                bars += counts[i] > 0 ? counts[i].ToString("X") : ".";
+            }
+            DebugConsole.NewMessage("[EditorDepth] bands (far→near): " + bars, Color.Cyan);
         }
     }
 }

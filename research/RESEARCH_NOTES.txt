@@ -16917,3 +16917,22 @@ Barotrauma разложен по винтикам от handshake до титро
   - Двери/лестницы можно тоже загнать в полосы по их SpriteDepth
   - Связка с экструзией: стенам с одинаковым SpriteDepth — общая толщина
 >>>>>>> 36f55e7 (Wave 473: implemented FirstPersonDepthPatch.cs — Sprite.Depth->Z for user's FP mod (partial class, 16 depth bands from editor's SpriteDepth slider, NumPad9 toggle, far-band fade via SpriteColor save/restore); v2 file patched: partial class + Draw3DWorld branch + toggle; awaiting user compile/test)
+===============================================================================
+[WAVE 474 — ПАТЧ ВЛИТ В v2 (один самодостаточный CSHUB-файл)]
+===============================================================================
+
+--- По запросу юзера: CSHUB-файл без компилятора ---
+  LuaCs компилит ВСЕ .cs папки мода в одну сборку на рантайме → partial
+  через файлы работает, НО юзеру удобнее Self-contained: патч влит
+  НАПРЯМУЮ в FirstPersonMod.cs (2).cs (первый класс файла, конец):
+    UseEditorDepth (public static, NumPad9 тоггл в FP),
+    EditorDepthBands=16, EditorDepthFadeMin=0.55,
+    GetEntityEditorDepthZ = (SpriteDepth−0.5)×2×layerDepth,
+    DrawWallEntitiesEditorDepth (бакеты по SpriteDepth, дальние→ближние,
+    фейд: structures через save/restore SpriteColor, items overrideColor),
+    DebugLogEditorDepthBands (DateTime, не Timing — нет риска internal).
+  FirstPersonDepthPatch.cs УДАЛЁН (partial больше не нужен).
+  v2: public class FirstPersonCamera : ACsMod (partial снят), брейсы
+  сбалансированы, Draw3DWorld ветка на месте (8887).
+  ИНСТРУКЦИЯ: скопировать FirstPersonMod.cs (2).cs в CSharp/Client мода
+  (заменить старый), v1 не трогать. В игре: F5 FP → NumPad9 ON.
