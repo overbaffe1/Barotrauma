@@ -16381,3 +16381,54 @@ Barotrauma разложен по винтикам от handshake до титро
   соблюдён везде, КРОМЕ продажи/клиники; «всё после CanClientAccess —
   доверенное»; throw→catch-all→батч-дроп (7 экземпляров); NaN-инъекция
   (TryParse без IsValid) — 5+ экземпляров; Unit mismatch display↔sim.
+===============================================================================
+[WAVE 463 — FILE-UPLOAD ОТСУТСТВУЕТ + SAVE-NAME TRAVERSAL КУРЬЁЗ + ЧИСТОТЫ]
+===============================================================================
+
+--- ✅ ЗАГРУЗКА ФАЙЛОВ С КЛИЕНТА: НЕ СУЩЕСТВУЕТ ---
+  ClientPermissions (полный енум, 26 значений) — НЕТ файловых пермов.
+  FILE_REQUEST = download-only (суб/мод/сейв СЕРВЕРА → клиенту).
+  FileReceiver — клиентский (server→client). Sub-file upload в ваниле
+  физически отсутствует: субы всегда из SavedSubmarines сервера.
+  Вектор «загнать серверу злой .sub файл» закрыт архитектурой.
+
+--- ✅ ReadClientNameChange (GameServer:3458) — ГИГИЕНА ---
+  u16 nameId (монотонный, IdMoreRecent) → SanitizeName → IsNameValid →
+  NameChangeCoolDown (спам-ответ раз/сек + NameId++ чтобы клиент откатился)
+  → hidden-job фильтр (не представиться служебной профессией).
+  Спуф имени соседа невозможен.
+
+--- ★ SAVE-NAME TRAVERSAL — курьёз ---
+  CAMPAIGN_SETUP_INFO isNew=true → saveName → CreateSavePath (SaveUtil:487):
+    fileName = ToolBox.RemoveInvalidFileNameChars(fileName);
+    Path.Combine(folder, fileName) + ".save"
+  Стрип-сет (SafeIO:252): " < > | \0 ctrl : * ? \\ / — ТОЧКИ НЕ В СПИСКЕ!
+  → saveName = ".." → Path.Combine(folder, "..") → ЗАПИСЬ ".save" в
+  РОДИТЕЛЬСКУЮ папку сейвов. Фиксированный уровень, фиксированное имя,
+  перезапись с суффиксами " 0.save". Не произвольный путь (слэши стрипнуты)
+  → КУРЬЁЗ ★. Для произвольного traversal не хватает ровно одного символа.
+  Windows "..\x" после стрипа → "..x" (файл в папке). Защита «почти случилась».
+
+--- ✅ DISCONNECT REASON — ЛОГ-ИНЪЕКЦИЯ НЕВОЗМОЖНА by design ---
+  LidgrenServerPeer:322: клиентский disconnect-текст →
+  FromLidgrenStringRepresentation (NetworkPeerStructs:219):
+    switch по хардкодам Lidgren → else split(separator) →
+    Enum.TryParse<DisconnectReason>(split[0]) + base64ToStr(split[1]) →
+    иначе Fallback(Unknown).
+  Строгая структура: enum + base64 → сырой текст в логи НЕ попадает.
+  Красивейший паттерн — девы знали про log-forging и задавили базой64.
+
+--- ★ VOIP: CanReceive при Screen.Selected != GameScreen → ГЛОБАЛЬНЫЙ ВОЙС ---
+  VoipServer.CanReceive: ПЕРВЫЙ чек — если сервер не в GameScreen:
+  distanceFactor=0, return true для ВСЕХ (мьют уже отфильтрован на уровне
+  пакета). By design для лобби; в переходах раунда (loading) войс может
+  утекать кросс-командно (PvP). Сервер-состояние, клиентом не управляется.
+  Quirk, ★.
+
+--- ★ SEED: строка уровня из пакета (isNew=true) без длины-лимита →
+  память + хэш при генерации (одноразово, ManageRound-гейт). ★.
+
+--- ИТОГ 463: клиент→сервер ФАЙЛОВАЯ поверхность закрыта архитектурно;
+  из строк-в-пути остался один недожатый ".."-квирк; дисконнект-пакет —
+  харденинг-образец. Векторов волна не дала: всё «почти-дыры» застряли
+  за полшага до эксплойта.
