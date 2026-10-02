@@ -37,7 +37,7 @@
 <<<<<<< HEAD
 - НОМЕР ВОЛНЫ: последняя — 472 (разбор FP-мода юзера: FirstPersonMod.cs.cs v1 8 режимов-прототип; FirstPersonMod.cs (2).cs v2 9.6K — настоящий FP через инъекцию Keys.Held, экструзия спрайтов в меши, hull-комнаты, физика-рейкаст интеракт; рекомендации: Sprite.Depth→Z, кэши, свет). СЛЕДУЮЩАЯ — 473: тест FreeHeal / FP-мод итерации / дампы. Любые волны = углублённый аудит/моды. РАЗМЕР ВОЛНЫ ~800-1500 строк.
 =======
-- НОМЕР ВОЛНЫ: последняя — 474 (Sprite.Depth→Z ВЛИТ В v2: FirstPersonMod.cs (2).cs теперь самодостаточен — UseEditorDepth/NumPad9/DrawWallEntitiesEditorDepth внутри класса, FirstPersonDepthPatch.cs удалён, partial снят; юзер копирует ОДИН файл в CSharp/Client). СЛЕДУЮЩАЯ — 475: тест юзером (F5 → NumPad9) / фиксы по фидбеку / FreeHeal / модули 455+458. Любые волны = углублённый аудит/моды. РАЗМЕР ВОЛНЫ ~800-1500 строк.
+- НОМЕНЕР ВОЛНЫ: последняя — 474b (FirstPersonLite.cs НАПИСАН С НУЛЯ на базе v1: 1024 строки, движение через Keys.Held инъекцию, hull-комнаты Floor/SideMatrix, персонажи-коробки NumPad8, 7 своих ошибок исправлено по ходу; v2 остаётся референсом). СЛЕДУЮЩАЯ — 475: тест юзером / фиксы. Любые волны = углублённый аудит/моды. РАЗМЕР ВОЛНЫ ~800-1500 строк.
 >>>>>>> 36f55e7 (Wave 473: implemented FirstPersonDepthPatch.cs — Sprite.Depth->Z for user's FP mod (partial class, 16 depth bands from editor's SpriteDepth slider, NumPad9 toggle, far-band fade via SpriteColor save/restore); v2 file patched: partial class + Draw3DWorld branch + toggle; awaiting user compile/test)
 - АУДИТЫ ДЫР: юзер просил не забывать — периодически (примерно раз в 3-4 волны)
   включать в волну скриптовый аудит гейтов/пакетов. Проведено: #1 (386, ServerEventRead

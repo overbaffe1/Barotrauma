@@ -16936,3 +16936,42 @@ Barotrauma разложен по винтикам от handshake до титро
   сбалансированы, Draw3DWorld ветка на месте (8887).
   ИНСТРУКЦИЯ: скопировать FirstPersonMod.cs (2).cs в CSharp/Client мода
   (заменить старый), v1 не трогать. В игре: F5 FP → NumPad9 ON.
+===============================================================================
+[WAVE 474b — FirstPersonLite.cs: ПЕРЕПИСАН С НУЛЯ на базе v1 (1024 строки)]
+===============================================================================
+
+--- РЕШЕНИЕ ЮЗЕРА: v2 перегружен (9.6K, 300+ хоткеев) → v1 за основу ---
+  Создан FirstPersonLite.cs — один самодостаточный CSHUB-файл (~1020 строк).
+
+  ВЗЯТО ИЗ v1 (остов): LuaCs-хуки (think/UpdateTransform Before/GameScreen
+  Draw Before+After/DrawMap After), F5, мышь-обзор, прицел-оверлей.
+
+  ВЗЯТО ИЗ v2 (проверенные механики):
+  - Движение = ИНЪЕКЦИЯ Keys.Held (SetState(false,true)+Held=true) —
+    персонаж реально ходит; noclip убит
+  - Вода: «куда смотришь — туда плывёшь» (look-вектор → Up/Down или
+    Right/Left по доминанте), лестницы (W+взгляд вверх = лезть + ladder.Select),
+    суша: W/S = Right/Left по lockedDir, Space=прыжок, Ctrl=Crouch
+  - SyncFacing: TargetDir по yaw + cooldown 30 кадров, CursorPosition
+    = взгляд (интеракт/аим сервер-совместим — 449)
+  - Комната по Hull → FloorMatrix/SideMatrix (RotX −90/RotY 90), тайлинг
+    текстур ближайших структур через GetTexture(Structure) = Sprite.Texture+
+    SourceRect (публичные, проверено)
+  - Персонажи: NumPad8 = толщина лимбов (0=плоский биллборд,
+    иначе 8-вершинная коробка: back/side/front DrawUserIndexedPrimitives
+    через BasicEffect), cBack=col/2, cSide=col×3/4
+  - NumPad2 = масштаб отсечения комнаты (0.6..1.5)
+
+  ИСПРАВЛЕННЫЕ СОБСТВЕННЫЕ ОШИБКИ (во время написания):
+  1) Press() заглушка без контекста → локальная функция с замыканием на ch
+  2) limb.sprite → limb.ActiveSprite (клиентский, conditional sprites)
+  3) Head?.SpriteColor — не существует → Color.White
+  4) Structure.SectionSprite — не существует → Sprite (префабовый)
+  5) using FarseerPhysics для ConvertUnits — добавлен
+  6) странная тернарная строка w = ... is var _ ? — выпрямлена
+  7) кэш стен — раз в 0.5с по Timing.TotalTime (было каждый кадр в v2)
+
+  ОСТАВЛЕНО ЧЕСТНО 2D: стены плоские биллборды на z=0 (из v1), вода не
+  рисуется 3D-объёмом (v2-подход тяжёлый), свет выключается (LosEnabled).
+  ЭКСТЕНШН-ТОЧКИ: limbThickness (NumPad8), clipScale (NumPad2),
+  RecacheWalls (раз в 0.5с), xrayStyleClip флаг (сейчас false).
