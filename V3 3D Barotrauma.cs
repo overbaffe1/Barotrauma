@@ -1660,7 +1660,7 @@ namespace BaroDepth
                             // The Item base sprite is often only a placeholder/frame. Extruding
                             // it produced the two white plates. Capture ONLY the native door leaf.
                             if (door.OpenState < 0.999f)
-                            door.Draw(captureBatch, false, -1f, doorItem.SpriteColor);
+                            door.Draw(captureBatch, false, -1f, Color.White); // no tint: yellow SpriteColor washes the leaf
                             stamp.CapturedDoorState = door.OpenState;
                         }
                         else if (entity is Item item && itemDrawWithTint != null)
@@ -2289,7 +2289,7 @@ namespace BaroDepth
                     if (!Visible(b, 0f, depth)) continue;
                     if (stamp != null) { stamp.LastSeen = now; stamp.LastDrawn = now; }
                     if (xrayView) { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 125)); continue; }
-                    if (stamp?.HasImage == true && Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.08)
+                    if (stamp?.HasImage == true && Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02)
                     DrawVolume(stamp, b, 0f, depth, RenderMode.Contours, false);
                     else AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110));
                 }
@@ -2476,7 +2476,7 @@ namespace BaroDepth
                         blue += Math.Min(255, c.B * 255 / c.A);
                     }
                     int index = y * gw + x;
-                    mask[index] = solid > 0 && solid * 3 >= count;
+                    mask[index] = solid > 0; // any coverage joins the contour: closes corner gaps on round sprites
                     colors[index] = solid == 0 ? Color.White : new Color(red / solid, green / solid, blue / solid, 255);
                 }
                 float anchorDistance = float.MaxValue;
