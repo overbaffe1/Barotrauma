@@ -82,6 +82,7 @@ namespace BaroDepth
             public bool ShowIds = true;
             public bool WarmupAll = true;
             public bool SurfaceTexture = true;
+            public float ContourRefreshScale = 1f;
             public ViewMode StartMode = ViewMode.Full;
             public readonly List<ObjectRule> Rules = new List<ObjectRule>();
             private readonly Dictionary<string, List<ObjectRule>> indexed = new Dictionary<string, List<ObjectRule>>(StringComparer.OrdinalIgnoreCase);
@@ -149,7 +150,7 @@ namespace BaroDepth
                     if (global != null)
                     {
                         CheckAttributes(global, "depthScale", "roomHalfDepth", "layerSpread", "surfaceInset", "defaultMode", "showIds",
-                            "fullTextureSize", "detailTextureSize", "cacheMiB", "jobsPerFrame", "captureBudgetMs", "warmupAll", "surfaceTexture");
+                            "fullTextureSize", "detailTextureSize", "cacheMiB", "jobsPerFrame", "captureBudgetMs", "warmupAll", "surfaceTexture", "contourRefreshScale");
                         next.DepthScale = Number(global, "depthScale", next.DepthScale, 0f, 4f);
                         next.RoomHalfDepth = Number(global, "roomHalfDepth", next.RoomHalfDepth, 50f, 600f);
                         next.LayerSpread = Number(global, "layerSpread", next.LayerSpread, 0f, 200f);
@@ -162,6 +163,7 @@ namespace BaroDepth
                         next.ShowIds = Boolean(global, "showIds", true);
                         next.WarmupAll = Boolean(global, "warmupAll", next.WarmupAll);
                         next.SurfaceTexture = Boolean(global, "surfaceTexture", next.SurfaceTexture);
+                        next.ContourRefreshScale = Number(global, "contourRefreshScale", next.ContourRefreshScale, 0.1f, 10f);
                         string mode = (string)global.Attribute("defaultMode");
                         if (mode != null && (!Enum.TryParse(mode, true, out next.StartMode) || !Enum.IsDefined(typeof(ViewMode), next.StartMode)))
                             throw new FormatException("defaultMode: Normal, Full or Xray.");
@@ -250,7 +252,7 @@ namespace BaroDepth
   <Global depthScale=""0.25"" roomHalfDepth=""155"" layerSpread=""16"" surfaceInset=""28""
           defaultMode=""Full"" showIds=""true""
           fullTextureSize=""128"" detailTextureSize=""320"" cacheMiB=""192""
-          jobsPerFrame=""4"" captureBudgetMs=""4"" warmupAll=""true"" surfaceTexture=""true"" />
+          jobsPerFrame=""4"" captureBudgetMs=""4"" warmupAll=""true"" surfaceTexture=""true"" contourRefreshScale=""1"" />
 
   <Objects>
     <!-- ПРИМЕРЫ ниже закомментированы и пока ничего не меняют. -->
@@ -1049,6 +1051,7 @@ namespace BaroDepth
             public Renderer(Settings configuration, float distance)
             {
                 surfaceTexture = configuration.SurfaceTexture;
+                contourRefreshScale = configuration.ContourRefreshScale;
                 settings = configuration; halfDepth = settings.RoomHalfDepth; viewDistance = distance;
                 gd = GameMain.Instance.GraphicsDevice;
                 try
@@ -1258,10 +1261,12 @@ namespace BaroDepth
             private static bool BankEnabled(LayerPlacement layer, int bank)
             { return (layer.Banks & (bank > 0 ? 1 : 2)) != 0; }
             public bool surfaceTexture = true;
+            public float contourRefreshScale = 1f;
             public void ApplySettings(Settings value)
             {
                 settings = value; halfDepth = value.RoomHalfDepth;
                 surfaceTexture = value.SurfaceTexture;
+                contourRefreshScale = value.ContourRefreshScale;
                 identity.Clear(); nextRefresh = 0;
             }
             private void BuildLayers(List<MapEntity> entities)
@@ -1569,10 +1574,13 @@ namespace BaroDepth
                 int revision = Revision(entity);
                 bool isDoor = entity is Item doorItem && doorItem.GetComponent<Door>() != null;
                 float distanceSq = stamp.Bounds.DistanceSquared(eye);
-                double interval = distanceSq < 300f * 300f ? 0.18 : distanceSq < 800f * 800f ? 0.5 : 8.0;
+                double interval = isDoor
+                    ? 0.0   // doors re-capture immediately: stale open-state = stretch
+                    : distanceSq < 300f * 300f ? 0.18 : distanceSq < 800f * 800f ? 0.5 : 8.0;
+                interval /= MathF.Max(0.1f, contourRefreshScale);
                 bool upgrade = stamp.HasImage && stamp.Quality < quality;
                 bool dirty = !stamp.HasImage || revision != stamp.ShapeRevision || upgrade ||
-                    (dynamicImage && !isDoor && now - stamp.LastCapture > interval);
+                    (dynamicImage && (isDoor || now - stamp.LastCapture > interval));
                 if (!dirty && stamp.OutlineAttempted) return;
                 if (!WithinBudget(jobs, timer)) return;
                 jobs++; long oldBytes = stamp.Bytes;
@@ -2289,7 +2297,16 @@ namespace BaroDepth
                     if (!Visible(b, 0f, depth)) continue;
                     if (stamp != null) { stamp.LastSeen = now; stamp.LastDrawn = now; }
                     if (xrayView) { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 125)); continue; }
-                    if (stamp?.HasImage == true && Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02)
+                    bool synced = stamp?.HasImage == true && Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02;
+                    if (!synced && stamp != null && stamp.Bounds.Valid)
+                    {
+                        // Doors must re-stamp immediately: a stale frame at the
+                        // wrong open state is what read as a "yellow stretch".
+                        int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
+                        PrepareEntity(item, true, RenderMode.Contours, settings.DetailTextureSize, ref jobs, timer);
+                        synced = Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02;
+                    }
+                    if (synced)
                     DrawVolume(stamp, b, 0f, depth, RenderMode.Contours, false);
                     else AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110));
                 }
