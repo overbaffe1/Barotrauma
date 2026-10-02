@@ -16815,3 +16815,70 @@ Barotrauma разложен по винтикам от handshake до титро
 --- ★ InsurancePolicy-риск (468) доп: AppliesEffectOnIntervalUpdate=true,
   ApplyEffect на каждый тик interval-группы при живом condition —
   полный вердикт после XML (нет в репо). Кодовая сторона — многократна.
+===============================================================================
+[WAVE 472 — ЮЗЕРСКИЙ FirstPersonMod: РАЗБОР (2 файла в корне репо)]
+===============================================================================
+
+--- FirstPersonMod.cs.cs (822 строки, "True3DMod") — прототип, 8 режимов ---
+  LuaCs-хуки: think (update), Camera.UpdateTransform Before (OverrideTransform
+  через reflection в private transform/shaderTransform), GameScreen.Draw
+  Before/After (PreDraw/Overlay), DrawMap After (Render3DWorld). F5 тоггл,
+  F2 режим, мышь — обзор, WASD — noclip-полёт камеры (не персонаж!).
+  Режимы: Raycast Walls (лучи по Structure.WallList AABB → столбцы),
+  Billboard3D, Hull Room 3D, Wall Extrusion, Depth Sphere, Column
+  (Wolfenstein), Layered Depth (8 RT w/4), Voxel Convert.
+  БАГИ: (1) Billboard3D рисует квады в z=0 плоскости при камере тоже z=0 —
+  при yaw≈0 квады видны с ребра = НЕВИДИМЫ (надо offset по Z, как в v2);
+  (2) WallExtrusion/Voxel: End/Begin на каждый слой × структуру + нет
+  Clear между слоями = просто перерисовка поверх (экструзии нет без
+  depth-буфера); (3) LayeredDepth — правильный паттерн (слои снаружи,
+  структуры внутри, RT на слой, alpha-композит).
+  Персонажи плоские поверх. DrawOverlay: прицел+инфо.
+
+--- FirstPersonMod.cs (2).cs (9665 строк, "FirstPersonCamera") — ЭВОЛЮЦИЯ ---
+  Настоящий FP: движение через ИНЪЕКЦИЮ ch.Keys[(int)InputType.X].Held
+  (не noclip! персонаж реально ходит/плавает/лестницы — HandleMovementInput
+  с водой «куда смотришь туда плывёшь», ladder detection, DoFlip с
+  cooldown/freeze — блокируют 2D-флип хуками на AnimController.Flip Before
+  + SetState блок (blockKeySetState/blockFlip)).
+  МИР: FindCurrentRoom по Hull → room bounds; классификация структур
+  (horizontal/vertical/stair/door + angled/flipped отдельно); экструзия
+  спрайтов в 3D-меши по альфа-порогу (ExtrudedSpriteMesh, кэш по
+  (tex,src,alpha), VertexPositionColorTexture + DrawUserIndexedPrimitives,
+  BasicEffect 3D + DepthStencilState + Clear DepthBuffer); z-слои через
+  BuildWallMatrix(z)=Scale(1,-1,1)·Translate(0,0,z)·ViewProj·Screen.
+  Пол/потолок: BuildFloorMatrix(y)=RotX(-90°); стены: BuildSideMatrix(x)=RotY(90°).
+  ПЕРСОНАЖИ: DrawCharacter3D с режимами (limbDisplayMode,
+  characterRenderMode, charRenderFixMode 0..5, rightLimbFixMode,
+  stretchMethod ×10) —battle-tested против глючных рэгдоллов в перспективе.
+  ИНТЕРАКТ: элегантно — ch.CursorPosition = 3D-точка взгляда (физика-рейкаст
+  ConvertUnits sim) → ИГРА САМА таргетит hover/interact; E/ЛКМ. Сервер-
+  совместимо (449: сервер восстанавливает курсор из intAim, клиент шлёт
+  свой angle от этого же CursorPosition).
+  ДЕБАГ: 2D-окно (Render2DToTexture + DrawMap After), F2 X-ray, F7
+  cameraFollow, F10 debug, NumPad-режимы рендера лимбов. Лайтинг
+  выключается (LosEnabled/LightingEnabled=false каждый кадр).
+
+--- РЕКОМЕНДАЦИИ (мой разбор) ---
+  1. ★ ГЛАВНОЕ: юзать Sprite.Depth (редакторский, 0.001..0.999 — тот самый
+     «спрайт глубина») вместо фиксированных ±layerDepth:
+     z = (SpriteDepth − 0.5) × 2 × layerDepth для каждой structure/entity
+     → декоративные детали автоматом уходят за стены, редакторский
+     параметр становится реальной Z-координатой. GetDrawDepth уже включает
+     SortingKey+ID анти-z-fight шум.
+  2. Кэшировать классификацию структур (CacheStructures каждый кадр →
+     на OnRoundStart/структурные ивенты), per-frame LINQ убрать из
+     draw-путей.
+  3. Lighting: вместо полного выключения — рисовать с LightingEnabled и
+     белым lightMap, иначе теряется настроение (тьма — половина игры).
+     Или минимум: LosEnabled=false + Lighting оставить.
+  4. Файл 1 режим 2 фикс: offset по Z (±layerDepth) для billboard'ов.
+  5. Монолит 9.6K строк → partial classes (рендер мира/персонажи/инпут/
+     дебаг). Имя "FirstPersonMod.cs.cs" и "(2).cs" → переименовать
+     (файл со скобками может не подцепиться csproj-глоббингом).
+  6. Экструзию статичных стен печь ОДИН раз в vertex-буфер на суб
+     (меши уже кэшируются по (tex,src,alpha) — отлично, дальше батчить
+     по материалу в один DrawIndexedPrimitives на текстуру).
+  ВЕРДИКТ: v2 — это уже играбельный FP-конверсионный слой с честным
+  инпут-мостом (не noclip!) и перспетивной экструзией геометрии.
+  Сильная работа; главные точки роста — Sprite.Depth-Z, кэши, свет.
