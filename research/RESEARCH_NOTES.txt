@@ -16882,3 +16882,38 @@ Barotrauma разложен по винтикам от handshake до титро
   ВЕРДИКТ: v2 — это уже играбельный FP-конверсионный слой с честным
   инпут-мостом (не noclip!) и перспетивной экструзией геометрии.
   Сильная работа; главные точки роста — Sprite.Depth-Z, кэши, свет.
+<<<<<<< HEAD
+=======
+===============================================================================
+[WAVE 473 — ПАТЧ Sprite.Depth→Z ДЛЯ FP-МОДА (реализован)]
+===============================================================================
+
+--- FirstPersonDepthPatch.cs — новый файл, partial class FirstPersonCamera ---
+  Что сделано в коде юзера (3 минимальные правки):
+  1) FirstPersonMod.cs (2).cs: class → public partial class (строка 14)
+  2) Draw3DWorld: ветка if (UseEditorDepth) → DrawWallEntitiesEditorDepth
+     вместо пары DrawWallEntities(±layerDepth)
+  3) NumPad9 — тоггл режима (рядом с F2 X-Ray)
+
+  Патч-файл:
+  - GetEntityEditorDepthZ: SpriteDepth (0.001..0.999, редакторский слайдер)
+    → (d−0.5)×2×layerDepth, кламп в ±layerDepth
+  - 16 полос-бакетов (EditorDepthBands), рисование дальние→ближние,
+    BuildWallMatrix(z центра полосы) — параллакс становится непрерывным
+  - Фейд дальности: lerp(0.55, 1) — structures через save/restore
+    SpriteColor (settable-свойство, без污染), items через overrideColor
+  - Фильтры 1:1 с DrawWallEntities: HasBody/Submarine/не-angled/не-special
+    shell/ShouldDrawEntity/ParentInventory — angled-проход не задет
+  - DebugLogEditorDepthBands: гистограмма полос в консоль (опционально)
+  Доступ к internal Timing проверен (юзеров SellByIdModule уже юзает).
+
+  ЧТО ДАЁТ: детали из редактора (SpriteDepth-слайдер) автоматически
+  раскладываются по Z. Проводка поверх стен, декали за стёклами,
+  «глубина» становится управляемой в редакторе, а не хардкодом ±150.
+  Дальние полосы темнее — грубая, но работающая дистанционная перспектива.
+
+  ПОТЕНЦИАЛЬНЫЕ ГРАНИ (для итераций):
+  - Полосы 16 → при желании 32 (Begin/End ×32 всё ещё дёшево)
+  - Двери/лестницы можно тоже загнать в полосы по их SpriteDepth
+  - Связка с экструзией: стенам с одинаковым SpriteDepth — общая толщина
+>>>>>>> 36f55e7 (Wave 473: implemented FirstPersonDepthPatch.cs — Sprite.Depth->Z for user's FP mod (partial class, 16 depth bands from editor's SpriteDepth slider, NumPad9 toggle, far-band fade via SpriteColor save/restore); v2 file patched: partial class + Draw3DWorld branch + toggle; awaiting user compile/test)

@@ -11,7 +11,7 @@ using FarseerPhysics;
 using FarseerPhysics.Dynamics;
 namespace FirstPersonMod
 {
-    public class FirstPersonCamera : ACsMod
+    public partial class FirstPersonCamera : ACsMod
     {
         private const float MOUSE_SENSITIVITY = 0.003f;
         private static bool isFirstPerson = false;
@@ -8884,8 +8884,16 @@ namespace FirstPersonMod
             DrawBackground(camPos);
         
             // Обычные плоские сущности на зад/перед стенах
-            DrawWallEntities(camPos, -layerDepth, cam);
-            DrawWallEntities(camPos, layerDepth, cam);
+            if (UseEditorDepth)
+            {
+                // SpriteDepth из редактора → настоящая Z (см. FirstPersonDepthPatch.cs)
+                DrawWallEntitiesEditorDepth(camPos, cam);
+            }
+            else
+            {
+                DrawWallEntities(camPos, -layerDepth, cam);
+                DrawWallEntities(camPos, layerDepth, cam);
+            }
         
             // Повернутые/зеркальные структуры - один проход (без дубля)
             DrawAngledStructures(camPos, cam);
@@ -9541,6 +9549,13 @@ namespace FirstPersonMod
             {
                 xrayMode = !xrayMode;
                 DebugConsole.NewMessage("X-Ray: " + (xrayMode ? "ON" : "OFF"), xrayMode ? Color.Lime : Color.Orange);
+            }
+
+            if (PlayerInput.KeyHit(Keys.NumPad9))
+            {
+                UseEditorDepth = !UseEditorDepth;
+                DebugConsole.NewMessage("EditorDepth Z (SpriteDepth→Z): " + (UseEditorDepth ? "ON" : "OFF"),
+                    UseEditorDepth ? Color.LimeGreen : Color.Orange);
             }
 
             if (PlayerInput.KeyHit(Keys.F5))
