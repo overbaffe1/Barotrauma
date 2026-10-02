@@ -16754,3 +16754,30 @@ Barotrauma разложен по винтикам от handshake до титро
 
 --- ✅ DeflectProjectiles: Lerp(mod,1,penetration) — пробитие игнорирует
   дефлект корректно; Projectile bounce при любом Deflect в AppliedModifiers.
+===============================================================================
+[WAVE 470 — ГЕНЫ: СТАКИНГ СИЛЫ + SetStrength ОБХОДИТ КЛАМПЫ]
+===============================================================================
+
+--- ★★★ ГЕНЫ: СУММАРНАЯ СИЛА ПО ВСЕМУ ИНВЕНТАРЮ + BYPASS КЛАМПОВ ---
+  Equip (GeneticMaterial.cs:188):
+    strength = GetCombinedEffectStrength();
+    ApplyAffliction(strength);
+    affliction.SetStrength(strength);
+    //force strength to the correct value to bypass any clamping
+    //e.g. AfflictionHusk might be doing        ← КОММЕНТАРИЙ ДЕВОВ
+  GetCombinedEffectStrength (:379):
+    foreach Inventory.FindAllItems(recursive: true):  ← ВЕСЬ инвентарь
+      if geneticMaterial.selectedEffect == selectedEffect:
+        effectStrength += ConditionPercentage/100 × MaxStrength
+  → СУММА по ВСЕМ активным генам того же эффекта! Носи 3 рефайнутых
+  гена-хаска по 100% = сила аффликции 300 (при MaxStrength префаба 100),
+  ЗАФОРСИРОВАННАЯ мимо клампов. Ген-статус «на всю катушку».
+  Гены остаются активными: надеты / в экипированном контейнере / КОНТЕЙНЕР
+  В HEALTH-INTERFACE СЛОТЕ (имплант, :245) — имплантный слот = легит
+  третий-четвёртый ген одновременно с карт-слотом и т.д.
+  Update: тaint при смерти (SetTaintedOnDeath), деактивация при снятии
+  (Deactivate + у СОСЕДЕЙ по контейнеру тоже — анти-эксплойт-защита).
+  ФИКС девам: суммировать до MaxStrength префаба, SetStrength → clamp.
+
+--- ★ PressureProtection = Math.Max по всем вещам (не стэк) — честно.
+--- ✅ Welder fuel drain — XML StatusEffects (контент, не код). Пропущено.
