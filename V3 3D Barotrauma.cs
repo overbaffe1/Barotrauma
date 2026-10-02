@@ -81,6 +81,7 @@ namespace BaroDepth
             public double CaptureBudgetMs = 4;
             public bool ShowIds = true;
             public bool WarmupAll = true;
+            public bool SurfaceTexture = true;
             public ViewMode StartMode = ViewMode.Full;
             public readonly List<ObjectRule> Rules = new List<ObjectRule>();
             private readonly Dictionary<string, List<ObjectRule>> indexed = new Dictionary<string, List<ObjectRule>>(StringComparer.OrdinalIgnoreCase);
@@ -148,7 +149,7 @@ namespace BaroDepth
                     if (global != null)
                     {
                         CheckAttributes(global, "depthScale", "roomHalfDepth", "layerSpread", "surfaceInset", "defaultMode", "showIds",
-                            "fullTextureSize", "detailTextureSize", "cacheMiB", "jobsPerFrame", "captureBudgetMs", "warmupAll");
+                            "fullTextureSize", "detailTextureSize", "cacheMiB", "jobsPerFrame", "captureBudgetMs", "warmupAll", "surfaceTexture");
                         next.DepthScale = Number(global, "depthScale", next.DepthScale, 0f, 4f);
                         next.RoomHalfDepth = Number(global, "roomHalfDepth", next.RoomHalfDepth, 50f, 600f);
                         next.LayerSpread = Number(global, "layerSpread", next.LayerSpread, 0f, 200f);
@@ -160,6 +161,7 @@ namespace BaroDepth
                         next.CaptureBudgetMs = Number(global, "captureBudgetMs", (float)next.CaptureBudgetMs, 1f, 20f);
                         next.ShowIds = Boolean(global, "showIds", true);
                         next.WarmupAll = Boolean(global, "warmupAll", next.WarmupAll);
+                        next.SurfaceTexture = Boolean(global, "surfaceTexture", next.SurfaceTexture);
                         string mode = (string)global.Attribute("defaultMode");
                         if (mode != null && (!Enum.TryParse(mode, true, out next.StartMode) || !Enum.IsDefined(typeof(ViewMode), next.StartMode)))
                             throw new FormatException("defaultMode: Normal, Full or Xray.");
@@ -248,7 +250,7 @@ namespace BaroDepth
   <Global depthScale=""0.25"" roomHalfDepth=""155"" layerSpread=""16"" surfaceInset=""28""
           defaultMode=""Full"" showIds=""true""
           fullTextureSize=""128"" detailTextureSize=""320"" cacheMiB=""192""
-          jobsPerFrame=""4"" captureBudgetMs=""4"" warmupAll=""true"" />
+          jobsPerFrame=""4"" captureBudgetMs=""4"" warmupAll=""true"" surfaceTexture=""true"" />
 
   <Objects>
     <!-- ПРИМЕРЫ ниже закомментированы и пока ничего не меняют. -->
@@ -962,7 +964,7 @@ namespace BaroDepth
             // One synchronous capture pass over every loaded object on enable,
             // view switch or XML reload, so the whole sub is volumetric at once.
             public bool WarmupPending = true;
-            private const int WarmupTextureSize = 96;
+            private const int WarmupTextureSize = 0; // 0 = use settings.FullTextureSize
             // Labels ray-test every object; rebuilding them each frame while ALT
             // is held is the main source of the ALT stutter. Throttled instead.
             private double nextHintBuild;
@@ -1046,6 +1048,7 @@ namespace BaroDepth
 
             public Renderer(Settings configuration, float distance)
             {
+                surfaceTexture = configuration.SurfaceTexture;
                 settings = configuration; halfDepth = settings.RoomHalfDepth; viewDistance = distance;
                 gd = GameMain.Instance.GraphicsDevice;
                 try
@@ -1254,9 +1257,11 @@ namespace BaroDepth
             private float CorridorDepth(Submarine submarine) { return halfDepth; }
             private static bool BankEnabled(LayerPlacement layer, int bank)
             { return (layer.Banks & (bank > 0 ? 1 : 2)) != 0; }
+            public bool surfaceTexture = true;
             public void ApplySettings(Settings value)
             {
                 settings = value; halfDepth = value.RoomHalfDepth;
+                surfaceTexture = value.SurfaceTexture;
                 identity.Clear(); nextRefresh = 0;
             }
             private void BuildLayers(List<MapEntity> entities)
@@ -1534,13 +1539,22 @@ namespace BaroDepth
                 settings.CaptureBudgetMs = double.MaxValue;
                 try
                 {
+                    // Warm EVERY eligible loaded object, not only this frame's
+                    // capture pool, so remote rooms are volumetric too.
+                    var targets = new List<MapEntity>();
+                    foreach (Item item in items)
+                        if (CaptureEligible(item) && captureSet.Contains(item)) targets.Add(item);
+                    foreach (Structure structure in structures)
+                        if (CaptureEligible(structure) && captureSet.Contains(structure)) targets.Add(structure);
+
                     int warmed = 0;
-                    foreach (MapEntity entity in captureCandidates)
+                    foreach (MapEntity entity in targets)
                     {
                         Stamp stamp = GetStamp(entity);
                         if (stamp == null || !stamp.Bounds.Valid || stamp.HasImage) continue;
                         int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
-                        PrepareEntity(entity, entity is Item, RenderMode.Contours, WarmupTextureSize, ref jobs, timer);
+                        PrepareEntity(entity, entity is Item, RenderMode.Contours,
+                            WarmupTextureSize > 0 ? WarmupTextureSize : settings.FullTextureSize, ref jobs, timer);
                         warmed++;
                     }
                     Log("Warmup: " + warmed + " objects now volumetric", Color.LimeGreen);
@@ -1768,7 +1782,7 @@ namespace BaroDepth
                 removals.Clear();
                 foreach (var pair in staticStamps)
                 {
-                    if (pair.Key.Removed || (!fullView && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
+                    if (pair.Key.Removed || (!fullView && settings.WarmupAll == false && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
                     else cacheBytes += pair.Value.Bytes;
                 }
                 foreach (MapEntity entity in removals) { staticStamps[entity].Dispose(); staticStamps.Remove(entity); }
@@ -1792,6 +1806,30 @@ namespace BaroDepth
                 { characterStamps[character].Dispose(); characterStamps.Remove(character); }
             }
 
+            /// <summary>
+            /// Original texture of the nearest captured horizontal structure —
+            /// used for the room shell so stretched floors/ceilings keep the
+            /// authored look instead of the procedural metal.
+            /// </summary>
+            private Texture2D PickSurfaceTexture(Bounds2 tile)
+            {
+                // Original authored texture of the nearest horizontal wall —
+                // available immediately from prefabs, no stamp capture needed,
+                // and it never stretches: UVs wrap per 96-unit tile.
+                Structure best = null; float bestSq = float.MaxValue;
+                Vector2 center = new Vector2((tile.Left + tile.Right) * 0.5f, (tile.Bottom + tile.Top) * 0.5f) + eye;
+                foreach (Structure structure in structures)
+                {
+                    if (structure == null || structure.Removed) continue;
+                    if (structure.Prefab?.Sprite?.Texture == null) continue;
+                    float d = Vector2.DistanceSquared(structure.WorldPosition, center);
+                    if (d < bestSq) { bestSq = d; best = structure; }
+                }
+                var sprite = best?.Prefab?.Sprite;
+                var texture = sprite?.Texture;
+                return texture != null && !texture.IsDisposed ? texture : null;
+            }
+
             private void DrawRoomWalls()
             {
                 // Union tiles do not overlap. Their UVs are submarine-local, not per-hull.
@@ -1805,16 +1843,21 @@ namespace BaroDepth
                     float l = b.Left + offset.X, r = b.Right + offset.X;
                     float t = b.Top + offset.Y, bottom = b.Bottom + offset.Y;
                     float wallZ = halfDepth + 2f;
+                    // Back copy: real wall, writes depth. Front copy: decorative
+                    // overlay, depth TESTED but NOT written — otherwise it
+                    // z-fights with itself across frames (ceiling flicker).
                     float z = wallZ;
                     Color tint = new Color(126, 151, 169);
-                    DrawQuad(metal, new Vector3(l, t, -z), new Vector3(r, t, -z),
+                    Texture2D surfaceTex = surfaceTexture ? PickSurfaceTexture(b) : null;
+                    if (surfaceTex == null) surfaceTex = metal;
+                    DrawQuad(surfaceTex, new Vector3(l, t, -z), new Vector3(r, t, -z),
                         new Vector3(l, bottom, -z), new Vector3(r, bottom, -z),
                         b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
                         tint, false, Matrix.Identity, true);
-                    DrawQuad(metal, new Vector3(l, t, z), new Vector3(r, t, z),
+                    DrawQuadFrontNoWrite(surfaceTex, new Vector3(l, t, z), new Vector3(r, t, z),
                         new Vector3(l, bottom, z), new Vector3(r, bottom, z),
                         b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
-                        tint, false, Matrix.Identity, true);
+                        tint);
                 }
             }
 
@@ -2337,6 +2380,31 @@ namespace BaroDepth
                 {
                     pass.Apply();
                     gd.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, mesh.VertexCount, 0, mesh.TriangleCount);
+                    frameDrawCalls++;
+                }
+            }
+
+            /// <summary>
+            /// Decorative front-facing quad: depth-tested against the scene but
+            /// never writes depth, so it cannot occlude items or flicker by
+            /// fighting its own depth across frames.
+            /// </summary>
+            private void DrawQuadFrontNoWrite(Texture2D texture, Vector3 tl, Vector3 tr, Vector3 bl, Vector3 br,
+                float u0, float v0, float u1, float v1, Color tint)
+            {
+                quad[0] = new VertexPositionColorTexture(tl, tint, new Vector2(u0, v0));
+                quad[1] = new VertexPositionColorTexture(tr, tint, new Vector2(u1, v0));
+                quad[2] = new VertexPositionColorTexture(bl, tint, new Vector2(u0, v1));
+                quad[3] = new VertexPositionColorTexture(br, tint, new Vector2(u1, v1));
+                gd.BlendState = BlendState.Opaque;
+                gd.DepthStencilState = DepthStencilState.DepthRead;
+                gd.RasterizerState = RasterizerState.CullNone;
+                gd.SamplerStates[0] = SamplerState.LinearWrap;
+                solidEffect.World = Matrix.Identity; solidEffect.Texture = texture;
+                foreach (EffectPass pass in solidEffect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    gd.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, quad, 0, 4, quadIndices, 0, 2);
                     frameDrawCalls++;
                 }
             }

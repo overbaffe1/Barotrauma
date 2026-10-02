@@ -2,11 +2,12 @@
 <BaroDepth version="1">
   <!-- F7: перечитать этот файл. Десятичный разделитель — точка. -->
   <!-- warmupAll: true = при входе в FP / F6 / F7 все предметы сразу объёмные (небольшой фриз на захват). -->
+  <!-- surfaceTexture: true = пол/потолок используют текстуру ближайшей стены вместо процедурного металла (не растягивается). -->
   <!-- depthScale 0.25 = объём предметов в 4 раза тоньше; 1 = исходная толщина. -->
   <!-- roomHalfDepth задаёт ПОЛОВИНУ ширины коридора. Соседние предметы её не меняют. -->
   <!-- offset > 0 приближает предмет к середине; offset < 0 двигает к стенке. -->
   <Global depthScale="1.8" roomHalfDepth="155" layerSpread="17" surfaceInset="28"
-          defaultMode="Full" showIds="true" warmupAll="true"
+          defaultMode="Full" showIds="true" warmupAll="true" surfaceTexture="true"
           fullTextureSize="128" detailTextureSize="320" cacheMiB="192"
           jobsPerFrame="4" captureBudgetMs="4" />
 
