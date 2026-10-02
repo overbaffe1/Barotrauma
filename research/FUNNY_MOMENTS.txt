@@ -1435,3 +1435,10 @@
 - «Do NOT clear Select after the call: that discarded the server-side
   action» — прям документация моего же аудита 449-й волны, только
   найденная болью.
+- Волна 476: юзер словил мои компайл-ошибки и молча принёс лог. Мой
+  собственный property Screen (матрица) затенял тип Barotrauma.Screen —
+  Screen.Selected превращался в Matrix.Selected. Классика C#: свойство,
+  названное как тип, стреляет в спину каждые 100 строк.
+- Structure.Remove — метод; Item.Remove — метод; я написал их как
+  свойства в булевом выражении. «|| cannot be applied to method group» —
+  самый вежливый способ компилятора сказать «ты имел в виду скобочки».

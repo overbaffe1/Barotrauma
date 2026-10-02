@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BaroDepth version="1">
+  <!-- F7: перечитать этот файл. Десятичный разделитель — точка. -->
+  <!-- warmupAll: true = при входе в FP / F6 / F7 все предметы сразу объёмные (небольшой фриз на захват). -->
+  <!-- depthScale 0.25 = объём предметов в 4 раза тоньше; 1 = исходная толщина. -->
+  <!-- roomHalfDepth задаёт ПОЛОВИНУ ширины коридора. Соседние предметы её не меняют. -->
+  <!-- offset > 0 приближает предмет к середине; offset < 0 двигает к стенке. -->
+  <Global depthScale="1.8" roomHalfDepth="155" layerSpread="17" surfaceInset="28"
+          defaultMode="Full" showIds="true" warmupAll="true"
+          fullTextureSize="128" detailTextureSize="320" cacheMiB="192"
+          jobsPerFrame="4" captureBudgetMs="4" />
+
+  <Objects>
+    <!-- ПРИМЕРЫ ниже закомментированы и пока ничего не меняют. -->
+    <!-- prefab — строковый identifier типа предмета из редактора, а не его название. -->
+    <!-- entityId — числовой ID текущего экземпляра в игре. Может меняться между раундами. -->
+    <!-- editorId — ID из файла лодки; обязательно укажи submarine. Смотри выгрузку F8. -->
+    <!-- offset: единицы смещения, НЕ умножается на depthScale. -->
+    <!-- depth: полная толщина ДО глобального масштаба; scale: дополнительный множитель. -->
+    <!-- Итоговая толщина = depth * depthScale * scale. Без depth берётся толщина по размеру. -->
+    <!-- Оба значения ограничены внутренней шириной комнаты, которую предмет не расширяет. -->
+    <!-- side: both / positive / negative / hide (две стороны Z, одна или скрыть). -->
+
+    <!-- Все распределительные коробки: ближе на 8 единиц, итоговая толщина 16*0.25=4. -->
+    <Object prefab="opdeco_hrflyers" offset="8" depth="17" />
+    <Object prefab="ladder" offset="8" depth="37" />
+    <Object prefab="outpostreactor" offset="8" depth="35" />
+    <Object prefab="op_cafeteriabench" offset="8" depth="35" />
+    <!-- Только один предмет текущего раунда (замени 1234 настоящим entityId из F8): -->
+    <!-- <Object entityId="1234" offset="18" scale="0.5" /> -->
+
+    <!-- Предмет из сохранённой лодки (замени имя лодки и editorId): -->
+    <!-- <Object submarine="MySub" editorId="123" offset="-6" depth="32" /> -->
+
+    <!-- Только один визуальный дубль указанного предмета: -->
+    <!-- <Object entityId="1234" side="positive" /> -->
+  </Objects>
+</BaroDepth>

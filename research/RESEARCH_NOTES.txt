@@ -17053,3 +17053,53 @@ Barotrauma разложен по винтикам от handshake до титро
   можно было бы вообще не пересобирать при повороте камеры (они уже
   кэшированы) — так и сделано. Осталось: Stamp-меш для LIMB'ов персонажей
   (сейчас квадратные RT) — следующий шаг качества.
+===============================================================================
+[WAVE 476 — V3 УЛУЧШЕН: WARMUP (всё 3D сразу) + ALT-ЛАГ ФИКС + Lite фиксы]
+===============================================================================
+
+--- ЗАПРОС ЮЗЕРА: (1) все предметы сразу 3D, не только рядом; (2) Alt лагает ---
+
+--- ★★★ WARMUP: синхронный захват ВСЕХ кандидатов при входе/смене вида ---
+  Причина статус-кво: V3 согревает сцену бюджетом (JobsPerFrame=4,
+  CaptureBudgetMs=4) → дальние предметы плоские первые секунды/минуты.
+  РЕАЛИЗАЦИЯ (V3 3D Barotrauma.cs в репо):
+  - Settings.WarmupAll (XML warmupAll, default true, DefaultXml обновлён)
+  - Renderer.WarmupPending + WarmupTextureSize=96 (96² в ~1.8x дешевле 128²)
+  - WarmupAll(): временно JobsPerFrame=int.MaxValue/CaptureBudgetMs=max →
+    PrepareEntity(Contours, 96) для КАЖДОГО captureCandidate; finally
+    восстанавливает бюджет. Нормальные бюджетные проходы потом ДОКАЧИВАЮТ
+    ближние до DetailTextureSize (upgrade-механика stamp.Quality < quality).
+  - Триггеры: Enable (warmupQueued=true), F6 смена вида, F7 reload,
+    первый DrawMap после входа. DrawMap-хук передаёт renderer.WarmupPending.
+  - В Normal mode греется текущая зона; F6 Full = ВЕСЬ загруженный суб.
+  ЛОГ: «Warmup: N objects now volumetric».
+
+--- ★★★ ALT-ЛАГ: причина найдена — PrepareHints() КАЖДЫЙ КАДР ---
+  DrawOverlay: if (hints) PrepareHints(); — при зажатом ALT перестраивает
+  ярлыки каждый кадр: до 36 кандидатов × OcclusionLimit(includeItems:true),
+  который РЕЙ-МАРШИТ альфа-сетку (RayPrism DDA до MaskWidth+MaskHeight
+  шагов) по ВСЕМ структурам и предметам. O(36 × (S+I) × DDA) за кадр.
+  ФИКСЫ:
+  1) Троттлинг: nextHintBuild — PrepareHints раз в 0.2с (визуально
+     идентично — ярлыки статичны), else кэш hintBoxes.
+  2) Дистанционный пре-фильтр: предметы дальше 8000 юнитов (не xray)
+     пропускаются до OcclusionLimit — в Full-виде это отсекает
+     большую часть рей-тестов.
+  UpdateAim/TryPick остался покадровым (нужен для ховера/курсора).
+
+--- ★ FirstPersonLite.cs: исправлены ошибки компиляции юзера ---
+  CS1061 'Matrix' does not contain 'Selected' (154/177/262/858):
+    мой частный property `Screen` (матрица экрана) ЗАТЕНЯЛ тип
+    Barotrauma.Screen → Screen.Selected резолвился в Matrix.Selected.
+    Ренейм: Screen → ScreenMatrix (3 использования ViewProj*ScreenMatrix,
+    4 Screen.Selected?.Cam целы).
+  CS0019 bool/method group (585/598):
+    Structure.Remove и Item.Remove — МЕТОДЫ; я юзал как свойства.
+    → .Removed. (Все четыре паттерна .Remove/.Draw/.Select/.Dispose
+    прогнаны регэкспом — больше метод-групп в булевом контексте нет.)
+  Извинение перед юзером: выдал неоткомпилированный файл. Теперь оба
+  файла (Lite и V3) прошли статическую проверку имён по исходникам.
+
+--- ПРИМЕЧАНИЕ: WarmupAll жёсткий по кадру: один кадр с N захватами =
+  фриз ~N×1-2ms. При 400 предметах ≈ 0.4-0.8с. Приемлемо (разово).
+  Хочется плавнее — поставить warmupAll=false и поднять jobsPerFrame.

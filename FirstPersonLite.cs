@@ -231,7 +231,7 @@ namespace FirstPersonMod
             }
         }
 
-        private static Matrix Screen
+        private static Matrix ScreenMatrix
         {
             get
             {
@@ -242,12 +242,12 @@ namespace FirstPersonMod
 
         /// <summary>Стена на глубине z: квады в плоскости XY, сдвинутые по Z.</summary>
         private static Matrix WallMatrix(float z)
-            => Matrix.CreateScale(1f, -1f, 1f) * Matrix.CreateTranslation(0f, 0f, z) * ViewProj * Screen;
+            => Matrix.CreateScale(1f, -1f, 1f) * Matrix.CreateTranslation(0f, 0f, z) * ViewProj * ScreenMatrix;
 
         /// <summary>Пол/потолок: горизонтальная плоскость на высоте y.</summary>
         private static Matrix FloorMatrix(float y)
             => Matrix.CreateScale(1f, -1f, 1f) * Matrix.CreateRotationX(-MathF.PI / 2f)
-               * Matrix.CreateTranslation(0f, y, 0f) * ViewProj * Screen;
+               * Matrix.CreateTranslation(0f, y, 0f) * ViewProj * ScreenMatrix;
 
         private static void OverrideTransform(Camera cam)
         {
@@ -582,7 +582,7 @@ namespace FirstPersonMod
             {
                 try
                 {
-                    if (s.Submarine == null || s.Remove) { continue; }
+                    if (s.Submarine == null || s.Removed) { continue; }
                     var wr = s.WorldRect;
                     // классификация: что длиннее — то и ориентация
                     if (wr.Width >= wr.Height) { horizontalWalls.Add(s); }
@@ -595,7 +595,7 @@ namespace FirstPersonMod
             {
                 try
                 {
-                    if (item.Remove || item.Submarine == null) { continue; }
+                    if (item.Removed || item.Submarine == null) { continue; }
                     if (item.HasTag(Tags.Door) || item.GetComponent<Door>() != null) { doors.Add(item); }
                 }
                 catch { }
@@ -706,7 +706,7 @@ namespace FirstPersonMod
         /// <summary>Боковая стена: вертикальная плоскость на координате x.</summary>
         private static Matrix SideMatrix(float x)
             => Matrix.CreateScale(1f, -1f, 1f) * Matrix.CreateRotationY(MathF.PI / 2f)
-               * Matrix.CreateTranslation(x, 0f, 0f) * ViewProj * Screen;
+               * Matrix.CreateTranslation(x, 0f, 0f) * ViewProj * ScreenMatrix;
 
         /// <summary>Залитый квад в плоскости (по X — от a до b, по Z — от z0 до z1) на высоте/позиции y.</summary>
         private static void DrawQuadPlane(float a, float b, float z0, float z1, float yOrX, Color color)
