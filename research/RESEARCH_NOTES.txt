@@ -17700,3 +17700,11 @@ Pump+ConnectionPanel+Repairable, только-чтение (color/point) пом�
 Проверено компилябельно: GUITextBlock.Wrap — public field (GUITextBlock.cs:38),
 GUIComponent.ToolTip — virtual RichString с implicit operator из string
 (RichString.cs:90), GUIStyle.SmallFont публичен.
+
+== ВОЛНА 499 — CS1654 фикс ==
+Ошибка юзера: pref.OwnerLabel = ... в foreach (CS1654) — EditablePropRef
+это struct, модифицировать члены итерационной переменной foreach нельзя.
+Фикс: локальная копия var pref = pr; модификация копии, передача копии
+в RenderRow. Прочие foreach по props структуру только читают/передают
+по значению — валидно. Урок: struct в foreach = read-only; менять —
+только через копию или for-индекс.

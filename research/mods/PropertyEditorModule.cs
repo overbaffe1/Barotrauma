@@ -311,8 +311,11 @@ namespace CSHUB.Modules
             }
 
             // подпись источника в строке: имя + через какое подключение
-            foreach (var pref in props)
+            foreach (var pr in props)
             {
+                // EditablePropRef — struct: член foreach-переменной менять нельзя (CS1654),
+                // работаем с локальной копией
+                var pref = pr;
                 if (wiredVia.TryGetValue(pref.Item, out var conns))
                     pref.OwnerLabel = pref.Item.Name + " -> " + string.Join(",", conns);
                 ItemPropertyNet.RenderRow(list, pref);
