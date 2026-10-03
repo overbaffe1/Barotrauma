@@ -2381,24 +2381,18 @@ namespace BaroDepth
                     staticStamps.TryGetValue(item, out Stamp stamp);
                     Door door = item.GetComponent<Door>();
                     if (door == null) { DrawLayered(item, stamp); continue; }
-                    if (DoorOpen(door)) continue;
-                    Bounds2 b = RenderBounds(item, stamp);
-                    float depth = CorridorDepth(item.Submarine) - 2f;
-                    if (!Visible(b, 0f, depth)) continue;
-                    if (stamp != null) { stamp.LastSeen = now; stamp.LastDrawn = now; }
-                    if (xrayView) { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 125)); continue; }
-                    bool synced = stamp?.HasImage == true && Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02;
-                    if (!synced && stamp != null && stamp.Bounds.Valid)
-                    {
-                        // Doors must re-stamp immediately: a stale frame at the
-                        // wrong open state is what read as a "yellow stretch".
-                        int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
-                        PrepareEntity(item, true, RenderMode.Contours, settings.DetailTextureSize, ref jobs, timer);
-                        synced = Math.Abs(stamp.CapturedDoorState - door.OpenState) < 0.02;
-                    }
-                    if (synced)
-                    DrawVolume(stamp, b, 0f, depth, RenderMode.Contours, false);
-                    else AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110));
+
+                    Bounds2 b = EntityBounds(item);
+                    if (!Visible(b, 0f, 20f)) continue;
+
+                    fpBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
+                        SamplerState.LinearClamp, null, RasterizerState.CullNone,
+                        null, WallMatrix(0f));
+                    door.Draw(fpBatch, false, 0f, Color.White);
+                    fpBatch.End();
+
+                    // Wireframe box in X-ray for reference
+                    if (xrayView) { AddWireBox(b, 0f, 12f, new Color(82, 182, 204, 125)); }
                 }
             }
 
