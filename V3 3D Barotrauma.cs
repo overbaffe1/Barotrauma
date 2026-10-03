@@ -2324,7 +2324,7 @@ namespace BaroDepth
                 // while FP is on. No toggle needed.
                 if (now > nextDoorLog)
                 {
-                    nextDoorLog = now + 2.0;
+                    nextDoorLog = now + 10.0;
                     int doorsTotal = 0, doorsDrawn = 0, doorsOpen = 0, doorsNoStamp = 0, doorsCulled = 0;
                     string sample = "";
                     foreach (Item item in items)
