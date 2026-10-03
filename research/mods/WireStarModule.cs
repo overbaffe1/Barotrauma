@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Barotrauma;
@@ -9,12 +8,13 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  WIRE DRAW — режим on/off: активировал → каждый ЛКМ-клик ставит
-    //  ОДИН узел под курсором, провод рисует линию под курсором.
+    //  WIRE DRAW — режим on/off: активировал → каждый ЛКМ-клик
+    //  ставит узел под курсором, и провод РИСУЕТ ПРЯМУЮ от
+    //  предыдущей точки к новой (узлы распределяются по прямой,
+    //  но рисуются за один кадр — без пошагового ползания).
     //  Легитный клиентский путь: CreateClientEvent(ClientEventData(k))
     //  по одному узлу, сервер добавляет без клампов (находка 447)
-    //  и реплицирует всем. Опрос кликов — игро́вая корутина
-    //  (CoroutineManager.StartCoroutine, Running = следующий кадр).
+    //  и реплицирует всем.
     // ============================================================
     public class WireStarModule : CSModuleBase
     {
@@ -23,8 +23,8 @@ namespace CSHUB.Modules
         public override string Description =>
             "Режим рисования проводом.\n\n" +
             "• Нажми модуль = режим ВКЛ (ещё раз = ВЫКЛ)\n" +
-            "• В режиме каждый ЛКМ-клик ставит узел под курсором\n" +
-            "• Провод рисует линию между узлами\n" +
+            "• ЛКМ-клик = прямая линия от предыдущей точки к курсору\n" +
+            "• (первый клик — линия от самого провода)\n" +
             "• Нужен чистый разблокированный провод в инвентаре\n" +
             "• Видно всем игрокам";
         public override string Category => "fun";
@@ -67,7 +67,7 @@ namespace CSHUB.Modules
                 _wire = wireItem.GetComponent<Wire>();
                 _active = true;
                 CoroutineManager.StartCoroutine(DrawLoop());
-                GUI.AddMessage("[WireDraw] РЕЖИМ ВКЛ — ЛКМ по экрану = узел (" + wireItem.Name + ")", Color.Lime);
+                GUI.AddMessage("[WireDraw] РЕЖИМ ВКЛ — ЛКМ: прямая от прошлой точки к курсору", Color.Lime);
             }
             else
             {
@@ -84,7 +84,8 @@ namespace CSHUB.Modules
         }
 
         // Живёт, пока _active; тикает каждый кадр игровым планировщиком.
-        private static IEnumerator DrawLoop()
+        // Сигнатура: IEnumerable<CoroutineStatus> (не IEnumerator!).
+        private static IEnumerable<CoroutineStatus> DrawLoop()
         {
             while (_active)
             {
@@ -98,14 +99,17 @@ namespace CSHUB.Modules
 
                 if (PlayerInput.PrimaryMouseButtonClicked())
                 {
-                    PlaceNode();
+                    PlaceLine();
                 }
 
                 yield return CoroutineStatus.Running; // следующий кадр
             }
         }
 
-        private static void PlaceNode()
+        // ЛКМ: прямая от последней точки к курсору. Все промежуточные
+        // узлы ставятся СЕЙЧАС (одним кадром) — линия появляется сразу
+        // целиком, без «ползания» по кускам.
+        private static void PlaceLine()
         {
             Camera cam = (Screen.Selected as GameScreen)?.Cam;
             if (cam == null) return;
@@ -124,30 +128,44 @@ namespace CSHUB.Modules
                 return;
             }
 
-            // узлы в пространстве субмарины (draw = node + DrawPos + HiddenSubPos)
-            Vector2 pos = cam.ScreenToWorld(PlayerInput.MousePosition);
+            // клик → в N-пространство субмарины (draw = node + DrawPos + HiddenSubPos)
+            Vector2 target = cam.ScreenToWorld(PlayerInput.MousePosition);
             Submarine refSub = _wireItem.Submarine;
             if (refSub != null)
             {
-                pos -= refSub.DrawPosition + refSub.HiddenSubPosition;
+                target -= refSub.DrawPosition + refSub.HiddenSubPosition;
             }
 
-            // первый узел: стартуем от предмета-провода (его Position тоже
-            // мировая — конвертим в N-пространство так же, как клик)
-            if (nodes.Count == 0)
+            // старт: последний узел, либо сам провод (первый клик)
+            Vector2 start;
+            if (nodes.Count > 0)
             {
-                Vector2 startPos = _wireItem.Position;
+                start = nodes[nodes.Count - 1];
+            }
+            else
+            {
+                start = _wireItem.Position;
                 Submarine startSub = _wireItem.Submarine;
                 if (startSub != null)
                 {
-                    startPos -= startSub.DrawPosition + startSub.HiddenSubPosition;
+                    start -= startSub.DrawPosition + startSub.HiddenSubPosition;
                 }
-                nodes.Add(startPos);
+            }
+
+            float dist = Vector2.Distance(start, target);
+            if (dist < 1f) return;
+
+            // промежуточные узлы каждые ~50px, с запасом до лимита 255
+            int free = 250 - nodes.Count;
+            int steps = Math.Min((int)(dist / 50f), free);
+            if (steps < 1) steps = 1;
+
+            for (int i = 1; i <= steps; i++)
+            {
+                nodes.Add(start + (target - start) * ((float)i / steps));
                 SendEvent(_wireItem, _wire, nodes.Count, send);
             }
 
-            nodes.Add(pos);
-            SendEvent(_wireItem, _wire, nodes.Count, send);
             _wire.UpdateSections();
         }
 
