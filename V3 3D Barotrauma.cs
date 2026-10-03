@@ -1136,7 +1136,7 @@ namespace BaroDepth
                     gd.Viewport = new Viewport(0, 0, scene.Width, scene.Height);
                     gd.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, new Color(8, 17, 27), 1f, 0);
                     ConfigureEffects(player.InWater);
-                    if (!xrayView) DrawRoomWalls();
+                    if (!xrayView) { DrawRoomWalls(); DrawFloorLines(); }
                     DrawStructures(mode);
                     DrawItems(mode);
                     DrawWires();
@@ -1901,6 +1901,40 @@ namespace BaroDepth
                         new Vector3(l, bottom, -z), new Vector3(r, bottom, -z),
                         b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
                         tint, false, Matrix.Identity, true);
+                }
+            }
+
+            private void DrawFloorLines()
+            {
+                // The near backdrop copy is gone (flicker fix), which left the floor
+                // as void. Mark the walkable surface instead of restoring that wall:
+                // a baseboard skirt on the far wall + a thin horizontal walk strip
+                // across the corridor. Both are unique geometry (no near/far pair),
+                // so there is nothing to z-fight or flicker.
+                foreach (BackdropTile tile in backdrop)
+                {
+                    if (tile.Sub.Removed) continue;
+                    Bounds2 b = tile.Local;
+                    Vector2 offset = tile.Sub.DrawPosition - eye;
+                    float l = b.Left + offset.X, r = b.Right + offset.X;
+                    float bottom = b.Bottom + offset.Y;
+                    float wallZ = halfDepth + 2f;
+
+                    // Baseboard: dark skirt on the far wall — the floor line you see
+                    // while walking upright. Half a unit in front of the wall card.
+                    Texture2D surfaceTex = surfaceTexture ? PickSurfaceTexture(b) : null;
+                    if (surfaceTex == null) surfaceTex = metal;
+                    DrawQuad(surfaceTex, new Vector3(l, bottom + 6f, -wallZ + 0.5f), new Vector3(r, bottom + 6f, -wallZ + 0.5f),
+                        new Vector3(l, bottom, -wallZ + 0.5f), new Vector3(r, bottom, -wallZ + 0.5f),
+                        b.Left / 96f, -(b.Bottom + 6f) / 96f, b.Right / 96f, -b.Bottom / 96f,
+                        new Color(46, 58, 70), false, Matrix.Identity, true);
+
+                    // Walk strip: floor plane underfoot, full corridor depth. Edge-on
+                    // (invisible) when looking ahead, a receding floor when looking down.
+                    DrawQuad(metal, new Vector3(l, bottom - 0.5f, -wallZ), new Vector3(r, bottom - 0.5f, -wallZ),
+                        new Vector3(l, bottom - 0.5f, wallZ), new Vector3(r, bottom - 0.5f, wallZ),
+                        b.Left / 96f, -wallZ / 96f, b.Right / 96f, wallZ / 96f,
+                        new Color(58, 72, 86), false, Matrix.Identity, true);
                 }
             }
 
