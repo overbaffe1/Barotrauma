@@ -17871,3 +17871,29 @@ NaN через собственный Lerp. (Семейство перманен
 self-check сеттер, движок = Lerp-accumulator.)
 ПРАКТИКА: движок = мина одним сигналом жертве (свет жрётся, саб стоит,
 боты не поймут), НО и себе так же легко.
+
+== ВОЛНА 506 — WireStar: рисование звезды проводом у курсора ==
+Запрос юзера: отдельный модуль — рисовать проводами фигуры (звезда) на курсоре.
+КЛИЕНТСКИЙ ПУТЬ (сверен по исходникам):
+- Wire.ClientEventWrite (client Wire.cs:728): byte nodeCount + [если >0:
+  f32 x,y из nodes.Last()] — EventData = private nested struct
+  ClientEventData(int nodeCount). Достаём рефлексией (GetNestedType NonPublic
+  + Activator.CreateInstance(nodeCount)).
+- Item.CreateClientEvent<T>(T ic, ItemComponent.IEventData) (client Item.cs:2306):
+  гейты GameMain.Client null → return (сингл не работает — честно гвардим),
+  components.Contains(ic) (берём GetComponent<Wire> своего предмета),
+  ValidateEventData → TryExtractEventData<ClientEventData> ✓.
+- СЕРВЕР (Wire.ServerEventRead, wave 447): nodeCount байт, lastNodePos raw
+  f32×2 БЕЗ клампов; CanClientAccess (провод в своём инвентаре проходит через
+  CanAccessInventory); nodeCount > nodes.Count → добавляет узел. Реплика:
+  CreateNetworkEvent → ServerEventWrite пишет ВСЕ узлы → звезду видят ВСЕ.
+ПОСТРОЕНИЕ: сброс (nodes.Clear() + ивент nodeCount=0 → RemoveRange) →
+10 ивентов подряд (локальный список растёт по 1, узлы звезды: 5 внешних
+R=45 + 5 внутренних R*0.42, старт верхний луч, шаг 36°) → UpdateSections()
+(ПУБЛИЧНЫЙ — мгновенная отрисовка у себя).
+Требования юзера: провод в своём инвентаре, не Locked (гейт CanInteractWith),
+живой персонаж. Позиция узлов не клампится сервером → рисуй в любой точке
+мира в пределах видимости.
+Урок: приватные nested EventData-структуры — не преграда (рефлексия),
+но Item.CreateClientEvent имеет 2 перегрузки — фильтр по 2 параметрам +
+IsAssignableFrom(ItemComponent.IEventData).
