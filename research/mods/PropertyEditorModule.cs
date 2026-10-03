@@ -198,25 +198,36 @@ namespace CSHUB.Modules
         {
             _menu?.Close();
 
-            // собираем предметы на другом конце проводов насоса
+            // собираем предметы на другом конце проводов насоса + имена подключений
             var wiredItems = new List<Item>();
+            var wiredVia = new Dictionary<Item, List<string>>();
+            var pumpConnections = new List<string>();
             int wireCount = 0;
             if (pump.Connections != null)
             {
                 foreach (Connection conn in pump.Connections)
                 {
                     if (conn == null) continue;
+                    bool hasWire = false;
                     foreach (Wire w in conn.Wires)
                     {
                         // Wire — ItemComponent, у него нет Removed; живость смотрим у предмета
                         if (w == null || w.Item == null || w.Item.Removed) continue;
                         wireCount++;
+                        hasWire = true;
                         Item a = w.Connections[0]?.Item;
                         Item b = w.Connections[1]?.Item;
                         Item other = ReferenceEquals(a, pump) ? b : ReferenceEquals(b, pump) ? a : null;
                         if (other == null || ReferenceEquals(other, pump)) continue;
-                        if (!wiredItems.Contains(other)) wiredItems.Add(other);
+                        if (!wiredVia.TryGetValue(other, out var conns))
+                        {
+                            conns = new List<string>();
+                            wiredVia[other] = conns;
+                            wiredItems.Add(other);
+                        }
+                        if (!conns.Contains(conn.Name)) conns.Add(conn.Name);
                     }
+                    if (hasWire) pumpConnections.Add(conn.Name);
                 }
             }
 
@@ -234,11 +245,13 @@ namespace CSHUB.Modules
             content.ClearChildren();
 
             var header = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.11f), content.RectTransform, Anchor.TopCenter),
+                new RectTransform(new Vector2(1f, 0.13f), content.RectTransform, Anchor.TopCenter),
                 style: null);
             header.Color = new Color(45, 30, 30, 255);
 
+            string connText = pumpConnections.Count > 0 ? string.Join(", ", pumpConnections) : "нет проводов";
             string headerText = pump.Name + " #" + pump.ID + "\n" +
+                "подключения: " + connText + "\n" +
                 "проводов: " + wireCount + " | источников: " + wiredItems.Count +
                 " | редактируемых свойств: " + props.Count;
 
@@ -246,10 +259,33 @@ namespace CSHUB.Modules
                 new RectTransform(new Vector2(0.97f, 0.9f), header.RectTransform, Anchor.Center),
                 headerText, textAlignment: Alignment.CenterLeft);
             title.TextColor = new Color(255, 170, 120);
-            title.Font = GUIStyle.Font;
+            title.Font = GUIStyle.SmallFont;
+            title.Wrap = true;
+
+            // кнопка «отравить всё» — NaN во все float/vec2 свойства источников разом
+            var poisonAll = new GUIButton(
+                new RectTransform(new Vector2(0.97f, 0.055f), content.RectTransform, Anchor.TopCenter)
+                { RelativeOffset = new Vector2(0f, 0.135f) },
+                "ОТРАВИТЬ ВСЁ (NaN во все числа)");
+            poisonAll.Color = new Color(140, 40, 40);
+            poisonAll.OnClicked = (b, d) =>
+            {
+                int applied = 0;
+                foreach (var pr in props)
+                {
+                    Type pt = pr.Property.PropertyType;
+                    if (pt == typeof(float))
+                    { if (ItemPropertyNet.Send(pr, float.NaN)) applied++; }
+                    else if (pt == typeof(Vector2))
+                    { if (ItemPropertyNet.Send(pr, new Vector2(float.NaN, float.NaN))) applied++; }
+                }
+                GUI.AddMessage("[PumpPoison] NaN отправлен: " + applied + " свойств",
+                    applied > 0 ? Color.Red : Color.Orange);
+                return true;
+            };
 
             var listFrame = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.88f), content.RectTransform, Anchor.BottomCenter),
+                new RectTransform(new Vector2(1f, 0.79f), content.RectTransform, Anchor.BottomCenter),
                 style: null);
             listFrame.Color = new Color(24, 18, 18, 230);
 
@@ -258,20 +294,29 @@ namespace CSHUB.Modules
 
             if (props.Count == 0)
             {
+                string viaText = wiredItems.Count > 0
+                    ? "Источники на проводах есть (" + wiredItems.Count + " шт.), но in-game редактируемых свойств у них нет."
+                    : "На проводах насоса нет предметов-источников вообще.";
                 var hint = new GUITextBlock(
-                    new RectTransform(new Vector2(0.96f, 0.12f), list.Content.RectTransform),
-                    "На проводах насоса нет in-game редактируемых свойств.\n" +
+                    new RectTransform(new Vector2(0.96f, 0.14f), list.Content.RectTransform),
+                    viaText + "\n" +
                     "Схема: поставь memory component, провод memory signal_out → насос set_speed,\n" +
                     "потом снова нажми модуль — и отравишь NaN-строкой.\n" +
                     "Альтернатива: oscillator (Frequency=NaN) или divide 0/0 в цепи set_speed.",
                     textAlignment: Alignment.CenterLeft);
                 hint.TextColor = new Color(220, 160, 90);
-                hint.Font = GUIStyle.Font;
+                hint.Font = GUIStyle.SmallFont;
+                hint.Wrap = true;
                 return;
             }
 
+            // подпись источника в строке: имя + через какое подключение
             foreach (var pref in props)
+            {
+                if (wiredVia.TryGetValue(pref.Item, out var conns))
+                    pref.OwnerLabel = pref.Item.Name + " -> " + string.Join(",", conns);
                 ItemPropertyNet.RenderRow(list, pref);
+            }
 
             GUI.AddMessage("[PumpPoison] " + pump.Name + ": целей " + props.Count, Color.Orange);
         }
@@ -396,15 +441,16 @@ namespace CSHUB.Modules
             try { cur = p.GetValue(pref.Entity); } catch { }
             string nameStr = pref.OwnerLabel + "." + p.Name + " [" + ShortType(t) + "]";
             var name = new GUITextBlock(
-                new RectTransform(new Vector2(0.33f, 1f), layout.RectTransform),
-                nameStr + (editableType ? "" : "  (только чтение)"),
+                new RectTransform(new Vector2(0.32f, 1f), layout.RectTransform),
+                nameStr + (editableType ? "" : "  (read-only)"),
                 textAlignment: Alignment.CenterLeft);
             name.TextColor = editableType ? new Color(210, 215, 225) : new Color(120, 120, 140);
             name.Font = GUIStyle.SmallFont;
+            name.ToolTip = nameStr;
 
-            // текущее
+            // текущее (компактно, чтобы не наезжало на соседние колонки)
             var curText = new GUITextBlock(
-                new RectTransform(new Vector2(0.13f, 1f), layout.RectTransform),
+                new RectTransform(new Vector2(0.15f, 1f), layout.RectTransform),
                 Format(cur),
                 textAlignment: Alignment.Center);
             curText.TextColor = new Color(160, 180, 210);
@@ -517,16 +563,8 @@ namespace CSHUB.Modules
                 zeroBtn.Color = new Color(70, 90, 130);
                 zeroBtn.OnClicked = (b, d) => { Apply(pref, 0); return true; };
             }
-            else if (t == typeof(string) || t == typeof(Identifier))
-            {
-                // подсказка: "NaN" как строку вводят руками в бокс
-                var tip = new GUITextBlock(
-                    new RectTransform(new Vector2(0.2f, 1f), layout.RectTransform),
-                    "введи NaN руками",
-                    textAlignment: Alignment.CenterLeft);
-                tip.TextColor = new Color(140, 140, 160);
-                tip.Font = GUIStyle.SmallFont;
-            }
+            // строку/Identifier вводят руками в бокс (например "NaN") —
+            // отдельная подсказка не нужна: раньше наезжала на OK
         }
 
         private static void Apply(EditablePropRef pref, object value)
@@ -613,8 +651,14 @@ namespace CSHUB.Modules
             if (v is float f) return f.ToString("0.###", CultureInfo.InvariantCulture);
             if (v is Identifier id) return id.Value;
             if (v is Vector2 vec) return ((int)vec.X) + ";" + ((int)vec.Y);
+            if (v is Vector3 v3) return ((int)v3.X) + ";" + ((int)v3.Y) + ";" + ((int)v3.Z);
+            if (v is Vector4 v4) return ((int)v4.X) + ";" + ((int)v4.Y) + ";" + ((int)v4.Z) + ";" + ((int)v4.W);
+            if (v is Color c) return c.R + ";" + c.G + ";" + c.B + ";" + c.A;
+            if (v is Point pt) return pt.X + ";" + pt.Y;
+            if (v is Rectangle r) return r.X + ";" + r.Y + ";" + r.Width + ";" + r.Height;
             if (v is bool b) return b ? "true" : "false";
-            return v.ToString();
+            string s = v.ToString();
+            return s.Length > 16 ? s.Substring(0, 16) + "…" : s;
         }
     }
 }
