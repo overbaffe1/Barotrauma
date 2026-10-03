@@ -530,7 +530,7 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
-            if (keyboard.IsKeyDown(Keys.F2) && previousKeyboard.IsKeyUp(Keys.F2))
+            if (keyboard.IsKeyDown(Keys.B) && previousKeyboard.IsKeyUp(Keys.B))
             {
                 doorRenderMode = (doorRenderMode + 1) % 4;
                 string[] dn = { "CARD z=10", "VOLUME z=0", "CARD z=inset", "SKIP" };
@@ -3003,7 +3003,7 @@ namespace BaroDepth
                             screenBatch.Draw(white, new Rectangle(12, 12, Math.Max(100, Math.Min(width - 24, 850)), 74),
                             new Color(7, 15, 24, 210));
                             GUI.DrawString(screenBatch, new Vector2(22, 18),
-                            "BARODEPTH 0.3 | CONTOURS | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
+                            "BARODEPTH 0.3 | DOOR[" + doorRenderMode + "]=[" + new string[] { "CARD z=10", "VOLUME z=0", "CARD z=inset", "SKIP" }[doorRenderMode] + "] | CONTOURS | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
                             GUI.DrawString(screenBatch, new Vector2(22, 39),
                             "F5 off | F6 view | F7 reload XML | F8 export IDs | ALT labels | LMB release: interact", Color.White);
                             GUI.DrawString(screenBatch, new Vector2(22, 60),
