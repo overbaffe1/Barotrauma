@@ -18056,3 +18056,31 @@ internal — не юзать.
    точки к курсору. Узлы каждые ~50px (для плавной кривизны провода
    при отрисовке), кап 250 (лимит 255), свободный остаток.
 Опрос кликов остался на игровой корутине (509/514 уроки).
+
+== ВОЛНА 516 — SellFakeItems ПОЧИНЕН: почему у юзера не работал 452 ==
+Юзер прислал свой модуль продажи — «не работает». Сверил его пакет с
+ClientWrite/ServerRead байт-в-байт. НАЙДЕНО:
+УБИЙЦА №1 — WritePadBits() ПОСЛЕ трёх булов. Сообщения Barotrauma —
+БИТОВЫЙ поток (Message.cs:49 WriteBoolean пишет 1 БИТ). Игра в
+ClientWrite НЕ выравнивает после булов — сразу WriteItems (байт).
+Пэд добавлял 5-7 мусорных бит → всё после съезжало → сервер читал
+мусорные storeCount → продажа не доходила никогда.
+УБИЙЦА №2 — клиентский self-censor: HasSellPermission юзера проверял
+только прямые пермы/owner и БЛОКИРОВАЛ отправку. Сервер же пускает по
+широкой AllowedToManageCampaign: перма ИЛИ ManageCampaign ИЛИ owner ИЛИ
+единственный клиент ИЛИ никто не имеет пермы (CampaignMode.cs:197:
+пермщики не в игре >60с раунда = тоже пуск!). На пермлесс-серверах
+(самый жирный случай) модуль сам себе запрещал. ФИКС: зеркальная
+публичная CampaignMode.AllowedToManageCampaign(SellInventoryItems)
+(клиентская, CampaignMode.cs:114) + отправка ВСЕГДА, решает сервер.
+ПРАВКА 3: itemId=0 (NullEntityID, канон 452) вместо 0xFFF0 — нет риска
+коллизии с реальным ID.
+ПРАВКА 4: реальные индексы локаций вместо 0,0 — на серверах с
+AllowDebugTeleport ноль телепортнул бы карту (ServerRead: currentLocIndex
++ AllowDebugTeleport → SetLocation!).
+ПРАВКА 5: баланс магазина: SellItems скипает позицию если store.Balance <
+itemValue (CargoManager.cs:44) — клиентский кап affordable=Balance/price,
+фильтр списка, статус-предупреждения.
+Пакет теперь байт-в-байт = ClientWrite: u16 loc x2 | byte missions | 3
+бита | byte 0 x3 (сторы) | byte 1 | storeId | u16 n | n×{id, u16 0, bit0,
+byte0, byte0(origin=0 Character)} | u16 0 upgrades | u16 0 swaps.
