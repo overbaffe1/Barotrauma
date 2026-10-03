@@ -47,8 +47,10 @@
 //  Локации/миссии/ящики отсылаем КАК ЕСТЬ (зеркало клиента), чтобы не трогать
 //  состояние карты/корзин — ровно то же делает легит-клиент.
 //
-//  ОБРАТНАЯ СВЯЗЬ: Harmony-префикс на GameClient.ReadDataMessage декодирует
-//  MONEY(26)-пакеты (NetWalletUpdate) и показывает дельту твоего кошелька.
+//  ОБРАТНАЯ СВЯЗЬ (волна 519): корутина поллит клиентский PersonalWallet
+//  (MultiPlayerCampaign.GetWallet().Balance — public) и показывает дельту.
+//  Harmony-декод MONEY-пакетов удалён: вложенные internal-битфилды NetWallet*
+//  слишком хрупки, прямой полл кошелька надёжнее.
 //
 //  ВАЖНО ДЛЯ КОМПИЛЯЦИИ (бинарник игры):
 //  - WriteOnlyMessage internal -> создаём через рефлексию (CreateMsg()).
@@ -64,7 +66,6 @@ using System.Linq;
 using System.Reflection;
 using Barotrauma;
 using Barotrauma.Networking;
-using HarmonyLib;
 using Microsoft.Xna.Framework;
 
 namespace CSHUB.Modules
@@ -133,9 +134,11 @@ namespace CSHUB.Modules
         private static int _bankBalance = -1;
         private static int _uiThrottle;
 
-        // ------------------- Harmony -------------------
-        private static Harmony _harmony;
-        private static bool _echoHooked;
+        // ------------------- UI-корутина (вместо мёртвого Update) -------------------
+        // Пока окно открыто: полл кошелька (дельта = ответ сервера на продажу),
+        // таймаут эха, рефреш статуса. Планировщик игры, главный поток.
+        private static int _uiSession;
+
         private static MethodInfo _sendMethod;
         private static Type _writeMsgType;
 
@@ -152,7 +155,6 @@ namespace CSHUB.Modules
         public override void Initialize()
         {
             base.Initialize();
-            InstallEchoHook();
         }
 
         public override string GetLabel()
@@ -177,28 +179,9 @@ namespace CSHUB.Modules
             }
         }
 
-        public override void Update()
-        {
-            try
-            {
-                if (_awaitingEcho && Timing.TotalTime - _lastSendRealTime > EchoTimeout)
-                {
-                    _awaitingEcho = false;
-                    _lastResult = "сервер молчит " + (int)EchoTimeout + "с — похоже, пакет отклонён (гейт)";
-                    UpdateStatus();
-                }
-
-                // статус обновляем ~2 раза в секунду
-                _uiThrottle++;
-                if (_statusLabel != null && _uiThrottle % 30 == 0) { UpdateStatus(); }
-            }
-            catch { }
-        }
-
         public override void Dispose()
         {
             CloseWindow();
-            UnpatchEcho();
             base.Dispose();
         }
 
@@ -365,6 +348,59 @@ namespace CSHUB.Modules
             BuildList(content);
 
             RefreshList();
+            _uiSession++;
+            CoroutineManager.StartCoroutine(UiLoop(_uiSession));
+        }
+
+        // Тик каждые ~0.5с, пока открыто окно. Читаем СВОЙ кошелёк напрямую:
+        // клиентский MultiPlayerCampaign.GetWallet() = PersonalWallet (public),
+        // сервер синхронит его сам — дельта баланса = точный ответ на продажу.
+        private static System.Collections.Generic.IEnumerable<CoroutineStatus> UiLoop(int session)
+        {
+            double nextTick = 0.0;
+            while (_window != null && session == _uiSession)
+            {
+                // yield КАЖДЫЙ кадр (continue мимо yield завершил бы корутину)
+                yield return CoroutineStatus.Running;
+                if (Timing.TotalTime < nextTick) { continue; }
+                nextTick = Timing.TotalTime + 0.5;
+
+                int bal = ReadWalletBalance();
+                if (bal >= 0)
+                {
+                    if (_awaitingEcho && _walletBalance >= 0 && bal != _walletBalance)
+                    {
+                        int delta = bal - _walletBalance;
+                        _lastResult = (delta > 0 ? "СЕРВЕР ДАЛ: +" : "СЕРВЕР СПИСАЛ: ") +
+                                      delta + " mk (баланс " + bal + ")";
+                        _awaitingEcho = false;
+                        GUI.AddMessage("Sell By ID: " + _lastResult,
+                            delta > 0 ? SuccessColor : DangerColor);
+                    }
+                    _walletBalance = bal;
+                }
+
+                if (_awaitingEcho && Timing.TotalTime - _lastSendRealTime > EchoTimeout)
+                {
+                    _awaitingEcho = false;
+                    _lastResult = "сервер молчит " + (int)EchoTimeout + "с — отклонено (см. гейты ниже)";
+                }
+
+                UpdateStatus();
+            }
+        }
+
+        private static int ReadWalletBalance()
+        {
+            try
+            {
+                if (GameMain.GameSession?.Campaign is MultiPlayerCampaign mpc)
+                {
+                    return mpc.GetWallet().Balance;
+                }
+            }
+            catch { }
+            return -1;
         }
 
         private static void BuildHeader(GUIComponent content)
@@ -760,9 +796,48 @@ namespace CSHUB.Modules
                 string bank = _bankBalance >= 0 ? " | банк " + _bankBalance : "";
                 string priceTag = _advanced && !_pricePrefabId.IsEmpty ? " | $$$ " + _pricePrefabName : "";
                 string result = string.IsNullOrEmpty(_lastResult) ? "" : "\n" + _lastResult;
-                _statusLabel.Text = "Магазин: " + storeStr + "\nКошелёк: " + wallet + " mk" + bank + priceTag + result;
+                _statusLabel.Text = "Магазин: " + storeStr + "\nКошелёк: " + wallet + " mk" + bank + priceTag + result
+                    + "\n" + GateStatus();
             }
             catch { }
+        }
+
+        // ================================================================
+        //  ГЕЙТЫ СЕРВЕРА (зеркала, оба публичны)
+        // ================================================================
+        private static string GateStatus()
+        {
+            var parts = new List<string>();
+
+            // 1) пермы: AllowedToManageCampaign(SellInventoryItems) —
+            //    перма / ManageCampaign / owner / 1 клиент / никто не имеет пермы
+            parts.Add(CampaignMode.AllowedToManageCampaign(ClientPermissions.SellInventoryItems)
+                ? "пермы: OK"
+                : "пермы: НЕТ");
+
+            // 2) торговец: жив + NPC Store в 250 юнитах ИЛИ AllowRemoteCampaignInteractions
+            var me = GameMain.Client?.Character;
+            if (me == null || me.IsIncapacitated)
+            {
+                parts.Add("магазин: НЕТ (персонаж мёртв/в стуне)");
+            }
+            else if (GameMain.Client?.ServerSettings is { AllowRemoteCampaignInteractions: true })
+            {
+                parts.Add("магазин: OK (remote)");
+            }
+            else
+            {
+                string why = "нет торговца в 250";
+                bool ok = false;
+                foreach (Character other in Character.CharacterList)
+                {
+                    if (other.CampaignInteractionType != CampaignMode.InteractionType.Store) { continue; }
+                    if (me.CanInteractWith(other, maxDist: 250.0f)) { ok = true; why = "торговец рядом"; break; }
+                }
+                parts.Add(ok ? "магазин: OK (" + why + ")" : "магазин: НЕТ (" + why + ")");
+            }
+
+            return string.Join(" | ", parts);
         }
 
         // ================================================================
@@ -895,6 +970,8 @@ namespace CSHUB.Modules
 
                 var peer = GameMain.Client.ClientPeer;
                 _sendMethod.Invoke(peer, new object[] { msg, DeliveryMethod.Reliable, true });
+
+                DebugConsole.NewMessage("[SellById] гейты на момент отправки: " + GateStatus(), Color.Gray);
 
                 _lastSendTime = Timing.TotalTime;
                 _lastSendRealTime = Timing.TotalTime;
@@ -1108,166 +1185,6 @@ namespace CSHUB.Modules
                 LuaCsLogger.LogError("[SellById] ResolveSendMethod: " + e.Message);
             }
             return false;
-        }
-
-        // ================================================================
-        //  MONEY-ЭХО (декод NetWalletUpdate через ReadDataMessage-префикс)
-        // ================================================================
-
-        private static void InstallEchoHook()
-        {
-            if (_echoHooked) { return; }
-            try
-            {
-                _harmony = new Harmony("cshub.sellbyid.echo");
-                var readMethod = AccessTools.Method(typeof(GameClient), "ReadDataMessage");
-                if (readMethod == null)
-                {
-                    DebugConsole.NewMessage("[SellById] ReadDataMessage не найден — эхо-декодер выключен", Color.Orange);
-                    return;
-                }
-                _harmony.Patch(readMethod, prefix: new HarmonyMethod(typeof(SellByIdModule), nameof(ReadDataPrefix)));
-                _echoHooked = true;
-                DebugConsole.NewMessage("[SellById] MONEY-эхо декодер установлен", Color.Gray);
-            }
-            catch (Exception e)
-            {
-                LuaCsLogger.LogError("[SellById] InstallEchoHook: " + e.Message);
-            }
-        }
-
-        private static void UnpatchEcho()
-        {
-            if (!_echoHooked || _harmony == null) { return; }
-            try
-            {
-                var readMethod = AccessTools.Method(typeof(GameClient), "ReadDataMessage");
-                if (readMethod != null)
-                {
-                    _harmony.Unpatch(readMethod, HarmonyPatchType.Prefix, _harmony.Id);
-                }
-            }
-            catch { }
-            _echoHooked = false;
-        }
-
-        // GameClient.ReadDataMessage(IReadMessage inc) — диспетч всех входящих пакетов
-        private static void ReadDataPrefix(IReadMessage inc)
-        {
-            int prevPos = 0;
-            try { prevPos = inc.BitPosition; } catch { }
-            try
-            {
-                if (inc == null || inc.LengthBytes < 2) { return; }
-                inc.BitPosition = 0;
-                byte header = inc.ReadByte();
-                if (header != (byte)ServerPacketHeader.MONEY) { return; } // 26 = MONEY
-                DecodeMoneyUpdate(inc);
-            }
-            catch { }
-            finally
-            {
-                try { inc.BitPosition = prevPos; } catch { }
-            }
-        }
-
-        // NetWalletUpdate: [BitField][байтовый поток]; NetWalletTransaction:
-        //   { Option<ushort> CharacterID, WalletChangedData{Option<int>, Option<int>},
-        //     WalletInfo{int RewardDistribution, int Balance} }
-        private static void DecodeMoneyUpdate(IReadMessage inc)
-        {
-            var bf = new MiniBitField(inc);
-            int count = bf.ReadInteger(0, 256);
-            if (count < 0 || count > 256) { return; }
-
-            ushort myId = 0;
-            try { myId = Character.Controlled?.ID ?? (ushort)0; } catch { }
-
-            for (int i = 0; i < count; i++)
-            {
-                bool hasId = bf.ReadBoolean();
-                ushort charId = 0;
-                if (hasId) { charId = inc.ReadUInt16(); }
-
-                bool hasRewardChg = bf.ReadBoolean();
-                if (hasRewardChg) { inc.ReadInt32(); }
-
-                bool hasBalanceChg = bf.ReadBoolean();
-                int balanceChg = hasBalanceChg ? inc.ReadInt32() : 0;
-
-                inc.ReadInt32(); // WalletInfo.RewardDistribution
-                int infoBalance = inc.ReadInt32();
-
-                if (!hasId)
-                {
-                    _bankBalance = infoBalance;
-                    continue;
-                }
-
-                if (myId != 0 && charId == myId)
-                {
-                    bool changed = _walletBalance != infoBalance;
-                    _walletBalance = infoBalance;
-
-                    if (hasBalanceChg && balanceChg != 0 && _awaitingEcho)
-                    {
-                        _lastResult = (balanceChg > 0 ? "СЕРВЕР ДАЛ: +" : "СЕРВЕР СПИСАЛ: ") +
-                                      balanceChg + " mk (баланс " + infoBalance + ")";
-                        Color c = balanceChg > 0 ? SuccessColor : DangerColor;
-                        GUI.AddMessage("Sell By ID: " + _lastResult, c);
-                        DebugConsole.NewMessage("[SellById] " + _lastResult, balanceChg > 0 ? Color.Lime : Color.Orange);
-                        _awaitingEcho = false;
-                    }
-                    else if (changed && !hasBalanceChg)
-                    {
-                        _lastResult = "баланс обновлён: " + infoBalance + " mk (без дельты)";
-                    }
-                }
-            }
-            UpdateStatus();
-        }
-
-        // Мини-копия Barotrauma BitField (NetStructBitField.cs):
-        // 7 бит/байт LSB-first, бит7 последнего байта = конец поля.
-        private sealed class MiniBitField
-        {
-            private readonly List<byte> _bytes = new List<byte>();
-            private int _index;
-
-            public MiniBitField(IReadMessage inc)
-            {
-                while (true)
-                {
-                    if (inc.BitPosition >= inc.LengthBits) { throw new Exception("bitfield overrun"); }
-                    byte b = inc.ReadByte();
-                    _bytes.Add(b);
-                    if ((b & 0x80) != 0) { break; }
-                }
-            }
-
-            public bool ReadBoolean()
-            {
-                int byteIdx = _index / 7;
-                int bitIdx = _index % 7;
-                _index++;
-                return (_bytes[byteIdx] & (1 << bitIdx)) != 0;
-            }
-
-            public int ReadInteger(int min, int max)
-            {
-                // = NetUtility.BitsToHoldUInt(range)
-                uint range = (uint)(max - min);
-                int bits = 0;
-                while (range > 0) { bits++; range >>= 1; }
-                if (bits == 0) { bits = 1; }
-
-                uint value = 0;
-                for (int i = 0; i < bits; i++)
-                {
-                    if (ReadBoolean()) { value |= 1u << i; }
-                }
-                return (int)(min + value);
-            }
         }
     }
 }

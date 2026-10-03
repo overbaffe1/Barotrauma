@@ -18118,3 +18118,32 @@ CanInteractWith(Character, maxDist) публичны) — баннер и SELL �
 Фиксы: GameMain.Client?.ServerSettings + bool interact.
 Урок: зеркалируя серверный код в клиентский мод — перепроверяй каждый
 идентификатор: сборки разные, GameMain разные.
+
+== ВОЛНА 519 — SellByIdModule доработан (юзер: «его доработай а не тот») ==
+Ревизия волны-225 модуля по исходникам. ПАКЕТ ВЕРЕН (подтверждено):
+битовый поток без пэдов ✓, зеркала ящиков через reflection (имена
+PurchasedItem.ItemPrefabIdentifier/DeliverImmediately/Quantity — public ✓),
+RangedInteger(0,100) = CargoManager.MaxQuantity=100 ✓, Client.SessionId
+public byte ✓, IWriteMessage.WriteBytes/Buffer/LengthBytes ✓,
+CampaignMode.CargoManager public ✓.
+СЛОМАНО БЫЛО:
+1) Мёртвый Update() (волна 509!) — таймаут эха и статус не работали ВООБЩЕ
+   → ноль обратной связи = «не работает».
+2) Нет зеркал гейтов — пермы (AllowedToManageCampaign) и торговец
+   (InteractionType.Store в 250) — главные причины тихого скипа.
+3) Harmony-декод MONEY — хрупок (вложенные internal NetWallet* структуры,
+   NetWalletUpdate→NetWalletTransaction→WalletChangedData через ЕДИНЫЙ
+   внешний ReadOnlyBitField — ReadINetSerializableStruct передаёт bitField
+   дальше, WalletInfo без [NetworkSerialize]).
+ЗАМЕНЫ:
+- UiLoop-корутина (CoroutineManager.StartCoroutine, yield Running КАЖДЫЙ
+  кадр + троттлинг Timing.TotalTime 0.5с; continue мимо yield = смерть
+  корутины — yield строго первым) пока окно открыто: полл кошелька
+  ReadWalletBalance() = MultiPlayerCampaign.GetWallet().Balance (клиентский
+  override = PersonalWallet, public) → дельта = честный ответ сервера;
+  таймаут эха; рефреш статуса.
+- GateStatus() в статусе и в консоли при отправке: пермы OK/НЕТ + магазин
+  OK/НЕТ (мёртв/стун/remote/торговец 250).
+- Harmony + MiniBitField удалены целиком (using HarmonyLib тоже).
+Урок: полл публичного клиентского состояния (GetWallet) >> декод сетевых
+пакетов чужого протокола. И помни: свой Update-хук не тик — корутина игры.
