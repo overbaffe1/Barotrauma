@@ -17657,3 +17657,24 @@ ItemComponent-ы живут/умирают вместе с предметом �
 ItemComponent.cs:244). Остальные .Removed в файле — только на Item — ок.
 Урок: в Barotrauma иерархия Removed: Entity → Item/MapEntity; ItemComponent
 не Entity — никаких .Removed у компонентов (Wire, Pump, Door как компоненты).
+
+== ВОЛНА 497 — PropertyEditor: ЖИВОЙ ТЕСТ ЮЗЕРА (насосы #273/#23) — РАБОТАЕТ ==
+Скрины юзера: модуль собрал 14 свойств на обоих насосах, дерево Item+
+Pump+ConnectionPanel+Repairable, только-чтение (color/point) помечены верно.
+Анализ списка (по исходникам):
+- ImpactTolerance/ImpactDamage/ImpactDamageProbability (Item.cs:2757-2761):
+  ReceiveImpact → если |impact|>Tolerance и rand<Probability →
+  Condition -= impact*ImpactDamage. ЭТО УРОН САМОМУ ПРЕДМЕТУ, не жертве!
+  ВАЖНО: SetCondition (Item.cs:2234) имеет !MathUtils.IsValid(value)→return —
+  NaN НЕ проходит в condition вообще. Итог пары:
+  * ImpactDamage=MAX + Tolerance=0 + Prob=1 → любой пинок = Condition-=impact*3.4e38
+    → кламп 0 → предмет мгновенно ломается сам.
+  * ImpactDamage=NaN → impact-урон полностью абсорбируется (SetCondition
+    отвергает NaN) → предмет неубиваемый для столкновений.
+- Rotation — косметика спрайта. DescriptionTag [str] — тег описания
+  (фейк-текст/троллинг). AllowSwapping/LockGuiFramePosition — мусор.
+- Отравление насоса из ЭТОГО меню невозможно (у Pump только GUI-свойства):
+  нужен второй модуль PumpPoison (обход по проводам к memory/oscillator).
+- Косметика меню: хинт «введи NaN руками» наезжает на OK у str-строк;
+  color/point только чтение (сервер их читает, но эксплойт-ценности ноль).
+Вывод: ChangeProperty-путь подтверждён юзером вживую. 448 = рабочая.
