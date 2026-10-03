@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 using Barotrauma;
 using Barotrauma.Items.Components;
 using Barotrauma.Networking;
@@ -111,13 +112,20 @@ namespace CSHUB.Modules
             closeBtn.OnClicked = (b, d) => { CloseMenu(); return true; };
 
             // --- список ---
+            var steering = item.GetComponent<Barotrauma.Items.Components.Steering>();
+            float listH = steering != null ? 0.72f : 0.9f;
+
             var listFrame = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.9f), content.RectTransform, Anchor.BottomCenter),
+                new RectTransform(new Vector2(1f, listH), content.RectTransform, Anchor.TopCenter)
+                { RelativeOffset = new Vector2(0f, 0.10f) },
                 style: null);
             listFrame.Color = new Color(18, 24, 36, 230);
 
             _list = new GUIListBox(new RectTransform(Vector2.One, listFrame.RectTransform));
             _list.Color = new Color(18, 24, 36, 230);
+
+            if (steering != null)
+                RenderAutopilotPanel(item, content);
 
             if (props.Count == 0)
             {
@@ -133,6 +141,52 @@ namespace CSHUB.Modules
                 ItemPropertyNet.RenderRow(_list, pref);
 
             GUI.AddMessage("[PropEdit] " + item.Name + ": найдено свойств " + props.Count, Color.Cyan);
+        }
+
+        // Панель автопилота: навёлся на штурвал → послать куда угодно.
+        // Сервер читает raw f32×2 без IsValid/clamp (волна 447).
+        private static void RenderAutopilotPanel(Item helm, GUIPanel content)
+        {
+            var frame = new GUIFrame(
+                new RectTransform(new Vector2(1f, 0.17f), content.RectTransform, Anchor.BottomCenter),
+                style: null);
+            frame.Color = new Color(30, 26, 18, 235);
+
+            var label = new GUITextBlock(
+                new RectTransform(new Vector2(0.97f, 0.28f), frame.RectTransform, Anchor.TopCenter),
+                "АВТОПИЛОТ (posToMaintain — сервер примет любые координаты)",
+                textAlignment: Alignment.CenterLeft);
+            label.TextColor = new Color(255, 210, 120);
+            label.Font = GUIStyle.SmallFont;
+
+            var row = new GUILayoutGroup(
+                new RectTransform(new Vector2(0.97f, 0.6f), frame.RectTransform, Anchor.BottomCenter),
+                isHorizontal: true);
+            row.RelativeSpacing = 0.01f;
+
+            void AddBtn(string text, Color color, Vector2? target)
+            {
+                var btn = new GUIButton(
+                    new RectTransform(new Vector2(0.24f, 1f), row.RectTransform), text);
+                btn.Color = color;
+                btn.ToolTip = "Требуется: стоять у штурвала (CanClientAccess)";
+                btn.OnClicked = (b, d) =>
+                {
+                    if (ItemPropertyNet.SendAutopilot(helm, target))
+                        GUI.AddMessage("[PropEdit] автопилот: " +
+                            (target.HasValue ? ((int)target.Value.X) + ";" + ((int)target.Value.Y) : "ВЫКЛ"),
+                            target.HasValue ? Color.Red : Color.Lime);
+                    else
+                        GUI.AddMessage("[PropEdit] не вышло (штурвал рядом?)", Color.Orange);
+                    return true;
+                };
+            }
+
+            AddBtn("NaN ; NaN", new Color(160, 50, 50), new Vector2(float.NaN, float.NaN));
+            AddBtn("1e9 ; 1e9", new Color(170, 110, 40), new Vector2(1e9f, 1e9f));
+            AddBtn("СЮДА", new Color(60, 120, 80),
+                helm.Submarine != null ? helm.Submarine.WorldPosition : new Vector2(0f, 0f));
+            AddBtn("ВЫКЛ", new Color(70, 80, 110), null);
         }
 
         private static void CloseMenu()
@@ -576,6 +630,49 @@ namespace CSHUB.Modules
             {
                 GUI.AddMessage("[PropEdit] " + pref.OwnerLabel + "." + pref.Property.Name +
                     " = " + Format(value) + " → отправлено", Color.Lime);
+            }
+        }
+
+        // ===== АВТОПИЛОТ (Steering posToMaintain, волна 447) =====
+        // Через ChangeProperty не работает — posToMaintain не editable.
+        // Путь: выставляем клиентские поля + CreateClientEvent → ванильный
+        // ClientEventWrite упакует байт-в-байт легитный пакет
+        // (bool AutoPilot | bool docking | bool maintainPos | float x | float y).
+        // Сервер (Steering.ServerEventRead) читает raw f32×2 БЕЗ IsValid/clamp —
+        // NaN/1e9 принимаются как есть. Гейт: CanClientAccess (стоять у штурвала).
+        private static readonly FieldInfo steerPosField = typeof(Barotrauma.Items.Components.Steering)
+            .GetField("posToMaintain", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo steerDockField = typeof(Barotrauma.Items.Components.Steering)
+            .GetField("dockingNetworkMessagePending", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo steerInputField = typeof(Barotrauma.Items.Components.Steering)
+            .GetField("steeringInput", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        public static bool SendAutopilot(Item helm, Vector2? target)
+        {
+            try
+            {
+                if (helm == null || helm.Removed) return false;
+                var steer = helm.GetComponent<Barotrauma.Items.Components.Steering>();
+                if (steer == null) return false;
+
+                if (target.HasValue)
+                {
+                    steer.AutoPilot = true;                        // сеттер включает MaintainPos, null → текущая позиция
+                    steerPosField?.SetValue(steer, target.Value);  // перезаписываем ПОСЛЕ сеттера
+                }
+                else
+                {
+                    steer.AutoPilot = false;                       // сеттер обнуляет posToMaintain
+                    steerInputField?.SetValue(steer, Vector2.Zero);
+                }
+                steerDockField?.SetValue(steer, false);
+                helm.CreateClientEvent(steer);
+                return true;
+            }
+            catch (Exception e)
+            {
+                LuaCsLogger.LogError("[PropEdit] autopilot error: " + e.Message);
+                return false;
             }
         }
 

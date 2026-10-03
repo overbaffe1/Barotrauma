@@ -17708,3 +17708,37 @@ GUIComponent.ToolTip — virtual RichString с implicit operator из string
 в RenderRow. Прочие foreach по props структуру только читают/передают
 по значению — валидно. Урок: struct в foreach = read-only; менять —
 только через копию или for-индекс.
+
+== ВОЛНА 500 — PropertyEditor: секция АВТОПИЛОТА (447 в UI) + анализ щитка ==
+Юзер: «проперт редактор — сделай чтоб можно было NaN координаты подлодки
+куда плыть автопилотом».
+- posToMaintain НЕ editable → ChangeProperty не подходит. Путь как у
+  MedicalClinic юзера: клиентские поля + CreateClientEvent(steering).
+- ClientEventWrite формат: bool AutoPilot | bool dockingPending |
+  [if !AP: float x,y steeringInput] | [if AP: bool pos!=null | float x,y |
+  else bool LevelStartSelected] (client Steering.cs:991-1014).
+- Порядок важен: steer.AutoPilot=true СНАЧАЛА (сеттер ставит MaintainPos и
+  текущую позицию если null), ПОТОМ рефлексия posToMaintain=(NaN,NaN)
+  (client Steering field, shared Steering.cs:41), dockingPending=false.
+- Отправка: item.CreateClientEvent(steer) — ванильная упаковка ивента.
+- UI: RenderAutopilotPanel — если у предмета есть Steering, в меню появляются
+  кнопки: NaN;NaN / 1e9;1e9 / СЮДА (WorldPosition субы) / ВЫКЛ (AP=false +
+  steeringInput=0). Гейт CanClientAccess (штурвал).
+- NaN-цель: сервер PathFinder/GetOptimalVelocity считают от NaN → скорость
+  NaN → PhysicsBody гарды (волна 317 IsValidValue) отбрасывают силу — суб
+  зависает/дёргается, бот-экипаж бессилен. 1e9 — суб честно летит за границу.
+ЭЛЕКТРОЩИТОК (JunctionBox = PowerTransfer): сигнальных входов НЕ имеет —
+ReceiveSignal только ретранслирует (PowerTransfer.cs:452-473), сломать его
+сам сигнал не может. Но он УСИЛИТЕЛЬ: NaN с одной памяти расходится по всем
+щиткам цепи. InGameEditable у PowerTransfer нет — через ChangeProperty не
+тронуть. НАХОДКА: MemoryComponent.Value = [InGameEditable] string —
+то есть юзер прав: PropertyEditor уже умеет писать NaN прямо в память
+(навёлся → Value → NaN → OK), провод memory→set_speed не нужен даже —
+память сама держит и шлёт значение по своему signal_out.
+Остальное весёлое по электрике через PropertyEditor: Oscillator.Frequency=NaN
+(NaN-фабрика в шину), Delay=NaN (чужие схемы виснут), MotionSensor
+RangeX/RangeY/DetectOffset (vec2!) — слепой/всевидящий датчик,
+Exponentiation.Exponent=NaN ("NaN" на выход), Wifi.Channel (int) — увод
+канала. Modulus=0 защищён (NearlyEqual→1), НО set_modulus сигналом: NaN
+пройдёт (NearlyEqual(NaN,0)=false → modulus=NaN → x%NaN=NaN) — читерский
+NaN-источник без прав.
