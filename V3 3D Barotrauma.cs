@@ -59,6 +59,7 @@ namespace BaroDepth
         private bool ready;
         private static bool debugDoors;
         private static double nextDoorLog;
+        private static int floorLineMode; // 0=full, 1=short middle, 2=faint (B cycles)
         private bool warmupQueued = true;
 
         private enum ViewMode { Normal, Full, Xray }
@@ -527,6 +528,11 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
+            if (PlayerInput.KeyHit(Keys.B))
+            {
+                floorLineMode = (floorLineMode + 1) % 3;
+                Log("floor line: " + (floorLineMode == 1 ? "SHORT (middle)" : floorLineMode == 2 ? "FAINT" : "FULL"), Color.Lime);
+            }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
             if (toggleXray && !UiOwnsInput())
@@ -1907,10 +1913,11 @@ namespace BaroDepth
             private void DrawFloorLines()
             {
                 // The near backdrop copy is gone (flicker fix), which left the floor
-                // as void. Mark the walkable surface instead of restoring that wall:
-                // a baseboard skirt on the far wall + a thin horizontal walk strip
-                // across the corridor. Both are unique geometry (no near/far pair),
-                // so there is nothing to z-fight or flicker.
+                // as void. Mark the walkable surface instead of restoring that wall.
+                // B cycles the style (user picks live):
+                //   0 FULL  — full span, opaque
+                //   1 SHORT — only a small marker in the middle (~25% of the span)
+                //   2 FAINT — full span, translucent
                 foreach (BackdropTile tile in backdrop)
                 {
                     if (tile.Sub.Removed) continue;
@@ -1920,21 +1927,37 @@ namespace BaroDepth
                     float bottom = b.Bottom + offset.Y;
                     float wallZ = halfDepth + 2f;
 
+                    float sl = l, sr = r;
+                    bool faint = floorLineMode == 2;
+                    if (floorLineMode == 1)
+                    {
+                        float cx = (l + r) * 0.5f;
+                        float half = MathF.Max(20f, (r - l) * 0.125f);
+                        sl = cx - half; sr = cx + half;
+                    }
+                    if (sr <= sl) continue;
+                    // Submarine-local span of the segment keeps texture phase
+                    // aligned with the wall cards (they use local/96 UVs).
+                    float ll = sl - offset.X, rr = sr - offset.X;
+
+                    Color skirt = faint ? new Color(46, 58, 70, 80) : new Color(46, 58, 70);
+                    Color strip = faint ? new Color(58, 72, 86, 90) : new Color(58, 72, 86);
+
                     // Baseboard: dark skirt on the far wall — the floor line you see
                     // while walking upright. Half a unit in front of the wall card.
                     Texture2D surfaceTex = surfaceTexture ? PickSurfaceTexture(b) : null;
                     if (surfaceTex == null) surfaceTex = metal;
-                    DrawQuad(surfaceTex, new Vector3(l, bottom + 6f, -wallZ + 0.5f), new Vector3(r, bottom + 6f, -wallZ + 0.5f),
-                        new Vector3(l, bottom, -wallZ + 0.5f), new Vector3(r, bottom, -wallZ + 0.5f),
-                        b.Left / 96f, -(b.Bottom + 6f) / 96f, b.Right / 96f, -b.Bottom / 96f,
-                        new Color(46, 58, 70), false, Matrix.Identity, true);
+                    DrawQuad(surfaceTex, new Vector3(sl, bottom + 6f, -wallZ + 0.5f), new Vector3(sr, bottom + 6f, -wallZ + 0.5f),
+                        new Vector3(sl, bottom, -wallZ + 0.5f), new Vector3(sr, bottom, -wallZ + 0.5f),
+                        ll / 96f, -(b.Bottom + 6f) / 96f, rr / 96f, -b.Bottom / 96f,
+                        skirt, false, Matrix.Identity, true, faint);
 
                     // Walk strip: floor plane underfoot, full corridor depth. Edge-on
                     // (invisible) when looking ahead, a receding floor when looking down.
-                    DrawQuad(metal, new Vector3(l, bottom - 0.5f, -wallZ), new Vector3(r, bottom - 0.5f, -wallZ),
-                        new Vector3(l, bottom - 0.5f, wallZ), new Vector3(r, bottom - 0.5f, wallZ),
-                        b.Left / 96f, -wallZ / 96f, b.Right / 96f, wallZ / 96f,
-                        new Color(58, 72, 86), false, Matrix.Identity, true);
+                    DrawQuad(metal, new Vector3(sl, bottom - 0.5f, -wallZ), new Vector3(sr, bottom - 0.5f, -wallZ),
+                        new Vector3(sl, bottom - 0.5f, wallZ), new Vector3(sr, bottom - 0.5f, wallZ),
+                        ll / 96f, -wallZ / 96f, rr / 96f, wallZ / 96f,
+                        strip, false, Matrix.Identity, true, faint);
                 }
             }
 
@@ -3023,7 +3046,7 @@ namespace BaroDepth
                             screenBatch.Draw(white, new Rectangle(12, 12, Math.Max(100, Math.Min(width - 24, 850)), 74),
                             new Color(7, 15, 24, 210));
                             GUI.DrawString(screenBatch, new Vector2(22, 18),
-                            "BARODEPTH | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
+                            "BARODEPTH | FLOOR: " + (floorLineMode == 1 ? "SHORT" : floorLineMode == 2 ? "FAINT" : "FULL") + " | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
                             GUI.DrawString(screenBatch, new Vector2(22, 39),
                             "F5 off | F6 view | F7 reload XML | F8 export IDs | ALT labels | LMB release: interact", Color.White);
                             GUI.DrawString(screenBatch, new Vector2(22, 60),
