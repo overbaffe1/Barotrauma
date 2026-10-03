@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Barotrauma;
@@ -8,21 +9,23 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  WIRE DRAW — провод рисует линию туда, куда кликнул.
-    //  От позиции провода (или последней точки) к месту клика.
-    //  Легитный клиентский путь: узлы по одному через
-    //  CreateClientEvent(ClientEventData(k)), сервер добавляет
-    //  без клампов (находка 447) и реплицирует всем.
+    //  WIRE DRAW — режим on/off: активировал → каждый ЛКМ-клик ставит
+    //  ОДИН узел под курсором, провод рисует линию под курсором.
+    //  Легитный клиентский путь: CreateClientEvent(ClientEventData(k))
+    //  по одному узлу, сервер добавляет без клампов (находка 447)
+    //  и реплицирует всем. Опрос кликов — игро́вая корутина
+    //  (CoroutineManager.StartCoroutine, Running = следующий кадр).
     // ============================================================
     public class WireStarModule : CSModuleBase
     {
         public override string Id   => "wire_star";
         public override string Name => "Wire Draw";
         public override string Description =>
-            "Провод рисует линию к месту клика.\n\n" +
+            "Режим рисования проводом.\n\n" +
+            "• Нажми модуль = режим ВКЛ (ещё раз = ВЫКЛ)\n" +
+            "• В режиме каждый ЛКМ-клик ставит узел под курсором\n" +
+            "• Провод рисует линию между узлами\n" +
             "• Нужен чистый разблокированный провод в инвентаре\n" +
-            "• Первый клик — линия от провода к точке\n" +
-            "• Каждый следующий клик продолжает линию от предыдущей точки\n" +
             "• Видно всем игрокам";
         public override string Category => "fun";
 
@@ -37,107 +40,115 @@ namespace CSHUB.Modules
         // Item.CreateClientEvent<T>(T ic, ItemComponent.IEventData extraData)
         private static MethodInfo _createClientEvent;
 
-        private const float StepInterval = 0.05f; // 0.05с на промежуточный узел
+        private static bool _active;
+        private static Item _wireItem;
+        private static Wire _wire;
 
-        // сессия: новый клик глушит незавершённые шаги прошлой линии
-        private static int _drawSession;
-
-        public override string GetLabel() => "Wire Draw ✏";
+        public override string GetLabel() => _active ? "Wire Draw ✏ [ВКЛ]" : "Wire Draw ✏";
 
         public override void OnClick()
         {
-            if (GameMain.Client == null)
+            if (!_active)
             {
-                GUI.AddMessage("[WireDraw] Только в мультиплеере", Color.Orange);
-                return;
+                if (GameMain.Client == null)
+                {
+                    GUI.AddMessage("[WireDraw] Только в мультиплеере", Color.Orange);
+                    return;
+                }
+
+                Item wireItem = FindWire();
+                if (wireItem == null)
+                {
+                    GUI.AddMessage("[WireDraw] Возьми чистый разблокированный провод в инвентарь", Color.Orange);
+                    return;
+                }
+
+                _wireItem = wireItem;
+                _wire = wireItem.GetComponent<Wire>();
+                _active = true;
+                CoroutineManager.StartCoroutine(DrawLoop());
+                GUI.AddMessage("[WireDraw] РЕЖИМ ВКЛ — ЛКМ по экрану = узел (" + wireItem.Name + ")", Color.Lime);
             }
-
-            Item wireItem = FindWire();
-            if (wireItem == null)
+            else
             {
-                GUI.AddMessage("[WireDraw] Возьми чистый разблокированный провод в инвентарь", Color.Orange);
-                return;
-            }
-            Wire wire = wireItem.GetComponent<Wire>();
-
-            Camera cam = (Screen.Selected as GameScreen)?.Cam;
-            if (cam == null) return;
-            Vector2 target = cam.ScreenToWorld(PlayerInput.MousePosition);
-
-            MethodInfo send = ResolveSend();
-            if (send == null)
-            {
-                GUI.AddMessage("[WireDraw] reflection не готов", Color.Red);
-                return;
-            }
-
-            // свежий список: эхо сервера заменяет объект, захватывать нельзя
-            var nodes = nodesField?.GetValue(wire) as List<Vector2>;
-            if (nodes == null)
-            {
-                GUI.AddMessage("[WireDraw] reflection: nodes не найдены", Color.Red);
-                return;
-            }
-
-            // старт линии: уже нарисованное продолжаем, чистый провод — от предмета
-            Vector2 start = nodes.Count > 0 ? nodes[nodes.Count - 1] : wireItem.Position;
-
-            // узлы в пространстве субмарины (draw = node + DrawPos + HiddenSubPos)
-            Submarine refSub = wireItem.Submarine;
-            if (refSub != null)
-            {
-                target -= refSub.DrawPosition + refSub.HiddenSubPosition;
-            }
-
-            // дистанция в мире: старт может быть в старых координатах субмарины,
-            // для простоты режем по модулю разницы (оба в N-пространстве)
-            float dist = Vector2.Distance(start, target);
-            if (dist < 1f)
-            {
-                GUI.AddMessage("[WireDraw] слишком близко", Color.Orange);
-                return;
-            }
-
-            int session = ++_drawSession;
-
-            // промежуточные узлы каждые ~50px, максимум 250 за клик (лимит 255)
-            int steps = (int)(dist / 50f) + 1;
-            steps = Math.Min(steps, 250);
-
-            GUI.AddMessage("[WireDraw] линия " + (int)dist + "px, " + steps + " узлов", Color.Lime);
-
-            for (int i = 1; i <= steps; i++)
-            {
-                float t = (float)i / steps;
-                Vector2 pos = start + (target - start) * t;
-                ScheduleStep(wireItem, wire, send, pos, session, i * StepInterval);
+                Deactivate("РЕЖИМ ВЫКЛ");
             }
         }
 
-        // Один узел, исполняется CoroutineManager'ом в своё время.
-        private static void ScheduleStep(Item item, Wire wire, MethodInfo send,
-            Vector2 vertex, int session, float delay)
+        private static void Deactivate(string msg)
         {
-            CoroutineManager.Invoke(() =>
+            _active = false;
+            _wireItem = null;
+            _wire = null;
+            GUI.AddMessage("[WireDraw] " + msg, Color.Orange);
+        }
+
+        // Живёт, пока _active; тикает каждый кадр игровым планировщиком.
+        private static IEnumerator DrawLoop()
+        {
+            while (_active)
             {
-                try
+                // провод удалён/выкинут/заменён — глушим режим
+                if (_wireItem == null || _wireItem.Removed || _wireItem.ParentInventory == null ||
+                    _wireItem.GetComponent<Wire>() != _wire)
                 {
-                    if (session != _drawSession) return;   // устаревший шаг
-                    if (item == null || item.Removed || item.GetComponent<Wire>() != wire) return;
-
-                    // СВЕЖИЙ список каждый раз — эхо заменяет объект списка
-                    var nodes = nodesField?.GetValue(wire) as List<Vector2>;
-                    if (nodes == null || nodes.Count == 0) return; // пусто = рассинхрон, стоп
-
-                    nodes.Add(vertex);
-                    SendEvent(item, wire, nodes.Count, send);
-                    wire.UpdateSections();
+                    Deactivate("провод недоступен — режим ВЫКЛ");
+                    yield break;
                 }
-                catch (Exception e)
+
+                if (PlayerInput.PrimaryMouseButtonClicked())
                 {
-                    GUI.AddMessage("[WireDraw] фейл: " + e.GetBaseException().Message, Color.Red);
+                    PlaceNode();
                 }
-            }, delay);
+
+                yield return CoroutineStatus.Running; // следующий кадр
+            }
+        }
+
+        private static void PlaceNode()
+        {
+            Camera cam = (Screen.Selected as GameScreen)?.Cam;
+            if (cam == null) return;
+
+            MethodInfo send = ResolveSend();
+            if (send == null) { GUI.AddMessage("[WireDraw] reflection не готов", Color.Red); return; }
+
+            // СВЕЖИЙ список каждый раз: эхо сервера заменяет объект списка
+            var nodes = nodesField?.GetValue(_wire) as List<Vector2>;
+            if (nodes == null) return;
+
+            // лимит игры 255 узлов на провод
+            if (nodes.Count >= 250)
+            {
+                Deactivate("провод заполнен (250 узлов) — режим ВЫКЛ, возьми новый");
+                return;
+            }
+
+            // узлы в пространстве субмарины (draw = node + DrawPos + HiddenSubPos)
+            Vector2 pos = cam.ScreenToWorld(PlayerInput.MousePosition);
+            Submarine refSub = _wireItem.Submarine;
+            if (refSub != null)
+            {
+                pos -= refSub.DrawPosition + refSub.HiddenSubPosition;
+            }
+
+            // первый узел: стартуем от предмета-провода (его Position тоже
+            // мировая — конвертим в N-пространство так же, как клик)
+            if (nodes.Count == 0)
+            {
+                Vector2 startPos = _wireItem.Position;
+                Submarine startSub = _wireItem.Submarine;
+                if (startSub != null)
+                {
+                    startPos -= startSub.DrawPosition + startSub.HiddenSubPosition;
+                }
+                nodes.Add(startPos);
+                SendEvent(_wireItem, _wire, nodes.Count, send);
+            }
+
+            nodes.Add(pos);
+            SendEvent(_wireItem, _wire, nodes.Count, send);
+            _wire.UpdateSections();
         }
 
         // ===== ПОИСК ПРОВОДА =====
@@ -181,6 +192,10 @@ namespace CSHUB.Modules
             return _createClientEvent;
         }
 
-        public override void Dispose() { base.Dispose(); }
+        public override void Dispose()
+        {
+            _active = false;
+            base.Dispose();
+        }
     }
 }
