@@ -2991,7 +2991,7 @@ namespace BaroDepth
                             screenBatch.Draw(white, new Rectangle(12, 12, Math.Max(100, Math.Min(width - 24, 850)), 74),
                             new Color(7, 15, 24, 210));
                             GUI.DrawString(screenBatch, new Vector2(22, 18),
-                            "BARODEPTH | DOOR MODE " + doorRenderMode + " (" + new string[] { "CARD-10", "VOL-0", "CARD-INSET", "SKIP" }[doorRenderMode] + ") | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
+                            "BARODEPTH | " + (stretchTest ? "DOOR: NATURAL" : "DOOR: FULL WIDTH") + " | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
                             GUI.DrawString(screenBatch, new Vector2(22, 39),
                             "F5 off | F6 view | F7 reload XML | F8 export IDs | ALT labels | LMB release: interact", Color.White);
                             GUI.DrawString(screenBatch, new Vector2(22, 60),
