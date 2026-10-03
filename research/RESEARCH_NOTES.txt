@@ -18105,3 +18105,16 @@ CanInteractWith(Character, maxDist) публичны) — баннер и SELL �
 ИТОГОВЫЙ ЧЕКЛИСТ 452 (все 4 условия): MultiPlayerCampaign + гейт перм
 (AllowedToManageCampaign) + гейт близости торговца (Interaction gate) +
 баланс магазина >= цена. Любой провален = молчаливый ноль.
+
+== ВОЛНА 518 — SellFake CS0117/CS0029/CS0023 фиксы ==
+Три ошибки компиляции из волны 517 (мои):
+1) CS0117 GameMain.Server — скопировал строку из СЕРВЕРНОГО кода дословно
+   (server:1165 GameMain.Server?.ServerSettings). В клиентской сборке
+   GameMain.Server НЕ существует; настройки клиента: GameMain.Client
+   (NetworkMember) → .ServerSettings (NetworkMember.cs:220). AllowRemote
+   CampaignInteractions — ServerSettings.cs:656 (public, private set).
+2) CS0029 + CS0023: string interact = ServerInteractionAvailable(...) —
+   метод возвращает BOOL. string→!string = оба падения одной опечаткой.
+Фиксы: GameMain.Client?.ServerSettings + bool interact.
+Урок: зеркалируя серверный код в клиентский мод — перепроверяй каждый
+идентификатор: сборки разные, GameMain разные.

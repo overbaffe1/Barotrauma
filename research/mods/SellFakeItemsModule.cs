@@ -253,7 +253,7 @@ namespace CSHUB.Modules
                 reason = "нет живого персонажа (мёртв/в стуне) — сервер скипнет продажу";
                 return false;
             }
-            if (GameMain.Server?.ServerSettings is { AllowRemoteCampaignInteractions: true })
+            if (GameMain.Client?.ServerSettings is { AllowRemoteCampaignInteractions: true })
             {
                 reason = "remote interactions разрешены — продавай откуда угодно";
                 return true;
@@ -275,7 +275,7 @@ namespace CSHUB.Modules
         {
             if (GameMain.Client == null) return "Not connected.";
             bool perms = ServerWouldAllow();
-            string interact = ServerInteractionAvailable(out string why);
+            bool interact = ServerInteractionAvailable(out string why);
             if (!perms) return "PERMS: server would REJECT (AllowedToManageCampaign=false). | " + why;
             if (!interact) return "PERMS ok, но: " + why;
             return "Server would ALLOW this sale (" + why + ").";
