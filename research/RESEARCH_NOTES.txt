@@ -17807,3 +17807,46 @@ evil regex потенциально = backtracking-CPU (отдельная во�
 через PropertyEditor) → провод signal_out→НАЗНАЧИТЬ_СКОРОСТЬ_РАСЩЕПЛЕНИЯ →
 импульс. Замораживается heat-баланс, топливо гореть перестаёт.
 РЕЦЕПТ «БЛЭКАУТ»: тот же NaN в ТУРБИНУ = сеть в нуле до ручного цикла питания.
+
+== ВОЛНА 504 — ПОЛНЫЙ ТИРЛИСТ: NaN через memory component (все приёмники сверены) ==
+МЕТОД: memory.Value=NaN (PropertyEditor) → провод signal_out → вход X.
+S-ТИР (перманентно, сигналом не лечится):
+1. Реактор set_fissionrate → бессмертие + вечное топливо + темп заморожен
+   + shutdown/meltdown_warning мертвы (502). Лечение: только ручной цикл
+   питания PowerOn.
+2. Насос set_speed → сеттер FlowPercentage САМОУНИЧТОЖАЕТСЯ (проверяет
+   СТАРОЕ значение) → вода=NaN, стресс/энергопотребление=NaN, сеть отравлена.
+   Не лечится ВООБЩЕ до конца раунда (449/48-х волн).
+A-ТИР (серьёзно, лечится вручную):
+3. Реактор set_turbineoutput → выход=NaN → ВСЯ энергосеть под NaN (в нулях)
+   (449-паттерн grid poisoning). Лечение: ручной выкл/вкл питания реактора.
+4. Двигатель set_force → lastTargetForce=NaN → currPowerConsumption=NaN →
+   сеть отравлена, НО физика суба спасена гардами PhysicsBody (волна 317
+   IsValidValue -1e10..1e10 режет NaN force) — суб НЕ улетает.
+5. Осциллятор frequency_in (тип Sine/Saw/Square/Triangle) → phase=NaN →
+   шлёт "NaN" КАЖДЫЙ кадр = вечная NaN-фабрика. Pulse-тип: молчит (1/NaN).
+6. Modulo set_modulus → modulus=NaN (проверка нуля NearlyEqual(NaN,0)=false)
+   → любой вход → NaN на выходе = фабрика «по требованию».
+B-ТИР (утилити/гриф):
+7. Вайфай set_range → Range=NaN → радиус ∞ → управление схемами через всю
+   карту (448).
+8. Delay set_delay → задержка=NaN → очередь НИКОГДА не выпускает = «кнопка
+   тишины» для любой схемы. Лечится: ещё один set_delay=1 (временно).
+9. Тригонометрия sin_in/cos_in → TryParse Float ест NaN → sin(NaN)=NaN =
+   дешёвая фабрика №3.
+C-ТИР (косметика/логика):
+10. ColorComponent signal_r/g/b/a (БЕЗ IsValid!) → "NaN;NaN;..." в цвет
+    → цветомузыка-полтергейст.
+11. Greater/Equals/SignalCheck с NaN-входом → сравнения всегда false →
+    логические схемы вечно в false-ветке (логический блэкаут).
+12. Exponentiation.Exponent (ин-гейм editable!) = NaN → x^NaN="NaN" фабрика.
+ОХРАНЯЕМЫЕ (NaN НЕ работает — уважение девам):
+- Турель position_in: MathUtils.IsValid-гард (единственный чистый).
+- PowerContainer set_rate: !IsValid → return.
+- PowerDistributor ratio: !IsValid → return.
+- TriggerComponent set_force: TryParse ест NaN, НО PhysicsBody.ApplyForce
+  финальный IsValidValue(force, -1e10, 1e10) ВСЁ режет (317 спасает).
+- Щиток/реле: сигнальных входов калибра нет, ретранслятор.
+ВЫВОД: память = шприц NaN; самые жирные точки — реактор (жизнь базы) и
+насос (смерть воды). Оба — S. Turbine/Engine — сетевые A. Фабрики осц/мод/триг —
+сырьё для конвейеров NaN без повторных сигналов.
