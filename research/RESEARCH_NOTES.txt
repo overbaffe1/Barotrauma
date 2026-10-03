@@ -18153,3 +18153,30 @@ CampaignMode.CargoManager public ✓.
 AccessTools.TypeByName. Заменено на typeof(IWriteMessage).Assembly
 .GetType("Barotrauma.Networking.WriteOnlyMessage") — Assembly.GetType
 находит и internal-типы, HarmonyLib не нужен вовсе.
+
+== ВОЛНА 521 — MoneyTransferModule (455/458 семейство, новый CSHUB-модуль) ==
+Запрос юзера «найди что-то новое крутое по заметкам». Выбран 455
+(отрицательный перевод голосованием) — пере-проверен по свежему коду:
+ПОДТВЕРЖДЕНО: Voting.cs:313-336 — int amount = ReadInt32() БЕЗ <=0-чека
+(в прямом ServerReadMoney:1186 amount<=0 → return — НЕСИММЕТРИЧНО!).
+TransferVote.Finish (Voting.cs:81-96): fromWallet.TryDeduct(TransferAmount)
+→ CanAfford = Balance >= -X → ЛЮБОЙ баланс ≥ минуса → true → Deduct(-X)
+= +X; toWallet.Give(-X) = −X. From==null = БАНК-кошелёк; To==null = БАНК.
+ГЕЙТЫ: ShouldRejectVote = только cooldown 60с ПОСЛЕ непрохода; соло
+(Update: inGameClients==1 → passed мгновенно); многолюдно: VoteTimeout 30с
+→ yes/(yes+no) ≥ VoteRequiredRatio 0.6; голосуют только InGame.
+ПАКЕТ СТАРТА (зеркало Voting.ClientWrite + GameClient.Vote):
+UPDATE_LOBBY | сегмент Vote | byte VoteType.TransferMoney | bool
+startVote=TRUE | int amount | byte fromSession | byte toSession | pad.
+fromSession=0xFF (вне диапазона) → Find=null → банк-донор.
+SessionId жертвы: ConnectedClients ПУБЛИЧЕН (NetworkMember.cs:216) →
+по Character. Хрупкий Harmony не нужен.
+ЛИЧНЫЙ ПЕРЕВОД (путь 1): NetWalletTransfer.Write = [WriteOnlyBitField
+(Option-флаги)] → битфилд → WriteToMessage → тело (INetSerializableStruct
+.cs:796-804): Sender=None (server:1195: чужой Sender требует
+AllowedToManageWallets), Receiver=None=банк/Some=charId, Amount>0 —
+всё легально (компенсация взносов/кэша пати).
+GUI: кошелёк/банк в статусе (GetWallet/Bank public), 5 кнопок.
+Урок: отрицательные суммы в TRY-финансах = free-манипуляция: «Try»
+переворачивает знак (Deduct(-X)=Give). Симметрия чеков amount<=0 между
+путями обязательна.
