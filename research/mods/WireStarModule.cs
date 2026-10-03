@@ -43,11 +43,18 @@ namespace CSHUB.Modules
         private const float StarRadius = 45f;   // внешний радиус звезды (px)
         private const float InnerRatio = 0.42f; // внутренний радиус = внешний * ratio
 
-        // Пошаговая отрисовка (0.1с между узлами): 11 ивентов одним кадром
-        // затираются эхом, а ваниль шлёт узлы в темпе перетаскивания.
-        // Планировщик — CoroutineManager (движок сам зовёт экшены в главном
-        // потоке; CSModuleBase.Update фреймворком может не вызываться вовсе).
-        private const float StepInterval = 0.1f;
+        // Пошаговая отрисовка, темп 1 узел/сек (просьба юзера): 11 ивентов
+        // одним кадром затираются эхом, ваниль шлёт узлы в темпе перетаскивания.
+        // Планировщик — CoroutineManager (движок зовёт экшены в главном потоке;
+        // CSModuleBase.Update фреймворком не вызывается).
+        private const float StepInterval = 1.0f;
+
+        // Незавершённые шаги прошлых рисований само-глушатся: CoroutineHandle
+        // игры internal (по имени не достать), поэтому каждый шаг проверяет
+        // номер сессии. Иначе два потока перемешиваются (сброс очищает nodes,
+        // пока события прошлой звезды в полёте → nodes.Last() кидает
+        // "no elements" → вся пачка ивентов ломается → провод исчезает).
+        private static int _drawSession;
 
         public override string GetLabel() => "Wire Star ★";
 
@@ -58,6 +65,8 @@ namespace CSHUB.Modules
                 GUI.AddMessage("[WireStar] Только в мультиплеере (нужен сервер-получатель ивентов)", Color.Orange);
                 return;
             }
+
+            _drawSession++;
 
             Item wireItem = FindWire();
             if (wireItem == null)
@@ -91,43 +100,52 @@ namespace CSHUB.Modules
                 return;
             }
 
-            GUI.AddMessage("[WireStar] рисую ★ (" + verts.Count + " узлов, " + wireItem.Name + ")...", Color.Lime);
+            GUI.AddMessage("[WireStar] рисую ★ (" + verts.Count + " узлов, 1 узел/сек, " + wireItem.Name + ")...", Color.Lime);
+
+            int session = _drawSession;
+            int delayIdx = 0;
 
             // шаг 0: сброс старых узлов (nodeCount=0 → сервер RemoveRange всё)
-            int delayIdx = 0;
             if (nodes.Count > 0)
             {
-                ScheduleStep(wireItem, wire, nodes, send, 0, null, delayIdx);
+                ScheduleStep(wireItem, wire, nodes, send, 0, Vector2.Zero, 0, session, delayIdx);
                 delayIdx++;
             }
 
-            // шаги 1..N: по одному узлу, ивент несёт nodeCount=k + последнюю позицию
+            // шаги 1..N: по одному узлу в секунду
             for (int i = 0; i < verts.Count; i++)
             {
-                ScheduleStep(wireItem, wire, nodes, send, 1, verts[i], delayIdx);
+                ScheduleStep(wireItem, wire, nodes, send, 1, verts[i], i, session, delayIdx);
                 delayIdx++;
             }
         }
 
-        // Один шаг рисования, исполняется CoroutineManager'ом в нужное время.
+        // Один шаг рисования, исполняется CoroutineManager'ом в своё время.
+        // Устаревшая сессия (юзер кликнул снова) молча выходит.
         private static void ScheduleStep(Item item, Wire wire, List<Vector2> nodes,
-            MethodInfo send, int mode, Vector2? vertex, int delayIdx)
+            MethodInfo send, int mode, Vector2 vertex, int vertexIndex, int session, int delayIdx)
         {
             CoroutineManager.Invoke(() =>
             {
                 try
                 {
-                    // провод удалён/заменён — молча выходим
+                    if (session != _drawSession) return;   // устаревший шаг
                     if (item == null || item.Removed || item.GetComponent<Wire>() != wire) return;
 
                     if (mode == 0)
                     {
+                        // сброс: только если есть что сбрасывать
+                        if (nodes.Count == 0) return;
                         nodes.Clear();
                         SendEvent(item, wire, 0, send);
                     }
                     else
                     {
-                        nodes.Add(vertex.Value);
+                        // узел i добавляется только при ровно i узлах в списке;
+                        // рассинхрон = тихо стоп (иначе nodes.Last() кидает
+                        // "no elements" и валит всю пачку событий клиента)
+                        if (nodes.Count != vertexIndex) return;
+                        nodes.Add(vertex);
                         SendEvent(item, wire, nodes.Count, send);
                         wire.UpdateSections();
                     }
