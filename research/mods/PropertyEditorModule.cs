@@ -208,7 +208,8 @@ namespace CSHUB.Modules
                     if (conn == null) continue;
                     foreach (Wire w in conn.Wires)
                     {
-                        if (w == null || w.Removed) continue;
+                        // Wire — ItemComponent, у него нет Removed; живость смотрим у предмета
+                        if (w == null || w.Item == null || w.Item.Removed) continue;
                         wireCount++;
                         Item a = w.Connections[0]?.Item;
                         Item b = w.Connections[1]?.Item;

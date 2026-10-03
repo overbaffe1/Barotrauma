@@ -17648,3 +17648,12 @@ Vector2/Vector3/Vector4/Point/Rectangle/Enum.
   FlowPercentage после этого проверяет СТАРОЕ значение и навсегда return).
 Урок: internal-атрибуты игры — преграда только для компиляции мода,
 не для семантики: имя типа в Attributes == зеркало серверного списка.
+
+== ВОЛНА 496 — CS1061 фиксы PropertyEditorModule ==
+Ошибка юзера: Wire.Removed (CS1061) — Wire это ItemComponent, свойства
+Removed у него нет (Removed только у Entity/Item). Паттерн-уровень:
+ItemComponent-ы живут/умирают вместе с предметом — живость проверяем
+у owner-предмета: w.Item == null || w.Item.Removed (Item property,
+ItemComponent.cs:244). Остальные .Removed в файле — только на Item — ок.
+Урок: в Barotrauma иерархия Removed: Entity → Item/MapEntity; ItemComponent
+не Entity — никаких .Removed у компонентов (Wire, Pump, Door как компоненты).
