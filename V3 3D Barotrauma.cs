@@ -862,6 +862,7 @@ namespace BaroDepth
             public Vector2 AnchorUV = new Vector2(0.5f, 0.5f);
             public double CapturedDoorState = -1;
             public bool HasImage;
+            public bool DiagLogged;
             public bool Failed;
             public bool OutlineAttempted;
             public int Quality;
@@ -1714,6 +1715,25 @@ namespace BaroDepth
                 }
                 stamp.ImageBounds = stamp.Bounds;
                 stamp.HasImage = true;
+                // One-time pixel readback: is the captured RT actually empty?
+                if (entity is Item diagItem && diagItem.GetComponent<Door>() != null && !stamp.DiagLogged)
+                {
+                    stamp.DiagLogged = true;
+                    try
+                    {
+                        var px = new Color[stamp.Texture.Width * stamp.Texture.Height];
+                        stamp.Texture.GetData(px);
+                        int opaque = 0, total = px.Length;
+                        long r = 0, g = 0, b = 0;
+                        foreach (var c in px) { if (c.A > 128) { opaque++; r += c.R; g += c.G; b += c.B; } }
+                        string msg = opaque > 0
+                            ? $"capture OK: {opaque}/{total} opaque px, avg ({r / opaque},{g / opaque},{b / opaque})"
+                            : "capture EMPTY: 0 opaque pixels!";
+                        Log("door stamp diag [" + diagItem.Prefab?.Identifier + "]: " + msg,
+                            opaque > 0 ? Color.LimeGreen : Color.Red);
+                    }
+                    catch (Exception ex) { Log("door stamp diag failed: " + ex.Message, Color.Orange); }
+                }
                 return true;
             }
 
