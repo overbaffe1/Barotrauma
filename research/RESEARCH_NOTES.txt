@@ -17620,3 +17620,31 @@ SHORT-сегмент: UV пересчитаны по фактическому с
 sl-offset/96) — фаза текстуры остаётся сцеплена со стенами, швов нет.
 Урок: юзер хочет LIVE A/B/C-тест на B для любых визуальных решений —
 делать фичу сразу с циклом выбора, а не фиксировать вариант вслепую.
+
+== ВОЛНА 495 — PropertyEditor + PumpPoison модули (эксплойт 448 в CSHUB) ==
+Запрос юзера: (1) редактор свойств — навёлся на предмет → меню со всеми
+свойствами (автодетект) → поменял → сервер применил; (2) насос — навёлся,
+кнопка, NaN.
+КЛИЕНТСКИЙ ПУТЬ (проверен по исходникам): item.SerializableProperties →
+локально TrySetValue (WritePropertyChange сериализует ТЕКУЩЕЕ значение
+свойства!) → GameMain.NetworkMember.CreateEntityEvent(item,
+new Item.ChangePropertyEventData(property, component)). Формат веток
+сервера ReadPropertyChange: string/Identifier/float/int/bool/Color/
+Vector2/Vector3/Vector4/Point/Rectangle/Enum.
+НЮАНСЫ, найденные при написании:
+- InGameEditable и ConditionallyEditable — INTERNAL классы: из CSHUB-мода
+  не скомпилить GetAttribute<InGameEditable>(). Обход: скан
+  SerializableProperty.Attributes (AttributeCollection) по GetType().Name.
+- Сервер ищет свойство в GetInGameEditableProperties(ignoreConditions:true)
+  → модуль зеркалит: InGameEditable+ConditionallyEditable по имени,
+  у компонентов требование AllowInGameEditing.
+- GUIStyle публичен (Font/SmallFont = GUIFont) ✓.
+- Насос: InGameEditable-свойств НЕТ (MaxFlow только [Editable]) →
+  ChangeProperty на сам насос невозможен (сервер вернёт list.Count==0
+  ДО чтения). PumpPoison идёт с обхода: провода насоса (Connection.Wires)
+  → предметы на другом конце (memory/oscillator/delay/wifi) → их
+  редактируемые свойства → NaN строкой/числом уходит в set_speed
+  (TryParse NumberStyles.Any ест "NaN"; Clamp(NaN)=NaN; сеттер
+  FlowPercentage после этого проверяет СТАРОЕ значение и навсегда return).
+Урок: internal-атрибуты игры — преграда только для компиляции мода,
+не для семантики: имя типа в Attributes == зеркало серверного списка.
