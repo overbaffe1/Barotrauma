@@ -1687,7 +1687,34 @@ namespace BaroDepth
                             // The Item base sprite is often only a placeholder/frame. Extruding
                             // it produced the two white plates. Capture ONLY the native door leaf.
                             if (door.OpenState < 0.999f)
-                            door.Draw(captureBatch, false, -1f, Color.White);
+                            {
+                                if (stretchTest)
+                                {
+                                    // NATURAL: leaf at its own size, centered.
+                                    Sprite leaf = doorSpriteField?.GetValue(door) as Sprite;
+                                    if (leaf == null || leaf.Texture == null || leaf.Texture.IsDisposed)
+                                    leaf = doorItem.Sprite;
+                                    if (leaf?.Texture != null && !leaf.Texture.IsDisposed)
+                                    {
+                                        var bnd = stamp.Bounds;
+                                        float lw = leaf.SourceRect.Width;
+                                        float lh = leaf.SourceRect.Height;
+                                        var dest = new Rectangle(
+                                            (int)(bnd.Center.X - lw / 2), (int)(-(bnd.Center.Y + lh / 2)),
+                                            (int)lw, (int)lh);
+                                        captureBatch.Draw(leaf.Texture, dest, leaf.SourceRect, Color.White);
+                                    }
+                                    else
+                                    {
+                                        door.Draw(captureBatch, false, -1f, Color.White);
+                                    }
+                                }
+                                else
+                                {
+                                    // FULL WIDTH: door.Draw at frame — stretches to bounds
+                                    door.Draw(captureBatch, false, -1f, Color.White);
+                                }
+                            }
                             stamp.CapturedDoorState = door.OpenState;
                         }
                         else if (entity is Item item && itemDrawWithTint != null)
