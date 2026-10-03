@@ -2383,6 +2383,7 @@ namespace BaroDepth
                     Door door = item.GetComponent<Door>();
                     if (door == null) { DrawLayered(item, stamp); continue; }
 
+                    // Дверь рисуется по ВЕСЬ проём (WorldRect), не по doorSprite bounds
                     Bounds2 b = EntityBounds(item);
                     if (!Visible(b, 0f, 20f)) continue;
 
@@ -2391,7 +2392,7 @@ namespace BaroDepth
                         case 0: // CARD z=10 — BLUE tint
                             DrawCard(stamp.Texture, b, 10f, 1f, new Color(50, 100, 255));
                             break;
-                        case 1: // VOLUME z=0 — normal contours
+                        case 1: // VOLUME z=0 — normal contours, FULL WIDTH
                             DrawVolume(stamp, b, 0f, 20f, RenderMode.Contours, false);
                             break;
                         case 2: // CARD z=+SurfaceInset — RED tint for visibility
