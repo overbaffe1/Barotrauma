@@ -2388,7 +2388,7 @@ namespace BaroDepth
                     // Draw closed-pose stamp as flat card at z=0 (eye plane).
                     // The stamp holds the closed door captured once — it never
                     // changes, so no re-capture = no flicker, no lag.
-                    DrawCard(stamp.Texture, b, 0f, 1f, Color.White);
+                    DrawCard(stamp.Texture, b, 10f, 1f, Color.White);
 
                     // Wireframe box in X-ray for reference
                     if (xrayView) { AddWireBox(b, 0f, 12f, new Color(82, 182, 204, 125)); }
