@@ -2385,7 +2385,7 @@ namespace BaroDepth
                         bool hasImg = st2?.HasImage == true;
                         if (!hasImg) { doorsNoStamp++; continue; }
                         doorsDrawn++;
-                        if (sample.Length < 140) sample += "; " + item.Prefab?.Identifier + "#" + item.ID + " z=" + layer.Z.ToString("0") + " hd=" + layer.HalfDepth.ToString("0") + " os=" + dr.OpenState.ToString("0.00");
+                        if (sample.Length < 140) sample += "; " + item.Prefab?.Identifier + "#" + item.ID + " depth=" + (halfDepth + 1f).ToString("0") + " os=" + dr.OpenState.ToString("0.00");
                     }
                     string line = "doors: total=" + doorsTotal + " drawn=" + doorsDrawn + " open=" + doorsOpen
                         + " noStamp=" + doorsNoStamp + " culled=" + doorsCulled + " sample[" + sample + "]";
@@ -2410,11 +2410,15 @@ namespace BaroDepth
                     Door door = item.GetComponent<Door>();
                     if (door == null) { DrawLayered(item, stamp); continue; }
 
-                    // Дверь рисуется по ВЕСЬ проём (WorldRect), не по doorSprite bounds
+                    // Дверь рисуется по ВЕСЬ проём (WorldRect), не по doorSprite bounds.
+                    // Глубина = глубина самой стены (halfDepth+1, как ShellDepth у стен):
+                    // дверь перекрывает проём от стены до стены по всей глубине комнаты,
+                    // а не тонкая пластина ±20, которая торчит «на игрока и вперёд».
                     Bounds2 b = EntityBounds(item);
-                    if (!Visible(b, 0f, 20f)) continue;
+                    float doorDepth = halfDepth + 1f;
+                    if (!Visible(b, 0f, doorDepth)) continue;
 
-                    DrawVolume(stamp, b, 0f, 20f, RenderMode.Contours, false);
+                    DrawVolume(stamp, b, 0f, doorDepth, RenderMode.Contours, false);
                 }
             }
 
