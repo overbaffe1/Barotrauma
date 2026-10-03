@@ -161,7 +161,7 @@ namespace BaroDepth
                         next.SurfaceInset = Number(global, "surfaceInset", next.SurfaceInset, 1f, 200f);
                         next.FullTextureSize = Integer(global, "fullTextureSize", next.FullTextureSize, 32, 256);
                         next.DetailTextureSize = Integer(global, "detailTextureSize", next.DetailTextureSize, next.FullTextureSize, 512);
-                        next.CacheMiB = Integer(global, "cacheMiB", next.CacheMiB, 32, 512);
+                        next.CacheMiB = Integer(global, "cacheMiB", next.CacheMiB, 32, 2048);
                         next.JobsPerFrame = Integer(global, "jobsPerFrame", next.JobsPerFrame, 2, 12);
                         next.CaptureBudgetMs = Number(global, "captureBudgetMs", (float)next.CaptureBudgetMs, 1f, 20f);
                         next.ShowIds = Boolean(global, "showIds", true);
@@ -956,7 +956,7 @@ namespace BaroDepth
         private sealed class Renderer : IDisposable
         {
             private const int MaxStaticEntries = 32768;
-            private long MaxCacheBytes => (long)settings.CacheMiB * 1024L * 1024L;
+            private long MaxCacheBytes => (long)Math.Max(settings.CacheMiB, settings.WarmupAll ? 512 : settings.CacheMiB) * 1024L * 1024L;
             private const int MaxCharacters = 8;
             private const int MaxItems = 128; // detailed captures, NOT visibility cutoff
             private const int MaxStructures = 176; // detailed captures, NOT visibility cutoff
@@ -1574,7 +1574,7 @@ namespace BaroDepth
                     {
                         Stamp stamp = GetStamp(entity);
                         if (stamp == null || !stamp.Bounds.Valid || stamp.HasImage) continue;
-                        if (warmed % 32 == 31) TrimCache(); // keep room in the cache
+                        // no TrimCache during warmup: it would evict just-captured stamps
                         int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
                         PrepareEntity(entity, entity is Item, RenderMode.Contours,
                             WarmupTextureSize > 0 ? WarmupTextureSize : settings.FullTextureSize, ref jobs, timer);
@@ -1827,7 +1827,15 @@ namespace BaroDepth
                 removals.Clear();
                 foreach (var pair in staticStamps)
                 {
-                    if (pair.Key.Removed || (!fullView && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
+                    if (pair.Key.Removed) { removals.Add(pair.Key); continue; }
+                    // Never time-evict stamps near the eye — they're being drawn.
+                    if (!fullView)
+                    {
+                        var b = EntityBounds(pair.Key);
+                        if (b.DistanceSquared(eye) < rangeSq * 0.25f)
+                        { cacheBytes += pair.Value.Bytes; continue; }
+                    }
+                    if (!fullView && now - pair.Value.LastSeen > 30.0) removals.Add(pair.Key);
                     else cacheBytes += pair.Value.Bytes;
                 }
                 foreach (MapEntity entity in removals) { staticStamps[entity].Dispose(); staticStamps.Remove(entity); }

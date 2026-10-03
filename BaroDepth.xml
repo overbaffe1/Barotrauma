@@ -8,7 +8,7 @@
   <!-- offset > 0 приближает предмет к середине; offset < 0 двигает к стенке. -->
   <Global depthScale="1.8" roomHalfDepth="155" layerSpread="17" surfaceInset="28"
           defaultMode="Full" showIds="true" warmupAll="true" surfaceTexture="true"
-          fullTextureSize="128" detailTextureSize="320" cacheMiB="192"
+          fullTextureSize="128" detailTextureSize="320" cacheMiB="512"
           jobsPerFrame="4" captureBudgetMs="4" />
 
   <Objects>
