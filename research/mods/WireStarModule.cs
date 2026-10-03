@@ -43,16 +43,11 @@ namespace CSHUB.Modules
         private const float StarRadius = 45f;   // внешний радиус звезды (px)
         private const float InnerRatio = 0.42f; // внутренний радиус = внешний * ratio
 
-        // Пошаговая отрисовка: 11 ивентов одним кадром затираются эхо-состояниями
-        // (echo k обрезает локальный список до k, пока следующие уже ушли).
-        // Ваниль шлёт узлы по одному при перетаскивании — повторяем этот темп.
-        private const double StepInterval = 0.1; // сек между узлами
-
-        private static Item _drawItem;
-        private static Wire _drawWire;
-        private static List<Vector2> _pending;   // вершины звезды
-        private static int _step;                // 0=сброс, 1..N=узлы
-        private static double _nextStepAt;
+        // Пошаговая отрисовка (0.1с между узлами): 11 ивентов одним кадром
+        // затираются эхом, а ваниль шлёт узлы в темпе перетаскивания.
+        // Планировщик — CoroutineManager (движок сам зовёт экшены в главном
+        // потоке; CSModuleBase.Update фреймворком может не вызываться вовсе).
+        private const float StepInterval = 0.1f;
 
         public override string GetLabel() => "Wire Star ★";
 
@@ -86,68 +81,62 @@ namespace CSHUB.Modules
                 center -= refSub.DrawPosition + refSub.HiddenSubPosition;
             }
 
-            _drawItem = wireItem;
-            _drawWire = wire;
-            _pending = StarVerts(center, StarRadius, InnerRatio);
-            _step = 0;
-            _nextStepAt = 0.0; // первый шаг сразу
-            GUI.AddMessage("[WireStar] рисую ★ (" + _pending.Count + " узлов, " + wireItem.Name + ")...", Color.Lime);
-        }
+            List<Vector2> verts = StarVerts(center, StarRadius, InnerRatio);
 
-        public override void Update()
-        {
-            if (_pending == null || _drawWire == null) return;
-            if (Timing.TotalTime < _nextStepAt) return;
-            _nextStepAt = Timing.TotalTime + StepInterval;
-
-            // провод удалён/заменён посреди рисования — отменяем
-            if (_drawItem == null || _drawItem.Removed ||
-                _drawItem.GetComponent<Wire>() != _drawWire)
-            { Abort(); return; }
-
-            var nodes = nodesField?.GetValue(_drawWire) as List<Vector2>;
+            var nodes = nodesField?.GetValue(wire) as List<Vector2>;
             MethodInfo send = ResolveSend();
-            if (nodes == null || send == null) { Abort(); return; }
-
-            try
+            if (nodes == null || send == null)
             {
-                if (_step == 0)
-                {
-                    // сброс старых узлов: nodeCount=0 → сервер RemoveRange(всё)
-                    nodes.Clear();
-                    SendEvent(_drawItem, _drawWire, 0, send);
-                }
-                else
-                {
-                    // по одному узлу за шаг: локальный список растёт,
-                    // ивент несёт nodeCount=k + позицию последнего узла
-                    int i = _step - 1;
-                    if (i >= _pending.Count) { Abort(); return; }
-                    nodes.Add(_pending[i]);
-                    SendEvent(_drawItem, _drawWire, nodes.Count, send);
-                    _drawWire.UpdateSections();
-                }
-
-                _step++;
-                if (_step > _pending.Count)
-                {
-                    _drawWire.UpdateSections();
-                    GUI.AddMessage("[WireStar] ★ готова", Color.Lime);
-                    _pending = null;
-                }
+                GUI.AddMessage("[WireStar] reflection не готов", Color.Red);
+                return;
             }
-            catch (Exception e)
+
+            GUI.AddMessage("[WireStar] рисую ★ (" + verts.Count + " узлов, " + wireItem.Name + ")...", Color.Lime);
+
+            // шаг 0: сброс старых узлов (nodeCount=0 → сервер RemoveRange всё)
+            int delayIdx = 0;
+            if (nodes.Count > 0)
             {
-                GUI.AddMessage("[WireStar] фейл: " + e.GetBaseException().Message, Color.Red);
-                Abort();
+                ScheduleStep(wireItem, wire, nodes, send, 0, null, delayIdx);
+                delayIdx++;
+            }
+
+            // шаги 1..N: по одному узлу, ивент несёт nodeCount=k + последнюю позицию
+            for (int i = 0; i < verts.Count; i++)
+            {
+                ScheduleStep(wireItem, wire, nodes, send, 1, verts[i], delayIdx);
+                delayIdx++;
             }
         }
 
-        private static void Abort()
+        // Один шаг рисования, исполняется CoroutineManager'ом в нужное время.
+        private static void ScheduleStep(Item item, Wire wire, List<Vector2> nodes,
+            MethodInfo send, int mode, Vector2? vertex, int delayIdx)
         {
-            _pending = null;
-            _drawItem = null;
-            _drawWire = null;
+            CoroutineManager.Invoke(() =>
+            {
+                try
+                {
+                    // провод удалён/заменён — молча выходим
+                    if (item == null || item.Removed || item.GetComponent<Wire>() != wire) return;
+
+                    if (mode == 0)
+                    {
+                        nodes.Clear();
+                        SendEvent(item, wire, 0, send);
+                    }
+                    else
+                    {
+                        nodes.Add(vertex.Value);
+                        SendEvent(item, wire, nodes.Count, send);
+                        wire.UpdateSections();
+                    }
+                }
+                catch (Exception e)
+                {
+                    GUI.AddMessage("[WireStar] фейл: " + e.GetBaseException().Message, Color.Red);
+                }
+            }, delayIdx * StepInterval);
         }
 
         // ===== ПОИСК ПРОВОДА =====
