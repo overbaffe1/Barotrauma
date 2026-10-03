@@ -183,6 +183,13 @@ namespace CSHUB.Modules
 
                 try
                 {
+                    if (!ServerInteractionAvailable(out string why))
+                    {
+                        UpdateStatus("SERVER WILL SKIP: " + why);
+                        LuaCsLogger.Log("[SellFake] interaction gate: " + why);
+                        return true;
+                    }
+
                     int price = _currentStore.GetAdjustedItemSellPrice(_selected);
                     if (price <= 0) { UpdateStatus("Item has no sell price here."); return true; }
 
@@ -233,12 +240,45 @@ namespace CSHUB.Modules
             return CampaignMode.AllowedToManageCampaign(ClientPermissions.SellInventoryItems);
         }
 
+        // Точное зеркало серверного HasCampaignInteractionAvailable(Store)
+        // (MultiPlayerCampaign:1161). САМЫЙ ЧАСТЫЙ ПРИЧИН «НЕ РАБОТАЕТ»:
+        // весь блок продажи обёрнут в него (server:954) — без живого
+        // персонажа рядом с NPC-торговцем (250 юнитов) или
+        // AllowRemoteCampaignInteractions сервер МОЛЧА скипает продажи.
+        private static bool ServerInteractionAvailable(out string reason)
+        {
+            var me = GameMain.Client?.Character;
+            if (me == null || me.IsIncapacitated)
+            {
+                reason = "нет живого персонажа (мёртв/в стуне) — сервер скипнет продажу";
+                return false;
+            }
+            if (GameMain.Server?.ServerSettings is { AllowRemoteCampaignInteractions: true })
+            {
+                reason = "remote interactions разрешены — продавай откуда угодно";
+                return true;
+            }
+            foreach (Character other in Character.CharacterList)
+            {
+                if (other.CampaignInteractionType != CampaignMode.InteractionType.Store) continue;
+                if (me.CanInteractWith(other, maxDist: 250.0f))
+                {
+                    reason = "торговец рядом";
+                    return true;
+                }
+            }
+            reason = "НЕТ торговца в 250 юнитах — встань к NPC-магазина или серверу нужен AllowRemoteCampaignInteractions";
+            return false;
+        }
+
         private static string BuildPermissionBanner()
         {
             if (GameMain.Client == null) return "Not connected.";
-            if (!ServerWouldAllow())
-                return "Server would REJECT this (AllowedToManageCampaign=false). Send anyway?";
-            return "Server would ALLOW this sale.";
+            bool perms = ServerWouldAllow();
+            string interact = ServerInteractionAvailable(out string why);
+            if (!perms) return "PERMS: server would REJECT (AllowedToManageCampaign=false). | " + why;
+            if (!interact) return "PERMS ok, но: " + why;
+            return "Server would ALLOW this sale (" + why + ").";
         }
 
         private static string BuildStatus()

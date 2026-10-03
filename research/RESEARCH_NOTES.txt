@@ -18084,3 +18084,24 @@ itemValue (CargoManager.cs:44) — клиентский кап affordable=Balanc
 Пакет теперь байт-в-байт = ClientWrite: u16 loc x2 | byte missions | 3
 бита | byte 0 x3 (сторы) | byte 1 | storeId | u16 n | n×{id, u16 0, bit0,
 byte0, byte0(origin=0 Character)} | u16 0 upgrades | u16 0 swaps.
+
+== ВОЛНА 517 — SellFake: ПРИКОЛ найден в заметках 452 — гейт «торговец рядом» ==
+Юзер: «какой-то прикол был, глянь в заметках». В 452 notes гейт №2:
+HasCampaignInteractionAvailable(Store) — я пропустил его в волне 516!
+ПОДТВЕРЖДЕНО КОДОМ: ВЕСЬ блок продажи обёрнут
+  if (HasCampaignInteractionAvailable(sender, InteractionType.Store))  ← server:954
+    { buyCrate / subSellCrate / purchases / BUYBACK + SALES(1071-1125) }
+Без него сервер МОЛЧА скипает продажную секцию: деньги не приходят,
+ошибок нет — «не работает» без единого лога. Идеальная ловушка.
+УСЛОВИЯ (server:1161): (1) персонаж ЖИВ и не в стуне (Character!=null,
+!IsIncapacitated); (2) ИЛИ AllowRemoteCampaignInteractions=true на
+сервере (продавай откуда угодно); (3) ИЛИ живой NPC с
+CampaignInteractionType==Store (торговец) в CanInteractWith 250 юнитах.
+ФИКС 517: модуль зеркалит гейт (CampaignInteractionType и
+CanInteractWith(Character, maxDist) публичны) — баннер и SELL объясняют
+конкретную причину: «нет торговца в 250 юнитах», «мёртв/в стуне»,
+«remote разрешены». Отправку НЕ блокируем — решает сервер, но юзер
+видит почему тишина.
+ИТОГОВЫЙ ЧЕКЛИСТ 452 (все 4 условия): MultiPlayerCampaign + гейт перм
+(AllowedToManageCampaign) + гейт близости торговца (Interaction gate) +
+баланс магазина >= цена. Любой провален = молчаливый ноль.
