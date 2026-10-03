@@ -145,7 +145,7 @@ namespace CSHUB.Modules
 
         // Панель автопилота: навёлся на штурвал → послать куда угодно.
         // Сервер читает raw f32×2 без IsValid/clamp (волна 447).
-        private static void RenderAutopilotPanel(Item helm, GUIPanel content)
+        private static void RenderAutopilotPanel(Item helm, GUILayoutGroup content)
         {
             var frame = new GUIFrame(
                 new RectTransform(new Vector2(1f, 0.17f), content.RectTransform, Anchor.BottomCenter),

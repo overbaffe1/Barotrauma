@@ -17742,3 +17742,10 @@ Exponentiation.Exponent=NaN ("NaN" на выход), Wifi.Channel (int) — ув
 канала. Modulus=0 защищён (NearlyEqual→1), НО set_modulus сигналом: NaN
 пройдёт (NearlyEqual(NaN,0)=false → modulus=NaN → x%NaN=NaN) — читерский
 NaN-источник без прав.
+
+== ВОЛНА 501 — CS0246/CS1503 фиксы ==
+Ошибки юзера: GUIPanel не существует в Barotrauma GUI (классов GUIPanel
+нет — всё наследует GUIComponent; GUIMessageBox.Content = GUILayoutGroup,
+GUIMessageBox.cs:34). Фикс: RenderAutopilotPanel(Item, GUILayoutGroup).
+Урок: GUI-иерархия Barotrauma: GUIComponent → GUIFrame/GUITextBlock/
+GUILayoutGroup/GUIListBox; «Panel» — из других движков.
