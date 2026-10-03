@@ -530,7 +530,7 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
-            if (keyboard.IsKeyDown(Keys.B) && previousKeyboard.IsKeyUp(Keys.B))
+            if (PlayerInput.KeyHit(Keys.B))
             {
                 doorRenderMode = (doorRenderMode + 1) % 4;
                 string[] dn = { "CARD z=10", "VOLUME z=0", "CARD z=inset", "SKIP" };
@@ -2388,14 +2388,14 @@ namespace BaroDepth
 
                     switch (doorRenderMode)
                     {
-                        case 0: // CARD z=10
-                            DrawCard(stamp.Texture, b, 10f, 1f, Color.White);
+                        case 0: // CARD z=10 — BLUE tint
+                            DrawCard(stamp.Texture, b, 10f, 1f, new Color(50, 100, 255));
                             break;
-                        case 1: // VOLUME z=0
+                        case 1: // VOLUME z=0 — normal contours
                             DrawVolume(stamp, b, 0f, 20f, RenderMode.Contours, false);
                             break;
-                        case 2: // CARD z=+SurfaceInset
-                            DrawCard(stamp.Texture, b, settings.SurfaceInset, 1f, Color.White);
+                        case 2: // CARD z=+SurfaceInset — RED tint for visibility
+                            DrawCard(stamp.Texture, b, settings.SurfaceInset, 1f, new Color(255, 50, 50));
                             break;
                         case 3: // SKIP
                             break;
@@ -3003,7 +3003,7 @@ namespace BaroDepth
                             screenBatch.Draw(white, new Rectangle(12, 12, Math.Max(100, Math.Min(width - 24, 850)), 74),
                             new Color(7, 15, 24, 210));
                             GUI.DrawString(screenBatch, new Vector2(22, 18),
-                            "BARODEPTH 0.3 | DOOR[" + doorRenderMode + "]=[" + new string[] { "CARD z=10", "VOLUME z=0", "CARD z=inset", "SKIP" }[doorRenderMode] + "] | CONTOURS | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
+                            "BARODEPTH | DOOR MODE " + doorRenderMode + " (" + new string[] { "CARD-10", "VOL-0", "CARD-INSET", "SKIP" }[doorRenderMode] + ") | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
                             GUI.DrawString(screenBatch, new Vector2(22, 39),
                             "F5 off | F6 view | F7 reload XML | F8 export IDs | ALT labels | LMB release: interact", Color.White);
                             GUI.DrawString(screenBatch, new Vector2(22, 60),
