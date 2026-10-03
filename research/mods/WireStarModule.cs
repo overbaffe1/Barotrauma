@@ -92,9 +92,8 @@ namespace CSHUB.Modules
 
             List<Vector2> verts = StarVerts(center, StarRadius, InnerRatio);
 
-            var nodes = nodesField?.GetValue(wire) as List<Vector2>;
             MethodInfo send = ResolveSend();
-            if (nodes == null || send == null)
+            if (send == null)
             {
                 GUI.AddMessage("[WireStar] reflection не готов", Color.Red);
                 return;
@@ -102,28 +101,26 @@ namespace CSHUB.Modules
 
             GUI.AddMessage("[WireStar] рисую ★ (" + verts.Count + " узлов, 1 узел/сек, " + wireItem.Name + ")...", Color.Lime);
 
+            // ВАЖНО: nodes НЕ захватываем! Эхо сервера заменяет объект списка
+            // (ClientEventRead: nodes = nodePositions.ToList()) — захваченная
+            // ссылка становится призраком, и следующее событие уже считает
+            // nodeCount по мёртвому списку → при записи "Sequence contains
+            // no elements" (nodes.Last()). Каждый шаг читает СВЕЖИЙ список.
             int session = _drawSession;
             int delayIdx = 0;
 
-            // шаг 0: сброс старых узлов (nodeCount=0 → сервер RemoveRange всё)
-            if (nodes.Count > 0)
-            {
-                ScheduleStep(wireItem, wire, nodes, send, 0, Vector2.Zero, 0, session, delayIdx);
-                delayIdx++;
-            }
-
-            // шаги 1..N: по одному узлу в секунду
+            // Сброс-шаг не нужен: рисуем только на пустом списке (гард ниже),
+            // чтобы не обрубать путь уже подключённого провода.
             for (int i = 0; i < verts.Count; i++)
             {
-                ScheduleStep(wireItem, wire, nodes, send, 1, verts[i], i, session, delayIdx);
+                ScheduleStep(wireItem, wire, send, verts[i], i, session, delayIdx);
                 delayIdx++;
             }
         }
 
         // Один шаг рисования, исполняется CoroutineManager'ом в своё время.
-        // Устаревшая сессия (юзер кликнул снова) молча выходит.
-        private static void ScheduleStep(Item item, Wire wire, List<Vector2> nodes,
-            MethodInfo send, int mode, Vector2 vertex, int vertexIndex, int session, int delayIdx)
+        private static void ScheduleStep(Item item, Wire wire, MethodInfo send,
+            Vector2 vertex, int vertexIndex, int session, int delayIdx)
         {
             CoroutineManager.Invoke(() =>
             {
@@ -132,23 +129,23 @@ namespace CSHUB.Modules
                     if (session != _drawSession) return;   // устаревший шаг
                     if (item == null || item.Removed || item.GetComponent<Wire>() != wire) return;
 
-                    if (mode == 0)
+                    // СВЕЖИЙ список каждый раз — эхо могло заменить объект
+                    var nodes = nodesField?.GetValue(wire) as List<Vector2>;
+                    if (nodes == null) return;
+
+                    if (nodes.Count != vertexIndex)
                     {
-                        // сброс: только если есть что сбрасывать
-                        if (nodes.Count == 0) return;
-                        nodes.Clear();
-                        SendEvent(item, wire, 0, send);
+                        // список не пуст на старте (подключённый провод — не
+                        // обрубаем его путь) или рассинхрон эха: честно стопим.
+                        // Вслепую слать nodeCount нельзя: ClientEventWrite
+                        // делает nodes.Last() и упадёт на пустом списке.
+                        GUI.AddMessage("[WireStar] стоп: у провода уже есть узлы (" + nodes.Count + ") или рассинхрон — возьми чистый провод", Color.Orange);
+                        return;
                     }
-                    else
-                    {
-                        // узел i добавляется только при ровно i узлах в списке;
-                        // рассинхрон = тихо стоп (иначе nodes.Last() кидает
-                        // "no elements" и валит всю пачку событий клиента)
-                        if (nodes.Count != vertexIndex) return;
-                        nodes.Add(vertex);
-                        SendEvent(item, wire, nodes.Count, send);
-                        wire.UpdateSections();
-                    }
+
+                    nodes.Add(vertex);
+                    SendEvent(item, wire, nodes.Count, send);
+                    wire.UpdateSections();
                 }
                 catch (Exception e)
                 {
@@ -158,17 +155,23 @@ namespace CSHUB.Modules
         }
 
         // ===== ПОИСК ПРОВОДА =====
+        // Предпочитаем ПОЛНОСТЬЮ отключённые провода: у подключённого (например,
+        // из двери) узлы — его физический путь, сброс «обрубил» бы его.
         private static Item FindWire()
         {
             Character me = Character.Controlled;
             if (me?.Inventory == null) return null;
+
+            Item fallback = null;
             foreach (Item it in me.Inventory.AllItems)
             {
                 if (it == null || it.Removed) continue;
                 Wire w = it.GetComponent<Wire>();
-                if (w != null && !w.Locked) return it;
+                if (w == null || w.Locked) continue;
+                if (w.Connections[0] == null && w.Connections[1] == null) return it;
+                fallback ??= it;
             }
-            return null;
+            return fallback;
         }
 
         // ===== ГЕОМЕТРИЯ =====
