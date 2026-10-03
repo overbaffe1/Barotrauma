@@ -17452,3 +17452,26 @@ Barotrauma разложен по винтикам от handshake до титро
   0f, depth) — рисуется в центре коридора, не внутри стен.
 
   УРОК: не ломай работающий код. Рабочая дверь уже была в тестовом файле.
+===============================================================================
+[WAVE 487 — V3: ДВЕРИ = РАБОЧИЙ КОД ИЗ 3d test dooor.cs, БАЗА = repair pls.cs]
+===============================================================================
+
+--- ЮЗЕР: «прошлый вариант верни! я же просил ТОЛЬКО двери взять из
+    прошлого, какого хера ты тест вариант в оригинал делаешь» ---
+
+  ВОРКФЛОУ (правильный):
+  - БАЗА = repair pls.cs (3053 строки: warmup, ALT throttle, diagnostics,
+    surfaceTexture, всё моё хорошее)
+  - ДВЕРИ = из 3d test dooor.cs (рабочий код, подтверждён юзером)
+  - ФАЙЛ = V3 3D Barotrauma.cs (заменён repair pls.cs контентом)
+
+  ЧТО ИМЕННО ВЗЯТО ИЗ 3d test dooor.cs:
+  1. CaptureEntity: door.Draw(captureBatch, false, -1f, Color.White)
+     + stamp.CapturedDoorState = door.OpenState
+     (НЕ мой doorSpriteField closed-pose hack)
+  2. PrepareEntity: isDoor always-dirty + interval=0
+     (НЕ мой generic lazy interval)
+  3. Revision: Door.OpenState включён в revision hash
+  4. DrawItems: synced-check + immediate PrepareEntity restamp +
+     DrawVolume(stamp, b, 0f, depth, Contours) на z=0
+     (НЕ мой DrawCard на SurfaceInset)

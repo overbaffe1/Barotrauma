@@ -57,6 +57,10 @@ namespace BaroDepth
         private Vector2 savedCursor;
         private Point savedMouse;
         private bool ready;
+        private static bool debugDoors;
+        private static double nextDoorLog;
+        private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
+            "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
         private bool warmupQueued = true;
 
         private enum ViewMode { Normal, Full, Xray }
@@ -525,6 +529,12 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
+            if (keyboard.IsKeyDown(Keys.F2) && previousKeyboard.IsKeyUp(Keys.F2))
+            {
+                debugDoors = !debugDoors;
+                nextDoorLog = 0; // print immediately on toggle
+                Log("door debug: " + (debugDoors ? "ON" : "OFF"), Color.Cyan);
+            }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
             if (toggleXray && !UiOwnsInput())
@@ -589,6 +599,7 @@ namespace BaroDepth
             yaw = (character.AnimController?.Dir ?? 1f) >= 0f ? 0f : MathHelper.Pi;
             pitch = 0f;
             enabled = true;
+            warmupQueued = true;   // F5: full capture immediately, not a slow warm-up
             discardNextMouseDelta = true;
             Log("ON / " + ModeName(mode) + (warnedAboutCursor ? " / aim hook unavailable" : ""), Color.LimeGreen);
         }
@@ -851,6 +862,7 @@ namespace BaroDepth
             public Vector2 AnchorUV = new Vector2(0.5f, 0.5f);
             public double CapturedDoorState = -1;
             public bool HasImage;
+            public bool DiagLogged;
             public bool Failed;
             public bool OutlineAttempted;
             public int Quality;
@@ -1419,6 +1431,7 @@ namespace BaroDepth
                         value = value * 397 ^ item.SpriteDepth.GetHashCode();
                         Door door = item.GetComponent<Door>();
                         if (door != null) value = value * 397 ^ (int)(MathHelper.Clamp(door.OpenState, 0f, 1f) * 64f);
+
                     }
                     return value;
                 }
@@ -1544,19 +1557,24 @@ namespace BaroDepth
                 settings.CaptureBudgetMs = double.MaxValue;
                 try
                 {
-                    // Warm EVERY eligible loaded object, not only this frame's
-                    // capture pool, so remote rooms are volumetric too.
+                    // Warm EVERY eligible loaded object from the FULL entity
+                    // list, not the distance-culled per-frame pools, so all
+                    // rooms are volumetric even in Normal view.
                     var targets = new List<MapEntity>();
-                    foreach (Item item in items)
-                        if (CaptureEligible(item) && captureSet.Contains(item)) targets.Add(item);
-                    foreach (Structure structure in structures)
-                        if (CaptureEligible(structure) && captureSet.Contains(structure)) targets.Add(structure);
+                    foreach (MapEntity entity in MapEntity.MapEntityList)
+                    {
+                        if (entity == null || entity.Removed) continue;
+                        bool eligible = (entity is Item it && it.ParentInventory == null)
+                                     || entity is Structure;
+                        if (eligible && CaptureEligible(entity)) targets.Add(entity);
+                    }
 
                     int warmed = 0;
                     foreach (MapEntity entity in targets)
                     {
                         Stamp stamp = GetStamp(entity);
                         if (stamp == null || !stamp.Bounds.Valid || stamp.HasImage) continue;
+                        if (warmed % 32 == 31) TrimCache(); // keep room in the cache
                         int jobs = 0; Stopwatch timer = Stopwatch.StartNew();
                         PrepareEntity(entity, entity is Item, RenderMode.Contours,
                             WarmupTextureSize > 0 ? WarmupTextureSize : settings.FullTextureSize, ref jobs, timer);
@@ -1572,10 +1590,10 @@ namespace BaroDepth
                 Stamp stamp = GetStamp(entity);
                 if (!stamp.Bounds.Valid || now < stamp.RetryAfter) return;
                 int revision = Revision(entity);
-                bool isDoor = entity is Item doorItem && doorItem.GetComponent<Door>() != null;
                 float distanceSq = stamp.Bounds.DistanceSquared(eye);
+                bool isDoor = entity is Item doorItem && doorItem.GetComponent<Door>() != null;
                 double interval = isDoor
-                    ? 0.0   // doors re-capture immediately: stale open-state = stretch
+                    ? 0.0
                     : distanceSq < 300f * 300f ? 0.18 : distanceSq < 800f * 800f ? 0.5 : 8.0;
                 interval /= MathF.Max(0.1f, contourRefreshScale);
                 bool upgrade = stamp.HasImage && stamp.Quality < quality;
@@ -1668,7 +1686,7 @@ namespace BaroDepth
                             // The Item base sprite is often only a placeholder/frame. Extruding
                             // it produced the two white plates. Capture ONLY the native door leaf.
                             if (door.OpenState < 0.999f)
-                            door.Draw(captureBatch, false, -1f, Color.White); // no tint: yellow SpriteColor washes the leaf
+                            door.Draw(captureBatch, false, -1f, Color.White);
                             stamp.CapturedDoorState = door.OpenState;
                         }
                         else if (entity is Item item && itemDrawWithTint != null)
@@ -1687,6 +1705,25 @@ namespace BaroDepth
                 }
                 stamp.ImageBounds = stamp.Bounds;
                 stamp.HasImage = true;
+                // One-time pixel readback: is the captured RT actually empty?
+                if (entity is Item diagItem && diagItem.GetComponent<Door>() != null && !stamp.DiagLogged)
+                {
+                    stamp.DiagLogged = true;
+                    try
+                    {
+                        var px = new Color[stamp.Texture.Width * stamp.Texture.Height];
+                        stamp.Texture.GetData(px);
+                        int opaque = 0, total = px.Length;
+                        long r = 0, g = 0, b = 0;
+                        foreach (var c in px) { if (c.A > 128) { opaque++; r += c.R; g += c.G; b += c.B; } }
+                        string msg = opaque > 0
+                            ? $"capture OK: {opaque}/{total} opaque px, avg ({r / opaque},{g / opaque},{b / opaque})"
+                            : "capture EMPTY: 0 opaque pixels!";
+                        Log("door stamp diag [" + diagItem.Prefab?.Identifier + "]: " + msg,
+                            opaque > 0 ? Color.LimeGreen : Color.Red);
+                    }
+                    catch (Exception ex) { Log("door stamp diag failed: " + ex.Message, Color.Orange); }
+                }
                 return true;
             }
 
@@ -1790,7 +1827,7 @@ namespace BaroDepth
                 removals.Clear();
                 foreach (var pair in staticStamps)
                 {
-                    if (pair.Key.Removed || (!fullView && settings.WarmupAll == false && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
+                    if (pair.Key.Removed || (!fullView && now - pair.Value.LastSeen > 30.0)) removals.Add(pair.Key);
                     else cacheBytes += pair.Value.Bytes;
                 }
                 foreach (MapEntity entity in removals) { staticStamps[entity].Dispose(); staticStamps.Remove(entity); }
@@ -1851,9 +1888,8 @@ namespace BaroDepth
                     float l = b.Left + offset.X, r = b.Right + offset.X;
                     float t = b.Top + offset.Y, bottom = b.Bottom + offset.Y;
                     float wallZ = halfDepth + 2f;
-                    // Back copy: real wall, writes depth. Front copy: decorative
-                    // overlay, depth TESTED but NOT written — otherwise it
-                    // z-fights with itself across frames (ceiling flicker).
+                    // Only the FAR copy (behind the eye). The near copy z-fights
+                    // with item cards and flickers on ceiling/wall seams.
                     float z = wallZ;
                     Color tint = new Color(126, 151, 169);
                     Texture2D surfaceTex = surfaceTexture ? PickSurfaceTexture(b) : null;
@@ -1862,10 +1898,6 @@ namespace BaroDepth
                         new Vector3(l, bottom, -z), new Vector3(r, bottom, -z),
                         b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
                         tint, false, Matrix.Identity, true);
-                    DrawQuadFrontNoWrite(surfaceTex, new Vector3(l, t, z), new Vector3(r, t, z),
-                        new Vector3(l, bottom, z), new Vector3(r, bottom, z),
-                        b.Left / 96f, -b.Top / 96f, b.Right / 96f, -b.Bottom / 96f,
-                        tint);
                 }
             }
 
@@ -2244,6 +2276,15 @@ namespace BaroDepth
                     if (structure == null || structure.Removed || Placement(structure).Banks == 0) continue;
                     staticStamps.TryGetValue(structure, out Stamp stamp);
                     Bounds2 b = RenderBounds(structure, stamp);
+                    if (structure.IsPlatform)
+                    {
+                        // Hatches/walkways sit on invisible platforms. Platforms
+                        // are paper-thin décor: draw as a flat card with the
+                        // original texture, no extrusion, no stretch.
+                        if (xrayView) { AddWireBox(b, 0f, 4f, new Color(60, 111, 141, 60)); continue; }
+                        DrawCard(stamp?.Texture, b, 0f, 1f, Color.White);
+                        continue;
+                    }
                     if (!structure.HasBody)
                     {
                         if (xrayView)
@@ -2274,16 +2315,57 @@ namespace BaroDepth
             private static Bounds2 DoorProxy(Item item)
             {
                 Bounds2 b = EntityBounds(item);
-                // Small control hotspot at the frame, NOT an invisible box sealing the aperture.
-                Vector2 center = b.Center;
+                // Closed: the whole door face is clickable (hatches included).
                 Door door = item.GetComponent<Door>();
-                if (door != null && door.IsHorizontal)
+                if (door == null || door.OpenState < 0.02f) return b;
+                // Open: small hotspot at the frame so the doorway stays passable
+                // for clicks meant for objects behind it.
+                Vector2 center = b.Center;
+                if (door.IsHorizontal)
                 return new Bounds2(center.X - 7f, b.Top - 13f, center.X + 7f, b.Top - 3f);
                 return new Bounds2(b.Left + 3f, center.Y - 9f, b.Left + 13f, center.Y + 9f);
             }
 
+            private static double nextDoorLog;
+
             private void DrawItems(RenderMode mode)
             {
+                // Door diagnostics: ALWAYS log to file + console once per 2 s
+                // while FP is on. No toggle needed.
+                if (now > nextDoorLog)
+                {
+                    nextDoorLog = now + 10.0;
+                    int doorsTotal = 0, doorsDrawn = 0, doorsOpen = 0, doorsNoStamp = 0, doorsCulled = 0;
+                    string sample = "";
+                    foreach (Item item in items)
+                    {
+                        var dr = item?.GetComponent<Door>();
+                        if (dr == null) continue;
+                        doorsTotal++;
+                        if (DoorOpen(dr)) { doorsOpen++; continue; }
+                        var layer = Placement(item);
+                        if (layer.Banks == 0) { doorsCulled++; continue; }
+                        staticStamps.TryGetValue(item, out Stamp st2);
+                        bool hasImg = st2?.HasImage == true;
+                        if (!hasImg) { doorsNoStamp++; continue; }
+                        doorsDrawn++;
+                        if (sample.Length < 140) sample += "; " + item.Prefab?.Identifier + "#" + item.ID + " z=" + layer.Z.ToString("0") + " hd=" + layer.HalfDepth.ToString("0") + " os=" + dr.OpenState.ToString("0.00");
+                    }
+                    string line = "doors: total=" + doorsTotal + " drawn=" + doorsDrawn + " open=" + doorsOpen
+                        + " noStamp=" + doorsNoStamp + " culled=" + doorsCulled + " sample[" + sample + "]";
+                    Log(line, Color.Cyan);
+                    try
+                    {
+                        string folder = Path.GetDirectoryName(SettingsStore.ActivePath ?? Path.Combine(SettingsStore.UserFolder, "BaroDepth.xml"));
+                        if (folder != null)
+                        {
+                            Directory.CreateDirectory(folder);
+                            File.AppendAllText(Path.Combine(folder, "BaroDepth.debug.log"),
+                                DateTime.Now.ToString("HH:mm:ss") + " " + line + "\r\n");
+                        }
+                    }
+                    catch { }
+                }
                 foreach (Item item in items)
                 {
                     if (item == null || item.Removed || item.ParentInventory != null || Placement(item).Banks == 0) continue;
@@ -2321,6 +2403,17 @@ namespace BaroDepth
                     else DrawSlices(stamp.Texture, stamp.Bounds, 0f,
                         MathHelper.Clamp(stamp.Bounds.Height * 0.075f, 10f, 35f), mode == RenderMode.Slices ? 11 : 5, true);
                 }
+            }
+
+            private void DrawVolumeTinted(Stamp stamp, Bounds2 bounds, float z, float depth, RenderMode mode, Color tint)
+            {
+                if (stamp == null || !stamp.HasImage || stamp.Texture == null || stamp.Texture.IsDisposed)
+                {
+                    DrawBoxSides(bounds, z, depth, tint);
+                    return;
+                }
+                DrawCard(stamp.Texture, bounds, z - depth, 1f, tint);
+                DrawCard(stamp.Texture, bounds, z + depth, 1f, tint);
             }
 
             private void DrawVolume(Stamp stamp, Bounds2 bounds, float z, float depth, RenderMode mode, bool taper)
@@ -2462,6 +2555,10 @@ namespace BaroDepth
                     float fraction = MathHelper.Clamp(hull.WaterVolume / ((float)r.Width * r.Height), 0f, 1f);
                     Vector2 d = SubDrawCorrection(hull.Submarine) - eye;
                     float y = r.Y - r.Height + r.Height * fraction + d.Y;
+                    // Keep the waterline off exact wall lines: coplanar quads
+                    // flicker (z-fighting) at the floor/ceiling seam.
+                    y = MathHelper.Clamp(y, r.Bottom - r.Height * 0.999f + d.Y, r.Bottom - 1f + d.Y);
+                    y += 0.5f;
                     DrawQuad(white, new Vector3(r.X + d.X, y, -waterDepth), new Vector3(r.Right + d.X, y, -waterDepth),
                         new Vector3(r.X + d.X, y, waterDepth), new Vector3(r.Right + d.X, y, waterDepth),
                         0, 0, 1, 1, new Color(37, 128, 165, 105), false, Matrix.Identity, false, true);
