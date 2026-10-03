@@ -17749,3 +17749,36 @@ NaN-источник без прав.
 GUIMessageBox.cs:34). Фикс: RenderAutopilotPanel(Item, GUILayoutGroup).
 Урок: GUI-иерархия Barotrauma: GUIComponent → GUIFrame/GUITextBlock/
 GUILayoutGroup/GUIListBox; «Panel» — из других движков.
+
+== ВОЛНА 502 — ★★★★ РЕАКТОР БЕССМЕРТЕН: set_fissionrate NaN (полная цепь подтверждена) ==
+Вопрос юзера «реактор через NaN» подтвердился, эффект круче ожидаемого:
+ЦЕПЬ (все звенья сверены):
+1) Reactor.ReceiveSignal set_fissionrate: Clamp(NaN,0,100) — XNA Clamp
+   (MathHelper.cs: clamp = value>max?max:value; value<min?min:value) —
+   все сравнения с NaN false → NaN ПРОХОДИТ (Reactor.cs:866-874).
+2) adjustValueWithoutOverShooting(current, NaN, speed): NaN<current=false →
+   Math.Min(NaN, x)=NaN → TargetFissionRate=NaN (Reactor.cs:271).
+3) FissionRate = Lerp(f, Math.Min(NaN, AvailableFuel), dt) → NaN
+   (сеттер опять Clamp(NaN)=NaN) (Reactor.cs:342).
+4) РАСХОД ТОПЛИВА: if (fissionRate > 0.0f) — NaN>0=FALSE →
+   стержни НЕ ГОРЕТ = БЕСКОНЕЧНОЕ ТОПЛИВО (Reactor.cs:351-355).
+5) ТЕМПЕРАТУРА: heat=GetGeneratedHeat(NaN)=NaN → temperatureDiff=NaN →
+   Math.Sign(NaN)=0 → Temperature ЗАМОРОЖЕНА на текущем значении
+   (Reactor.cs:321-323). Meltdown-чек Temperature>=100 — false ВСЕГДА
+   → расплавление НЕВОЗМОЖНО = реактор бессмертен.
+6) ВЫХЛОД: temperatureFactor=Min(frozenTemp/50,1) — замораживаешь темп ~55
+   ДО инъекции → фактор 1.0 → реактор стабильно питает всю сеть ВЕЧНО
+   даром. shutdown-сигнал: if(TargetFissionRate>0||Turbine>0) — NaN>0
+   false → сигнал SHUTDOWN ИГНОРИРУЕТСЯ (Reactor.cs:856-864).
+ЛЕЧЕНИЕ: выкл/вкл PowerOn вручную (сеттер !PowerOn → TargetFissionRate=0),
+но бот-экипаж этого не поймёт; сигнальное управление «умирает» через 1с
+(controlledBySignals timeout) — но NaN уже в TargetFissionRate остаётся
+при ручном режиме.
+ДОСТАВКА NaN: memory component (Value=[InGameEditable]string — пишется
+НАШИМ PropertyEditor!) → wire → set_fissionrate. ОДНОГО сигнала хватит:
+после инъекции TargetFissionRate навсегда NaN в ручном режиме.
+БОНУС-НАХОДКИ InGameEditable-списка: ExponentiationComponent.Exponent=NaN —
+вторая NaN-фабрика (x^NaN="NaN" на выходе); LightComponent.LightColor —
+Color-ветка сервера принимает 4 байта (стробоскоп-цвет не нужен сейчас);
+WaterDetector Output/FalseOutput — строки сигнала; RegExFind.Expression —
+evil regex потенциально = backtracking-CPU (отдельная волна, осторожно).
