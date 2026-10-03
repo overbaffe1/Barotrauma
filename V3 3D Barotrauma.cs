@@ -1832,7 +1832,7 @@ namespace BaroDepth
                     if (!fullView)
                     {
                         var b = EntityBounds(pair.Key);
-                        if (b.DistanceSquared(eye) < rangeSq * 0.25f)
+                        if (b.DistanceSquared(eye) < range * range * 0.25f)
                         { cacheBytes += pair.Value.Bytes; continue; }
                     }
                     if (!fullView && now - pair.Value.LastSeen > 30.0) removals.Add(pair.Key);
