@@ -1080,7 +1080,10 @@ namespace CSHUB.Modules
             {
                 if (_writeMsgType == null)
                 {
-                    _writeMsgType = AccessTools.TypeByName("Barotrauma.Networking.WriteOnlyMessage");
+                    // WriteOnlyMessage internal — достаём из сборки игры по имени
+                    // (Assembly.GetType находит и internal-типы, HarmonyLib не нужен)
+                    _writeMsgType = typeof(IWriteMessage).Assembly.GetType(
+                        "Barotrauma.Networking.WriteOnlyMessage");
                 }
                 if (_writeMsgType == null) { return null; }
                 return (IWriteMessage)Activator.CreateInstance(_writeMsgType);

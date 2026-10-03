@@ -18147,3 +18147,9 @@ CampaignMode.CargoManager public ✓.
 - Harmony + MiniBitField удалены целиком (using HarmonyLib тоже).
 Урок: полл публичного клиентского состояния (GetWallet) >> декод сетевых
 пакетов чужого протокола. И помни: свой Update-хук не тик — корутина игры.
+
+== ВОЛНА 520 — CS0103 AccessTools остаток ==
+Волна 519 убрала using HarmonyLib, но CreateMsg всё ещё звал
+AccessTools.TypeByName. Заменено на typeof(IWriteMessage).Assembly
+.GetType("Barotrauma.Networking.WriteOnlyMessage") — Assembly.GetType
+находит и internal-типы, HarmonyLib не нужен вовсе.
