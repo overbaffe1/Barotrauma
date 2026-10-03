@@ -2385,11 +2385,10 @@ namespace BaroDepth
                     Bounds2 b = EntityBounds(item);
                     if (!Visible(b, 0f, 20f)) continue;
 
-                    fpBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
-                        SamplerState.LinearClamp, null, RasterizerState.CullNone,
-                        null, WallMatrix(0f));
-                    door.Draw(fpBatch, false, 0f, Color.White);
-                    fpBatch.End();
+                    // Draw closed-pose stamp as flat card at z=0 (eye plane).
+                    // The stamp holds the closed door captured once — it never
+                    // changes, so no re-capture = no flicker, no lag.
+                    DrawCard(stamp.Texture, b, 0f, 1f, Color.White);
 
                     // Wireframe box in X-ray for reference
                     if (xrayView) { AddWireBox(b, 0f, 12f, new Color(82, 182, 204, 125)); }
