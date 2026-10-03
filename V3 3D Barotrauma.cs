@@ -58,10 +58,7 @@ namespace BaroDepth
         private Point savedMouse;
         private bool ready;
         private static bool debugDoors;
-        private static bool stretchTest;
         private static double nextDoorLog;
-        private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
-            "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
         private bool warmupQueued = true;
 
         private enum ViewMode { Normal, Full, Xray }
@@ -530,12 +527,6 @@ namespace BaroDepth
             }
             if (!enabled) return;
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
-            if (PlayerInput.KeyHit(Keys.B))
-            {
-                stretchTest = !stretchTest;
-                renderer?.InvalidateView();
-                Log("door capture: " + (stretchTest ? "doorSprite natural" : "WorldRect full"), Color.Lime);
-            }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
             if (toggleXray && !UiOwnsInput())
@@ -1686,34 +1677,10 @@ namespace BaroDepth
                         {
                             // The Item base sprite is often only a placeholder/frame. Extruding
                             // it produced the two white plates. Capture ONLY the native door leaf.
+                            // FULL WIDTH (working mode, wave 492): door.Draw at frame — fills bounds.
                             if (door.OpenState < 0.999f)
                             {
-                                if (stretchTest)
-                                {
-                                    // NATURAL: leaf at its own size, centered.
-                                    Sprite leaf = doorSpriteField?.GetValue(door) as Sprite;
-                                    if (leaf == null || leaf.Texture == null || leaf.Texture.IsDisposed)
-                                    leaf = doorItem.Sprite;
-                                    if (leaf?.Texture != null && !leaf.Texture.IsDisposed)
-                                    {
-                                        var bnd = stamp.Bounds;
-                                        float lw = leaf.SourceRect.Width;
-                                        float lh = leaf.SourceRect.Height;
-                                        var dest = new Rectangle(
-                                            (int)(bnd.Center.X - lw / 2), (int)(-(bnd.Center.Y + lh / 2)),
-                                            (int)lw, (int)lh);
-                                        captureBatch.Draw(leaf.Texture, dest, leaf.SourceRect, Color.White);
-                                    }
-                                    else
-                                    {
-                                        door.Draw(captureBatch, false, -1f, Color.White);
-                                    }
-                                }
-                                else
-                                {
-                                    // FULL WIDTH: door.Draw at frame — stretches to bounds
-                                    door.Draw(captureBatch, false, -1f, Color.White);
-                                }
+                                door.Draw(captureBatch, false, -1f, Color.White);
                             }
                             stamp.CapturedDoorState = door.OpenState;
                         }
@@ -3022,7 +2989,7 @@ namespace BaroDepth
                             screenBatch.Draw(white, new Rectangle(12, 12, Math.Max(100, Math.Min(width - 24, 850)), 74),
                             new Color(7, 15, 24, 210));
                             GUI.DrawString(screenBatch, new Vector2(22, 18),
-                            "BARODEPTH | " + (stretchTest ? "DOOR: NATURAL" : "DOOR: FULL WIDTH") + " | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
+                            "BARODEPTH | " + (xrayView ? "X-RAY / SEE THROUGH" : fullView ? "FULL / ALL ROOMS" : "NORMAL / NEAR") + " | depth x" + Number(settings.DepthScale) + " | width " + Number(halfDepth * 2f), Color.Cyan);
                             GUI.DrawString(screenBatch, new Vector2(22, 39),
                             "F5 off | F6 view | F7 reload XML | F8 export IDs | ALT labels | LMB release: interact", Color.White);
                             GUI.DrawString(screenBatch, new Vector2(22, 60),

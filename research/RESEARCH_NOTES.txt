@@ -17569,3 +17569,17 @@ Barotrauma разложен по винтикам от handshake до титро
 Урок: «roomShell» для дверей был объявлен в BuildLayers, но draw-путь его
 игнорировал — константа 20f осталась от эксперимента волны 489 и пережила
 чистку 490. Захардкоженные магические числа в draw-пути = рассинхрон с системой.
+
+== ВОЛНА 492 — stretchTest закрыт: FULL WIDTH признан рабочим ==
+Юзер протестировал оба режима захвата двери (B-тоггл): FULL WIDTH
+(door.Draw на весь WorldRect bounds) — рабочий, NATURAL (doorSprite
+в своём размере по центру) — не нужен.
+УБРАНО: поле stretchTest, B-хендлер (PlayerInput.KeyHit(Keys.B)),
+NATURAL-ветка в CaptureEntity, надпись "DOOR: NATURAL/FULL WIDTH"
+из статус-бара, ставший ненужным doorSpriteField (рефлексия к
+Door.doorSprite использовалась только NATURAL-веткой).
+ОСТАВЛЕНО: door.Draw(captureBatch, false, -1f, Color.White) —
+единственный путь захвата двери; захват при OpenState<0.999,
+CapturedDoorState для отслеживания ревизии.
+Урок: A/B-фича дожила 3 волны (490-491), юзер выбрал дефолт —
+значит дефолт изначально был правильный, а NATURAL был балластом.
