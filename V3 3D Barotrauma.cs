@@ -2390,28 +2390,17 @@ namespace BaroDepth
                     if (stamp != null) { stamp.LastSeen = now; stamp.LastDrawn = now; }
                     if (xrayView) { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 125)); continue; }
                     // The stamp always holds the CLOSED leaf (captured once).
-                    // Animate by sliding the volume: horizontal doors slide X,
-                    // vertical ones slide Y — matching the 2D door motion.
+                    // Draw as a flat card at the NEAR surface level (close to the
+                    // eye) — walls extrude to ±ShellDepth (~±201) and would
+                    // otherwise depth-cull the door at z=±198. Flat card at
+                    // z=+surfaceInset is in front of every wall face.
                     if (stamp?.HasImage != true)
                     { AddWireBox(b, 0f, depth, new Color(82, 182, 204, 110)); continue; }
 
-                    float slide = door.OpenState * Math.Max(b.Width, b.Height);
-                    Bounds2 anim = b;
-                    if (door.IsHorizontal)
-                    {
-                        bool flip = item.FlippedX;
-                        float shift = flip ? slide : -slide;
-                        anim = new Bounds2(b.Left + shift, b.Bottom, b.Right + shift, b.Top);
-                    }
-                    else
-                    {
-                        float shift = door.OpenState * b.Height;
-                        anim = new Bounds2(b.Left, b.Bottom + shift, b.Right, b.Top + shift);
-                    }
-                    // Fade the leaf out near the fully-open end so the aperture
-                    // ends up clear instead of holding a solid door in the wall.
-                    var animTint = Color.White * (1f - door.OpenState * 0.9f);
-                    DrawVolumeTinted(stamp, anim, 0f, depth, RenderMode.Contours, animTint);
+                    float openFade = 1f - door.OpenState;
+                    var doorTint = Color.White * openFade;
+                    if (doorTint.A > 10)
+                    DrawCard(stamp.Texture, b, settings.SurfaceInset, 1f, doorTint);
                 }
             }
 
