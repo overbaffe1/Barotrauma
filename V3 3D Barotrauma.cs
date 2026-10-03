@@ -58,7 +58,7 @@ namespace BaroDepth
         private Point savedMouse;
         private bool ready;
         private static bool debugDoors;
-        private static int doorRenderMode;
+        private static bool stretchTest;
         private static double nextDoorLog;
         private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
             "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -532,9 +532,9 @@ namespace BaroDepth
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
             if (PlayerInput.KeyHit(Keys.B))
             {
-                doorRenderMode = (doorRenderMode + 1) % 4;
-                string[] dn = { "CARD z=10", "VOLUME z=0", "CARD z=inset", "SKIP" };
-                Log("door mode: " + dn[doorRenderMode], Color.Lime);
+                stretchTest = !stretchTest;
+                renderer?.InvalidateView();
+                Log("door capture: " + (stretchTest ? "doorSprite natural" : "WorldRect full"), Color.Lime);
             }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
@@ -2387,20 +2387,7 @@ namespace BaroDepth
                     Bounds2 b = EntityBounds(item);
                     if (!Visible(b, 0f, 20f)) continue;
 
-                    switch (doorRenderMode)
-                    {
-                        case 0: // CARD z=10 — BLUE tint
-                            DrawCard(stamp.Texture, b, 10f, 1f, new Color(50, 100, 255));
-                            break;
-                        case 1: // VOLUME z=0 — normal contours, FULL WIDTH
-                            DrawVolume(stamp, b, 0f, 20f, RenderMode.Contours, false);
-                            break;
-                        case 2: // CARD z=+SurfaceInset — RED tint for visibility
-                            DrawCard(stamp.Texture, b, settings.SurfaceInset, 1f, new Color(255, 50, 50));
-                            break;
-                        case 3: // SKIP
-                            break;
-                    }
+                    DrawVolume(stamp, b, 0f, 20f, RenderMode.Contours, false);
                 }
             }
 
