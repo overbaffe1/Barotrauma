@@ -40,14 +40,40 @@ namespace CSHUB.Modules
         // Item.CreateClientEvent<T>(T ic, ItemComponent.IEventData extraData)
         private static MethodInfo _createClientEvent;
 
-        private const float StarRadius = 45f;   // внешний радиус звезды (px)
-        private const float InnerRatio = 0.42f; // внутренний радиус = внешний * ratio
+        private const float StarRadius = 12f;    // радиус ПЕРВОЙ (маленькой) звезды
+        private const float InnerRatio = 0.42f;  // внутренний радиус = внешний * ratio
+        private const int   Loops = 8;           // сколько раз обвести с ростом
+        private const float Growth = 6f;         // +px к радиусу на каждый обвод
+
+        // Полный маршрут: Loops звёзд, каждая чуть больше предыдущей —
+        // «обводка» вокруг центра раз за разом. Непрерывный путь: последняя
+        // вершина звезды k стоит в верхнем луче, первая звезды k+1 — там же
+        // (угол совпадает), поэтому на повторных обводках дубликат угла
+        // пропускаем — провод идёт без самопересечения в той же точке.
+        private static List<Vector2> StarPath(Vector2 center)
+        {
+            var path = new List<Vector2>(Loops * 9 + 1);
+            for (int loop = 0; loop < Loops; loop++)
+            {
+                float radius = StarRadius + loop * Growth;
+                int startI = loop == 0 ? 0 : 1;
+                for (int i = startI; i < 10; i++)
+                {
+                    double ang = Math.PI / 2.0 + i * (Math.PI / 5.0);
+                    float r = (i % 2 == 0) ? radius : radius * InnerRatio;
+                    path.Add(center + new Vector2(
+                        (float)(Math.Cos(ang) * r),
+                        (float)(Math.Sin(ang) * r)));
+                }
+            }
+            return path;
+        }
 
         // Пошаговая отрисовка, темп 1 узел/сек (просьба юзера): 11 ивентов
         // одним кадром затираются эхом, ваниль шлёт узлы в темпе перетаскивания.
         // Планировщик — CoroutineManager (движок зовёт экшены в главном потоке;
         // CSModuleBase.Update фреймворком не вызывается).
-        private const float StepInterval = 1.0f;
+        private const float StepInterval = 0.15f; // 73 узла x 0.15с ~ 11с на весь рисунок
 
         // Незавершённые шаги прошлых рисований само-глушатся: CoroutineHandle
         // игры internal (по имени не достать), поэтому каждый шаг проверяет
@@ -90,7 +116,7 @@ namespace CSHUB.Modules
                 center -= refSub.DrawPosition + refSub.HiddenSubPosition;
             }
 
-            List<Vector2> verts = StarVerts(center, StarRadius, InnerRatio);
+            List<Vector2> verts = StarPath(center);
 
             MethodInfo send = ResolveSend();
             if (send == null)
@@ -99,7 +125,7 @@ namespace CSHUB.Modules
                 return;
             }
 
-            GUI.AddMessage("[WireStar] рисую ★ (" + verts.Count + " узлов, 1 узел/сек, " + wireItem.Name + ")...", Color.Lime);
+            GUI.AddMessage("[WireStar] рисую ★ обводкой (" + verts.Count + " узлов, " + wireItem.Name + ")...", Color.Lime);
 
             // ВАЖНО: nodes НЕ захватываем! Эхо сервера заменяет объект списка
             // (ClientEventRead: nodes = nodePositions.ToList()) — захваченная
@@ -172,22 +198,6 @@ namespace CSHUB.Modules
                 fallback ??= it;
             }
             return fallback;
-        }
-
-        // ===== ГЕОМЕТРИЯ =====
-        private static List<Vector2> StarVerts(Vector2 center, float radius, float innerRatio)
-        {
-            var verts = new List<Vector2>(10);
-            for (int i = 0; i < 10; i++)
-            {
-                // старт с верхнего луча, шаг 36°, чередуем внешний/внутренний радиус
-                double ang = Math.PI / 2.0 + i * (Math.PI / 5.0);
-                float r = (i % 2 == 0) ? radius : radius * innerRatio;
-                verts.Add(center + new Vector2(
-                    (float)(Math.Cos(ang) * r),
-                    (float)(Math.Sin(ang) * r)));
-            }
-            return verts;
         }
 
         private static void SendEvent(Item item, Wire wire, int nodeCount, MethodInfo send)
