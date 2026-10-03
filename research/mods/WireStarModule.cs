@@ -65,6 +65,16 @@ namespace CSHUB.Modules
             if (cam == null) return;
             Vector2 center = cam.ScreenToWorld(PlayerInput.MousePosition);
 
+            // Узлы провода хранятся в пространстве СУБМАРИНЫ, а рисуются как
+            // nodePos + sub.DrawPosition + sub.HiddenSubPosition (Wire.GetDrawOffset).
+            // Инвертируем сдвиг: иначе звезда улетает на начало координат мира.
+            // В море (субы нет) сдвиг нулевой — мировые координаты как есть.
+            Submarine refSub = wireItem.Submarine;
+            if (refSub != null)
+            {
+                center -= refSub.DrawPosition + refSub.HiddenSubPosition;
+            }
+
             List<Vector2> verts = StarVerts(center, StarRadius, InnerRatio);
 
             string err;
