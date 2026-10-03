@@ -58,6 +58,7 @@ namespace BaroDepth
         private Point savedMouse;
         private bool ready;
         private static bool debugDoors;
+        private static int doorRenderMode;
         private static double nextDoorLog;
         private static readonly FieldInfo doorSpriteField = typeof(Door).GetField(
             "doorSprite", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -531,9 +532,9 @@ namespace BaroDepth
             if (reload && !UiOwnsInput()) { ReloadSettings(); warmupQueued = true; }
             if (keyboard.IsKeyDown(Keys.F2) && previousKeyboard.IsKeyUp(Keys.F2))
             {
-                debugDoors = !debugDoors;
-                nextDoorLog = 0; // print immediately on toggle
-                Log("door debug: " + (debugDoors ? "ON" : "OFF"), Color.Cyan);
+                doorRenderMode = (doorRenderMode + 1) % 4;
+                string[] dn = { "CARD z=10", "VOLUME z=0", "CARD z=inset", "SKIP" };
+                Log("door mode: " + dn[doorRenderMode], Color.Lime);
             }
             if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
             bool ui = UiOwnsInput() || HasItemGui();
@@ -2385,13 +2386,20 @@ namespace BaroDepth
                     Bounds2 b = EntityBounds(item);
                     if (!Visible(b, 0f, 20f)) continue;
 
-                    // Draw closed-pose stamp as flat card at z=0 (eye plane).
-                    // The stamp holds the closed door captured once — it never
-                    // changes, so no re-capture = no flicker, no lag.
-                    DrawCard(stamp.Texture, b, 10f, 1f, Color.White);
-
-                    // Wireframe box in X-ray for reference
-                    if (xrayView) { AddWireBox(b, 0f, 12f, new Color(82, 182, 204, 125)); }
+                    switch (doorRenderMode)
+                    {
+                        case 0: // CARD z=10
+                            DrawCard(stamp.Texture, b, 10f, 1f, Color.White);
+                            break;
+                        case 1: // VOLUME z=0
+                            DrawVolume(stamp, b, 0f, 20f, RenderMode.Contours, false);
+                            break;
+                        case 2: // CARD z=+SurfaceInset
+                            DrawCard(stamp.Texture, b, settings.SurfaceInset, 1f, Color.White);
+                            break;
+                        case 3: // SKIP
+                            break;
+                    }
                 }
             }
 
