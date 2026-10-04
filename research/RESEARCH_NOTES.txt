@@ -18441,3 +18441,23 @@ ending-список → доступ к Options[selectedOption] → ArgumentOutO
 ломать в любое время после (даже после завершения события, ev ещё в
 activeEvents).
 МИНИ-КВИРК: IgnoreClient(sender, 3f) для не-адресатов = 3с игнор-лист.
+
+== ВОЛНА 531 — ПРОВЕРКА «RangedInteger всегда кламп» ОПРОВЕРГНУТА/ПОДТВЕРЖДЕНА частично ==
+Гипотеза «все ReadRangedInteger клампятся безопасно» — ПРОВЕРКА:
+ReadRangedInteger (Message.cs:408): min + rvalue, rvalue = numBits от
+range = max-min → математически ВСЕГДА в [min,max]. Кламп есть по
+конструкции. Так что PowerDistributor.powerGroups[ReadRangedInteger(0,
+Count-1)] НЕ крашится (в отличие от byte-индекса EventManager 530).
+НО: PowerDistributor (комбайн-щиток силовых групп) ревизия:
+- RatioChange: RangedInteger(0,20)*step → сеттер Clamp(0,1) — чисто.
+- NameChange: string.Concat(ReadString().Take(32)) — макс-длина честна;
+  НО Name-сеттер вызывает TextManager.Get(name).Fallback(name) +
+  UpdateNameBox() — имя идёт в TextManager как КЛЮЧ ЛОКАЛИЗАЦИИ! Ключ
+  произвольной длины (32) произвольного содержания: lookup промахнётся
+  (Fallback сработает), но это dictionary-хеш каждого клиента + UI-бокс.
+  Оценка: квирк-уровень, не вектор.
+ИТОГ: RangedInteger-семейство чисто — подтверждённый hardening.
+Противопоставление: byte-индексы (EventManager 530, Order 451, Inventory
+461) vs RangedInteger — одна и та же ошибка «сырой индекс» в 3 местах
+решена в 1 месте протокола. Разработчики выбрали оба API — и один из них
+безопасен by design.
