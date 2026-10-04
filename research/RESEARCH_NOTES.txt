@@ -18606,3 +18606,21 @@ signal_out, умирает/становится бессмертным. Ника
 (дефолт false). Кап 200 символов NaN не ломает.
 Пакет для мода (если хочется издалека): EVENT-путь Terminal → byte
 ServerEventData.MsgIndex + WriteString(newOutputValue) — тоже прост.
+
+== ВОЛНА 537 — ТЕРМИНАЛ → ШТУРВАЛ: печатаемый руль (velocity_in) ==
+Юзер скинул панель штурвала (Steering), перепутал с терминалом. РАЗБОР
+ПАНЕЛИ (Steering connections): ЭНЕРГИЯ_В=power_in, ПРЕОБРАЗОВАТЕЛЬ_В
+(steering-конвертер), СКОРОСТЬ_В=velocity_in, СИГНАЛ_ИЗ_1/2/3=signal_out
+1/2/3 (настраиваемые), ВКЛЮЧИТЬ_СТЫКОВКУ=toggle_docking, ТЕКУЩАЯ_
+СКОРОСТЬ/ПОЗИЦИЯ Х/У = текущие значения, ИСПРАВНОСТЬ_ИЗ=condition_out.
+★ ВЕТКА velocity_in (Steering.cs:845-853): steeringInput =
+XMLExtensions.ParseVector2(signal.value) → ParseVector2 (XMLExtensions
+.cs:857) = split(','), float.TryParse(NumberStyles.Any, Invariant) на
+каждую компоненту → "NaN,NaN" ПАРСИТСЯ (Any включает NaN-литерал!) →
+Clamp(NaN)=NaN → steeringInput/TargetVelocity = NaN.
+Т.е. терминал signal_out → СКОРОСТЬ_В = ПЕЧАТАЕМЫЙ РУЛЬ:
+- "50,0" = вперёд, "0,50" = вверх (в тему координат),
+- "NaN,NaN" = руль-овощ (как движок 505, физика гардирует силу).
+Механика легитная (velocity_in = штатный вход автопилота/схем).
+ТЕРМИНАЛ vs ШТУРВАЛ: терминал = отдельный предмет-экран с текстовой
+строкой ввода внизу UI; на штурвале печатать нечего.
