@@ -18648,3 +18648,24 @@ Clamp(NaN)=NaN → steeringInput/TargetVelocity = NaN.
 - Требования: GameStarted, в uniqueEvents есть события (не пустой
   раунд), мы не SpectateOnly-фильтр не влияет на Init.
 Пакеты: UPDATE_INGAME | bool false | pad — 3 байта. Unreliable достаточно.
+
+== ВОЛНА 542 — IN-GAME ВАРИАНТ «ВСЕ ЛАГАЮТ»: кульбит с ENDROUND без выхода из лобби ==
+Юзер: «а если я уже в игре?» Анализ всех кик-гейтов ServerEntityEventManager:
+кики (OldEvent 252-262, RemovedEvent 270, SyncTimeout 280) действуют на
+InGame. НО MidRoundSyncTimeOut даёт окно: midRoundSyncTimeOut = max(
+uniqueEvents.Count/10 × UpdateInterval, MinimumMidRoundSyncTimeout=30с).
+Длинный раунд: 5000 событий → теоретически 500с/10... UpdateInterval
+обычно ~0.03-0.1с → uniqueEvents/10×0.1 = 50с при 5000 событий (но кап
+снизу 30с). Т.е. окно ресинка в раунде = 30-50+с БЕЗ кика (сервер в это
+время льёт ВЕСЬ бэклог). Потом кик по SyncTimeout.
+ТАКТИКА IN-GAME (цикл): 1) UPDATE_INGAME{false} → сервер льёт бэклог 30-50с
+(все лагают); 2) за ~5с до конца окна: ENDROUND_SELF (InGame=false → кик-
+фильтры InGame перестают действовать, NeedsMidRoundSync остаётся); 3)
+подождать пару сек; 4) UPDATE_INGAME{false} снова → новый InitClientMidRound
+Sync, НОВОЕ окно 30-50с, InGame=false (камера в лобби). 5) повторять.
+Итог: почти непрерывный поток бэклога серверу, без кика, без выхода
+из клиент-сессии. Инфра-гриф как LagBubble, но на виду у всех (режешь
+и «в игре»). Пакеты те же 3 байта. Свежий раунд (<RoundStartSyncDuration)
+не кикает по OldEvent тоже.
+Комбо-условия максимального эффекта: длинный раунд (бэклог огромный),
+владелец не смотрит консоль, хост-машина слабая.
