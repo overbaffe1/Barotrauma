@@ -18557,3 +18557,28 @@ false (обычные правила: Locked + CanClientAccess).
 beacon-станцию которую чинишь) → можешь ПЕРЕПАЯТЬ всю их схемку без
 Locked-ограничений (Locked проверяется, но авторы руин редко ставят).
 Комбо с сервером друга: 'Перепаять турель руины на friendly' = легит.
+
+== ВОЛНА 535 — ФИНАЛЬНЫЙ АУДИТ ИТЕМ-КОМПОНЕНТОВ (ServerEventRead полный лист) ==
+Прошёлся по ВСЕМ ServerEventRead (ItemComponents, server side). Итог:
+- DockingPort: allowOutpostAutoDocking — гейт AllowedToManageCampaign
+  (ManageMap) на ВАЖНОЕ поле (автодок аутпостов). Чисто.
+- Terminal: CanClientAccess + Readonly + MaxMessageLength=200 (ChatMessage
+  cap) → output → signal_out. Т.е. ЛЮБОЙ терминал с signal_out — и это
+  легит-канал: "ввёл текст на терминале" → сигнал на схемы. Комбо с
+  проводкой чужих руин (AlwaysAllowRewiring 534c) = вводишь что хочешь
+  в руинную схему. signal_out → мы знаем что роутинг сигналов доверенный.
+- ButtonTerminal: RangedInteger(0, len-1) — clamp by construction ✓.
+- PowerContainer: RangedInteger(0,10)/10*max — clamp ✓.
+- RelayComponent: ServerEventRead ОТСУТСТВУЕТ — реле переключается
+  ТОЛЬКО через сигналы (toggle/set_state) + SetState без CanClientAccess,
+  но сигналы не клиент-пакеты → реле не клиент-контролируемо напрямую.
+- GeneticMaterial/ItemLabel/Growable: server-write only, клиентского
+  входа нет.
+- Engine/Reactor/Pump/Steering/Sonar/Wifi — разобраны ранее (447-452).
+ИНТЕРЕСНОЕ (не краш, не эксплойт — ИНСТРУМЕНТ): Terminal.signal_out
++ Readonly=false по дефолту = ЛЕГИТНЫЙ клиент-контролируемый вход
+сигналов в любую схему, где стоит терминал. На руинах/вражеских субах
+(534c AlwaysAllowRewiring) можно 1) перепаять схему, 2) воткнуть
+терминал если вдруг есть, 3) терминалом дёргать set_speed/set_force
+на чужих механизмах (легитный источник, "мемори-компонент не нужен").
+Комбо-канон для сервера друга: руина+терминал+wires=полный пульт.
