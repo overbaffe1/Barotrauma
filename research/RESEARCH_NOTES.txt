@@ -18848,3 +18848,9 @@ CanInteractWith(this) + CanInteractWith(combineTarget) → Item.Combine
    Легит. Комбо: два игрока «переливают» condition друг другу.
    Вектора нет — гейты честные (CanInteractWith обоих).
 Combine = чисто (проверки обоих предметов + слоты). Skip.
+
+== ВОЛНА 551 — TREATMENT гейт: юзер-гейт только предмета; лечит только UseInHealthInterface ==
+EventType.Treatment (server Item.cs:210): CanInteractWith(this) на
+предмет + HealingCooldown + target = self или SelectedCharacter.
+ApplyTreatment (Item.cs:3434) требует UseInHealthInterface (предметы
+Health-интерфейса). Всё чисто. Skip.
