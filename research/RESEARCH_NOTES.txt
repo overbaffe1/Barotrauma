@@ -18306,3 +18306,38 @@ retaliation 99999с, VoteRequiredRatio=NaN (анти-кик), KickVotes 100%,
 transfer-cap 99 999 999, +custom любое свойство, +ExtraCargo спавнер.
 ГРАНИЦА: всё логируется сервером («changed X to Y»), перм проверяется
 жёстко — это «пульт админа с мод-клиентом», не пермлесс-эксплойт.
+
+== ВОЛНА 526 — ★★ ЛОББИ БЕЗ ПЕРМОВ: канал SERVER_SETTINGS_PERKS открыт «простым» ==
+Юзер спросил: «в лобби какие настройки можно менять без пермов?»
+НАЙДЕНО: отдельный канал SERVER_SETTINGS_PERKS (ServerSettings.cs:133,
+server) с ГОРАЗДО мягким гейтом HasPermissionToChangePerks (server:144):
+  1) перм ManageSettings → да;
+  2) ИЛИ (fallback!) НИ У КОГО из ОСТАЛЬНЫХ клиентов нет ManageSettings.
+  В PvP: вместо общего фоллбэка — по своей команде (PreferredTeam:
+  юзер выбирает Team1/Team2 в лобби!): никого с пермом в ТВОЕЙ команде
+  → ты «пермец» для своей команды.
+Т.е. на ПЕРМЛЕСС-сервере ЛЮБОЙ клиент в лобби — полноценный редактор
+disembark-перков. Ваниль даже даёт такому клиенту UI-кнопку (ло́би
+показывает перк-панель когда HasPermissionToChangePerks()==true —
+client ServerSettings.cs:212).
+ЧТО МЕНЯЕТСЯ ЧЕРЕЗ НЕГО: ReadPerks (shared:1436) → SelectedCoalitionPerks
+(Team1) + SelectedSeparatistsPerks (Team2) → применяются НА СТАРТЕ
+РАУНДА (GameSession PerkCollection.ApplyAll ← GameServer:3180):
+- GiveTalentPointPerk: +N ТАЛАНТ-ОЧКОВ ВСЕЙ команде (AdditionTalentPoints,
+  кап 100)
+- SpawnItemPerk (ServerOnly): спавн предметов по identifier/тегу ×
+  minAmount + perPlayer ВСЕЙ команде в контейнеры
+- UpgradeSubmarinePerk: СУБУ +Level апгрейда (стены тоже)
+- SubItemSwapPerk: замена предметов на субе
+Лимиты: ValidatedDisembarkPoints — сумма Cost ≤ DisembarkPointAllowance
+(7 по дефолту); ПАКЕТ перков НЕ содержит проверку суммы — сервер
+принимает ЛЮБОЙ набор (валдиация только клиентская в лобби!).
+ПАКЕТ (сервер ServerRead:137 → ReadPerks shared:1436):
+  byte SERVER_SETTINGS_PERKS(21) | VarUInt32 coalitionCount +
+  u32 uintIdentifier×N | VarUInt32 separatistsCount + u32×M
+uintIdentifier = ToolBoxCore.IdentifierToUint32Hash(Identifier, MD5) —
+Тот же алгоритм, что в 525 (реплицирован в SettingsFlipper).
+Обратная связь: SaveSettings() + LastUpdateID++ → всем рассылается
+обновлённый список перков.
+Кандидаты 527: модуль LobbyPerkEditor? (простой пакет: только u32-хеши),
+комбо: перки +5 талантов всем = потом TalentOverspend 447.
