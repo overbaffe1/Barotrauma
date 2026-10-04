@@ -18829,3 +18829,22 @@ ServerLog.MessageType.Error пишет в серверный консольны�
 даже без перма (else-if цепочка cs:1352). Второе переименование себе
 запрещено RenamingEnabled=false — ОДНОКРАТНОЕ переименование легит.
 Никаких новых векторов кроме лог-спама.
+
+== ВОЛНА 550 — Item.Combine перетаскиванием = легит-перенос ЧУЖИХ предметов на дистанции ==
+EventType.Combine (server Item.cs:233-241): u16 combineTargetID, гейты:
+CanInteractWith(this) + CanInteractWith(combineTarget) → Item.Combine
+→ каждый ItemComponent.Combine. Два интересных компонента:
+1) ItemContainer.Combine (ItemContainer.cs:837): «переложить предмет
+   в контейнер» через drag&drop-пакет, гейт CanAccessInventory — НО
+   CanAccessInventory(player) у себя = свой инвентарь. Т.е. игрок
+   МОЖЕТ переложить ЛЮБОЙ предмет, который может «интерактнуть»,
+   в СВОЙ контейнер (рюкзак) — легит-перенос, без физического
+   подъёма предмета в руки (обход веса/слотов? нет: TryPutItem
+   проверяет слоты).
+2) Базовый ItemComponent.Combine (canBeCombined = fuel-суммирование,
+   напр. сварочная смесь): Condition -= transferAmount / +=
+   transferAmount — можно ДОЛИВАТЬ условие из чужого предмета БЕЗ
+   выкидывания (item.ParentInventory.RemoveItem) если топливо.
+   Легит. Комбо: два игрока «переливают» condition друг другу.
+   Вектора нет — гейты честные (CanInteractWith обоих).
+Combine = чисто (проверки обоих предметов + слоты). Skip.
