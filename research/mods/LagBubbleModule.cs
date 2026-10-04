@@ -92,7 +92,7 @@ namespace CSHUB.Modules
                 GUI.AddMessage("[LagBubble] Только в мультиплеере", Color.Orange);
                 return;
             }
-            if (!GameMain.Client.InGame && string.IsNullOrEmpty(GameMain.Client.Name))
+            if (!AmInGame() && string.IsNullOrEmpty(GameMain.Client?.Name))
             {
                 GUI.AddMessage("[LagBubble] Нет соединения", Color.Orange);
                 return;
@@ -190,10 +190,26 @@ namespace CSHUB.Modules
             UpdateStatus();
         }
 
+        // InGame живёт на Client (в списке ConnectedClients), не на GameClient.
+        // Себя находим по SessionId — как ваниль (Voting.cs:426).
+        private static Client MyClient()
+        {
+            var c = GameMain.Client;
+            if (c == null) { return null; }
+            try { return c.ConnectedClients?.Find(cl => cl.SessionId == c.SessionId); }
+            catch { return null; }
+        }
+
+        private static bool AmInGame()
+        {
+            var me = MyClient();
+            return me != null && me.InGame;
+        }
+
         private static string StatusText()
         {
             var c = GameMain.Client;
-            string state = c == null ? "нет клиента" : c.InGame ? "в раунде (InGame)" : "в лобби";
+            string state = c == null ? "нет клиента" : AmInGame() ? "в раунде (InGame)" : "в лобби";
             return "состояние: " + state + " | запросов: " + _sent;
         }
 
@@ -235,7 +251,7 @@ namespace CSHUB.Modules
                     continue;
                 }
 
-                if (!c.InGame)
+                if (!AmInGame())
                 {
                     // ЛОББИ-режим: простой ресинк-запрос, кик невозможен
                     next = Timing.TotalTime + _interval;

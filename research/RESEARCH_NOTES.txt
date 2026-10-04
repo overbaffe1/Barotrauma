@@ -18688,3 +18688,13 @@ Sync, НОВОЕ окно 30-50с, InGame=false (камера в лобби). 5)
   state-machine (_waitingAfterEndRound) на yield-корутине.
 - Авто-стоп если: клиент null / соединение потеряно.
 Пакеты: ENDROUND_SELF=1 байт, UPDATE_INGAME=3 байта, всё Unreliable.
+
+== ВОЛНА 544 — LagBubble CS1061 фиксы ==
+GameClient (GameMain.Client) НЕ имеет InGame — InGame живёт на
+Client в списке ConnectedClients (NetworkMember.cs:216 public).
+Ваниль сама себя находит так: ConnectedClients.Find(SessionId ==
+GameMain.Client.SessionId) (Voting.cs:426). Фиксы:
+- MyClient(): Find по SessionId из c.ConnectedClients
+- AmInGame(): MyClient()?.InGame
+- 3 точки использования заменены (статус/лобби-ветка/старт-гейт)
+- старт-гейт loosened: InGame теперь разрешён (in-game кульбит 543)
