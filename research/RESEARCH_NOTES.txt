@@ -18811,3 +18811,21 @@ BUFFER_COUNT x decode попыток (8 x OpusDecode). Халявный CPU-burn
 58-байтовым пакетом (8 x len byte + 8 x byte).
 Формат VoipQueue.Write: u16 LatestBufferID | bool ForceLocal+pad |
 8x (byte len + bytes) = 2+1+8+8*40 = 331 байт максимум, мин ~11.
+
+== ВОЛНА 549 — CREW-ПАКЕТ: «проверки нет → лог есть» — ЛОГ-СПАМ ВЕКТОР ==
+ReadCrewMessage → ServerReadCrew: ветки с гейтами AllowedToManageCampaign
+упали в else с GameServer.Log(...) на КАЖДЫЙ пакет без гейта:
+  fireCharacter без ManageHires → GameServer.Log("attempted to fire...")
+  (MultiPlayerCampaign:1314-1318)
+  renameCharacter чужого без перма → Log "attempted to rename..."
+ServerLog.MessageType.Error пишет в серверный консольный лог + может
+писать в файл лога на диск (дисковый I/O). CREW-пакет позволяет юзеру
+БЕЗ ПРАВ спамить серверные лог-строки ЧЕРЕЗ fireCharacter/renameCharacter
+поля пакета — DoSProtection считает пакеты (лимит), но каждая запись
+диск-I/O. Аналог HandleClientError-спама (458).
+Плюс ServerReadCrew: ServerReadCrew(inc) → renameCharacter ветка
+чужого имени требует ManageHires, НО для СВОЕГО CharacterInfo
+(renamedIdentifier == sender.CharacterInfo.ID) — characterInfo берётся
+даже без перма (else-if цепочка cs:1352). Второе переименование себе
+запрещено RenamingEnabled=false — ОДНОКРАТНОЕ переименование легит.
+Никаких новых векторов кроме лог-спама.
