@@ -18461,3 +18461,24 @@ Count-1)] НЕ крашится (в отличие от byte-индекса Even
 461) vs RangedInteger — одна и та же ошибка «сырой индекс» в 3 местах
 решена в 1 месте протокола. Разработчики выбрали оба API — и один из них
 безопасен by design.
+
+== ВОЛНА 532 — ФАБРИКАТОР: твой крафт ЖРЁТ ИНВЕНТАРИ ДРУГИХ ИГРОКОВ (легитная механика!) ==
+Ревизия Fabricator.ServerEventRead: recipeHash u32 → fabricationRecipes
+[recipeHash] — Dictionary хеш-лукап, TryGetValue в Init, прямой индекс
+в хендлере... но недействительный хеш попадает ТОЛЬКО если игрок
+сделал StartFabricating ранее (хеш валиден из UI); крафтовый хеш
+произвольный → fabricationRecipes[bad] → KeyNotFound throw → батч-дроп
+(#3, требуется CanClientAccess-спелл + старт с валидным хешем до этого
+не нужен — Direct KeyNotFound при произвольном u32!). ПРОВЕРКА:
+if recipeHash==0 → cancel; fabricationRecipes[recipeHash] — ЭТО ИНДЕКС
+ImmutableDictionary → KeyNotFound на произвольном u32 → БАТЧ-ДРОП.
+Это Order 451 паттерн на фабрикаторе: 4 байта → всем лаг.
+ДОПОЛНИТЕЛЬНО (легит-механика, соц-квирк): RefreshAvailableIngredients
+берёт ингредиенты из linked-контейнеров + из инвентарей ДРУГИХ игроков,
+которые открыли linked-контейнер (c.SelectedItem.OwnInventory в
+linkedInventories) → StartFabricating съест подходящие материалы из
+чужих рюкзаков/сундуков без согласия. Только что-то, что ты держишь
+в руках (SelectedItem==fabricator) защищает твой инвентарь? Нет —
+user.Inventory добавляется в linkedInventories если user.SelectedItem
+== item (сам фабрикатор в руках). Твои материалы тоже съедаются.
+Диагностика «куда делись 30 титана» = социалка.
