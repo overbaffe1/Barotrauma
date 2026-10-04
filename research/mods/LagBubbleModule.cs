@@ -148,13 +148,17 @@ namespace CSHUB.Modules
                 }
                 else
                 {
-                    // InGame тоже ок: in-game кульбит (окно ресинка + ENDROUND-рефреш)
+                    // InGame тоже ок: in-game кульбит. Первый запрос сразу —
+                    // сервер немедленно начинает лить бэклог.
+                    SendResyncRequest();
+                    _sent++;
+                    _waitingAfterEndRound = false;
                     if (!float.TryParse((intervalBox.Text ?? "").Trim(), out _interval))
                     { _interval = DefaultInterval; }
                     _interval = Math.Clamp(_interval, MinInterval, MaxInterval);
 
                     _running = true;
-                    _sent = 0;
+                    _sent = 1; // первый запрос уже отправлен выше
                     _uiSession++;
                     CoroutineManager.StartCoroutine(PulseLoop(_uiSession));
                     startBtn.Text = "СТОП";
@@ -271,9 +275,10 @@ namespace CSHUB.Modules
                 // окно на исходе: ENDROUND (InGame=false, кик-фильтры off) →
                 // сразу новый ресинк-запрос = новое окно. Пользователь мигнёт
                 // в лобби на долю секунды.
-                // ENDROUND сам по себе НЕ гарантирует мгновенную обработку сервером
-                // (пакет может встать в очередь) — посылаем ENDROUND, на след.
-                // итерации корутины (след. кадр) шлём ресинк-запрос.
+                // ENDROUND: сервер переведёт нас в лобби-состояние (InGame=false).
+                // Клиент может остаться в GameScreen с чёрным/замороженным кадром —
+                // это НОРМАЛЬНО для кульбита (ваниль делает полный EndRoundForSelf,
+                // но нам выход из уровня не нужен, только смена состояния на сервере).
                 SendEndRoundSelf();
                 _sent++;
                 _waitingAfterEndRound = true;
