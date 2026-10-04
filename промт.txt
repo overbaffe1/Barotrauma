@@ -596,3 +596,4 @@
 - Волна 549 (CREW лог-спам): fire/rename ветки CREW-пакета при провале гейтов пишут GameServer.Log (диск I/O) на каждый пакет — DoSProtection считает пакеты, лог-строки растут. Аналог HandleClientError-спама 458. Rename себе = 1 раз (RenamingEnabled). Кандидаты 550.
 - Волна 550 (COMBINE аудит): EventType.Combine чист — CanInteractWith обоих предметов + CanAccessInventory для контейнера + TryPutItem слоты. canBeCombined fuel-transfer легит (перелив condition). Skip. Кандидаты 551.
 - Волна 552 (Door аудит): клиентского ServerEventRead нет, SetState только провода/клик (Pickable CanInteract+RequiredItems), IsStuck чек. Чисто. Skip. Кандидаты 553.
+- Волна 553 (Pickable): сервер-онли, клиентского входа нет, чисто. 2-й проход ServerEventRead завершён. Кандидаты 554.

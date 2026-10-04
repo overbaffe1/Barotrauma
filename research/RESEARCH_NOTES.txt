@@ -18864,3 +18864,11 @@ Pickable-pick через общее pick-событие). Дверь перек�
 1) Провода (signal) — гейт нет, но сигнал сам по себе.
 2) Клик (CanInteractWith+RequiredItems в Pickable/Item.Interact).
 IsStuck чек есть. Вектора нет. Skip.
+
+== ВОЛНА 553 — Pickable: сервер-онли (Pick/PickDistance клиентом не пакетоуется ==
+Pickable : IServerSerializable — только ServerEventWrite (статус
+пикапа рассылается). Клиентского ServerEventRead нет: пикап инициирует
+Click → CanInteractWith/RequiredItems на сервере через Item.Interact —
+не через компонент-пакет. Аудит Pickable: чисто. Skip.
+ФИНАЛ перечня ServerEventRead-хендлеров: все либо clean, либо в
+арсенале. Полный аудит завершён (2-й проход).
