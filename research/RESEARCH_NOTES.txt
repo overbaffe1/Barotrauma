@@ -18509,3 +18509,29 @@ user.Inventory добавляется в linkedInventories если user.Selecte
    ⚠ ОБНОВЛЕНИЕ 447: эксплойт ослаблен девами (1.5x = 180 px), не 150x!
 5) RateLimiter.IsExempt (server:131): owner или SpamImmunity перм —
    спам-фильтр/чат-лимиты игнорятся. Не клиент-байпас.
+
+== ВОЛНА 534 — REWIRING ГЕЙТ-ЦЕПОЧКА: панель закрыта лучше чем помнили ==
+Ревизия ConnectionPanel.ServerEventRead (server ConnectionPanel.cs:10+):
+ПОРЯДОК гейтов (важно для обходов): Locked/TemporarilyLocked/AllowRewiring
+→ CanClientAccess(панель) → CanClientAccess(КАЖДОГО нового провода,
+которого нет ни в одном коннекторе) → CheckCharacterSuccess (электро-
+удар скилл-чек, Reactor-спецслучай: отключённый реактор = 0 шок).
+Замки проводов: existingWire.Locked → disconnect ЛОГИРУЕТСЯ и скипается
+(+ IsLayerHidden). Т.е. «выдернуть замотанный провод» НЕТ.
+CanClientAccess(wire) — провод, лежащий В ЧУЖОМ КАРМАНЕ (ParentInventory
+≠ null)... CanInteractWith-wire ветка: провода интерактивны если
+персонаж держит/выбрал их инвентарь — доступ к проводу в чужом кармане
+= только через открытый чужой инвентарь. Байпаса «перепаять чужим
+проводом из кармана» нет.
+ServerEventWrite ПЕРЕД гейтами (item.CreateServerEvent(this) после
+locked-чека) — locked панели не рассинхронятся.
+Все гейты последовательны и полны — ConnectionPanel = ОБРАЗЕЦ (как
+Inventory-apply 450). Вектора нет.
+MINI: CustomInterface.ServerEventRead — DrawHudWhenEquipped ветка
+(item.ParentInventory.Owner == c.Character) позволяет нажимать кнопки
+кастом-интерфейса У ДРУГА В РЮКЗАКЕ (если HUD-экипировка) — кнопки
+шлют сигналы = легит-механика дистанционного активатора чужих вещей!
+CheckCharacterSuccess там не вызывается; CanClientAccess ИЛИ
+equip-HUD-ветка. Это не дыра — дизайн CustomInterface-дистанционных
+пультов, но интересно: предмет в чужом инвентаре с DrawHudWhenEquipped
+может быть активирован ВЛАДЕЛЬЦЕМ из его же меню — а не вором.
