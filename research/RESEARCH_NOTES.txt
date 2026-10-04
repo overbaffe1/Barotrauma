@@ -18482,3 +18482,30 @@ linkedInventories) → StartFabricating съест подходящие мате
 user.Inventory добавляется в linkedInventories если user.SelectedItem
 == item (сам фабрикатор в руках). Твои материалы тоже съедаются.
 Диагностика «куда делись 30 титана» = социалка.
+
+== ВОЛНА 533 — Repairable Sabotage: трейтор-гейт серверный, но байпас через TraitEvent client-set ==
+Ревизия Repairable.ServerEventRead (server Repairable.cs:16-48):
+1) requestedFixAction Sabotage для НЕ-трейтора тихо конвертируется в
+   Repair (server:26) — карма/скилл-гриф 467-волны НЕ обойти так.
+2) ЗАТО: IsTraitor (server Character.cs:548) — АВТОСВОЙСТВО с сеттером;
+   TraitorManager.ClientRead (CLIENT! TraitorManager.cs:19) ставит
+   GameMain.Client.Character.IsTraitor = true при получении
+   SERVER_EVENT(типа Traitor) — т.е. клиент ставит себе флаг сам при
+   получении соответствующего сервер-пакета. Если шлёшь себе
+   подделанный TraitorEvent-пакет (клиент-читерский мод) — флаг
+   поднимется локально, но на СЕРВЕРЕ трейтор-статус остаётся у
+   настоящего. Ага, но: Repairable проверяет c.Character.IsTraitor на
+   СЕРВЕРНОМ Character-объекте → client-side SetTraitora не влияет.
+   Зато TraitorEvent.SetTraitor (shared:94) — вызывается только с
+   сервера. Вывод: bypass НЕТ, но механизм = client-set флага интересен
+   для клиентских визуалов (Sabotage-кнопка станет enabled локально —
+   чисто косметика).
+3) RepairBoost (server:313-327) — QTESuccess верится: Condition +=
+   DegreeOfSuccess*3 — повторно подтверждённый 448-вектор, добавлен
+   контекст: CurrentFixer требуется (кто-то должен чинить).
+4) Holdable.ServerEventRead: 447-вектор подтверждён заново — IsValid
+   есть, MaxAttachDistance*1.5 ClampLength есть (улучшение после 447!)
+   — девы уже пропатчили частично: теперь clamp на 1.5x, не 150x.
+   ⚠ ОБНОВЛЕНИЕ 447: эксплойт ослаблен девами (1.5x = 180 px), не 150x!
+5) RateLimiter.IsExempt (server:131): owner или SpamImmunity перм —
+   спам-фильтр/чат-лимиты игнорятся. Не клиент-байпас.
