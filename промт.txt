@@ -597,3 +597,4 @@
 - Волна 550 (COMBINE аудит): EventType.Combine чист — CanInteractWith обоих предметов + CanAccessInventory для контейнера + TryPutItem слоты. canBeCombined fuel-transfer легит (перелив condition). Skip. Кандидаты 551.
 - Волна 552 (Door аудит): клиентского ServerEventRead нет, SetState только провода/клик (Pickable CanInteract+RequiredItems), IsStuck чек. Чисто. Skip. Кандидаты 553.
 - Волна 553 (Pickable): сервер-онли, клиентского входа нет, чисто. 2-й проход ServerEventRead завершён. Кандидаты 554.
+- Волна 554 (FORCESAY): ConversationAction опции с ForceSay=true отправляют РЕЧЬ целевого игрока в чат/радио (SendChatMessage senderClient=null → как AI-реплика: спам-фильтр и карма минуются). Выбор делает сам целевой игрок — против НЕГО не применимо, но авторы ивентов могут компрометировать ('признание' в радио). Клиент-читеру неинтересно. Кандидаты 555.
