@@ -18419,3 +18419,25 @@ spectate∞; money-vote=соц; sell/perks/settings=closed до опустени
   сообщение — «символьный» CPU-гриф в рамках спам-фильтра (мелочь).
 ★ Мёртвые шлют Order-сообщения? Нет: type==Order → return если
   Character==null/IsDead (cs:103). Дефолт-чат мёртвым — типом Dead.
+
+== ВОЛНА 530 — EVENTMANAGER_RESPONSE: byte-индекс опции диалога без границы ==
+Ревизия хвоста 528-449: EventManager.ServerRead (server Events/EventManager
+.cs:28): u16 actionId + byte selectedOption (255=ignore).
+ХЕНДЛЕР ищет активный ScriptedEvent с ConversationAction.Identifier ==
+actionId, гейт: TargetClients.Contains(sender) (только адресованным).
+А ТАМ: SelectedOption = selectedOption БЕЗ проверки < Options.Count!
+Защита стоит только в consumer-ветке: Options.Any() &&
+!GetEndingOptions().Contains(selectedOption) → var option =
+convAction.Options[selectedOption]; — ТОЛЬКО если !GetEndingOptions()
+содержит. GetEndingOptions возвращает индексы у которых OptionActionGroup
+пуст/GoTo-only (ConversationAction.cs:307). Индекс ≥ Count НЕ попадает в
+ending-список → доступ к Options[selectedOption] → ArgumentOutOfRangeException
+→ throw → SegmentTable-catch → БАТЧ-ДРОП (семейство #3, как Order 451).
+УСЛОВИЯ: живой scripted-event с ConversationAction, адресованный тебе
+(трэйтор-диалоги, outpost-диалоги). 1 байт → дроп батча всех клиентов.
+Косой selectedOption<255 но >=Count = гарант-краш чтения сегмента.
+Кроме того SelectedOption влияет на диалоговое дерево (GoTo) — чужой
+ответ за целевого игрока НЕЛЬЗЯ (TargetClients), но свой диалог можно
+ломать в любое время после (даже после завершения события, ev ещё в
+activeEvents).
+МИНИ-КВИРК: IgnoreClient(sender, 3f) для не-адресатов = 3с игнор-лист.
