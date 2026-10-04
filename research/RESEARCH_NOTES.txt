@@ -18789,3 +18789,25 @@ if GameStarted && c.Character != null && !dead && !incapacitated && (!AFK
 600с) = не выкинет. Полезно для LagBubble в раунде: персонаж в стуне,
 пульс идёт, AFK-кик не собьёт кульбит.
 Аналогично Inputs (CharacterNetworking:214): Aim-изменение тоже сбрасывает.
+
+== ВОЛНА 548 — VOIP VOICE_ТоКАЙ ИДЁТ В НАШ ПОЛЬЗУ: ключи НАШЕЙ проверки ==
+VoipQueue.Read (server shared:136-166): incLatestBufferID КЛИЕНТСКИЙ.
+Если НЕ IdMoreRecent(inc, LatestBufferID) И НЕ firstRead → ветка else:
+только chat skip (BitPosition += len*8) и return false — никакой
+обработки, никакого OnNewVoiceReceived. Если IdMoreRecent → buffers
+обновляются ЛОКАЛЬНО у нас + OnNewVoiceReceived → серверный декодер
+ЕСТ НАШИ байты.
+Concentus decoder.Decode не на掉ем — но внимание: OnNewVoiceReceived
+потолок: for i in lastRetrieved+1..LatestBufferID — если мы шлём
+LatestBufferID + 100 за раз (прыжок ID), цикл попробует retrieve
+каждый ID в диапазоне: RetrieveBuffer для id вне окна
+[Latest-(BUFFER_COUNT-1), Latest] возвращает outSize=-1 → continue.
+Но после этого lastRetrievedBufferID = i (ОБНОВЛЯЕТСЯ даже при failed
+retrieve — cs:86 после continue НЕ обновляется, но после декода = да).
+На самом деле cs:86 после декода — т.е. для missing буферов
+последний остаётся старым, каждый пакет с прыжком ID = цикл по всему
+диапазону заново = CPU-затраты сервера НА КАЖДЫЙ VOICE-ПАКЕТ, до
+BUFFER_COUNT x decode попыток (8 x OpusDecode). Халявный CPU-burn с
+58-байтовым пакетом (8 x len byte + 8 x byte).
+Формат VoipQueue.Write: u16 LatestBufferID | bool ForceLocal+pad |
+8x (byte len + bytes) = 2+1+8+8*40 = 331 байт максимум, мин ~11.
