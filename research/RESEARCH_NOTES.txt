@@ -18395,3 +18395,27 @@ uintIdentifier = ToolBoxCore.IdentifierToUint32Hash(Identifier, MD5) —
 spectate∞; money-vote=соц; sell/perks/settings=closed до опустения/ливна
 владельца. Никаких «дать себе перм» путей клиент→сервер не существует
 (SetPermissions только DebugConsole/owner-code paths).
+
+== ВОЛНА 529 — SpectatePos при жизни: геттер-щит закрывает ВСЁ, + чат-спам квирки ==
+Вопрос юзера: «SpectatePos NaN даст что-то если я жив?» — НЕТ:
+1) клиент Camera.ClientWrite шлёт позицию ТОЛЬКО мёртвым
+   (if (Character.Controlled != null && !IsDead) return; Camera.cs:177);
+2) сервер-геттер Client.SpectatePos возвращает null для живых
+   (Client.cs:114-127) → GetDistanceSqrToClosestPlayer не видит мусор;
+3) руками слать сегмент можно, но значение просто НЕ ЧИТАЕТСЯ живым.
+Живым SpectatePos-канал бесполезен. Вектору нужен труп — всё по 528.
+ЗАТО НАШЛИСЬ ЧАТ-КВИРКИ (ChatMessage.ServerRead, server ChatMessage.cs):
+★ КВИРК А — ПУСТЫЕ СООБЩЕНИЯ = MAX-СПАМ-СКОРОСТЬ: similarity для
+  пустой строки += closeFactor БЕЗ Levenshtein (cs:155-158) →
+  пустые сообщения быстрее всего поднимают ChatSpamSpeed (>5 → карма
+  -SpamFilterKarmaDecrease, ChatSpamCount>3 = кик). Парадокс: чтобы
+  НЕ попасть в кик — шлём ОСМЫСЛЕННЫЙ текст (высокий Levenshtein =
+  низкое similarity); чтобы В ОДИН тик — 4 пустышки подряд.
+★ КВИРК Б — ChatSpamSpeed НЕ ГАСИТСЯ blocked-сообщениями: блок по
+  спам-таймеру (ChatSpamTimer>0) происходит ПОСЛЕ += similarity —
+  скорость копится даже когда сообщения не доставлены (cs:188).
+  Затопление чужого чата: НЕВОЗМОЖНО (спам-фильтр на отправителе).
+★ Levenshtein O(n*m) на 200 симв x10 последних = 400k операций/
+  сообщение — «символьный» CPU-гриф в рамках спам-фильтра (мелочь).
+★ Мёртвые шлют Order-сообщения? Нет: type==Order → return если
+  Character==null/IsDead (cs:103). Дефолт-чат мёртвым — типом Dead.
