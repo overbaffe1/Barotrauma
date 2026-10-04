@@ -18669,3 +18669,22 @@ Sync, НОВОЕ окно 30-50с, InGame=false (камера в лобби). 5)
 не кикает по OldEvent тоже.
 Комбо-условия максимального эффекта: длинный раунд (бэклог огромный),
 владелец не смотрит консоль, хост-машина слабая.
+
+== ВОЛНА 543 — LagBubbleModule v2: dual-mode (лобби + в-раунде) ==
+Юзер: «а если я уже в игре?» — модуль обновлён до двух режимов в одном:
+- ЛОББИ (InGame=false): старый LagBubble — UPDATE_INGAME{false} каждые
+  N сек, кик невозможен (ServerEntityEventManager:280 фильтр c.InGame).
+- В-РАУНДЕ (InGame=true, кульбит): MidRoundSyncTimeOut =
+  max(uniqueEvents/10×UpdateInterval, MinimumMidRoundSyncTimeout=30с) —
+  окно 30-50+с в котором сервер льёт ВЕСЬ бэклог именно тебе и
+  OldEvent/RemovedEvent/SyncTimeout-кики заблокированы. Модуль шлёт
+  UPDATE_INGAME{false}, ждёт ~25с (запас до истечения окна), потом:
+  ENDROUND_SELF (InGame=false → все InGame-гейты кика мгновенно
+  исчезают) → полсекунды → опять UPDATE_INGAME{false} → НОВОЕ окно
+  (InitClientMidRoundSync переинициализирует MidRoundSyncTimeOut).
+  Тебе видно на долю секунды лобби, потом сервер опять льёт.
+  Практически непрерывный бэклог-поток без кика, ты «в игре».
+- Thread.Sleep не используем (блокирует игровой поток) — двухфазный
+  state-machine (_waitingAfterEndRound) на yield-корутине.
+- Авто-стоп если: клиент null / соединение потеряно.
+Пакеты: ENDROUND_SELF=1 байт, UPDATE_INGAME=3 байта, всё Unreliable.

