@@ -18854,3 +18854,13 @@ EventType.Treatment (server Item.cs:210): CanInteractWith(this) на
 предмет + HealingCooldown + target = self или SelectedCharacter.
 ApplyTreatment (Item.cs:3434) требует UseInHealthInterface (предметы
 Health-интерфейса). Всё чисто. Skip.
+
+== ВОЛНА 552 — Door.SetState аудит: гейты на Pickable-уровне, нет клиентского ServerEventRead ==
+Door: SetState серверный partial — вызывается только из ReceiveSignal
+(провода) и Pickable-уровня. Door НЕ имеет клиентского ServerEventRead
+через ITEM-event (Pickable : IServerSerializable, но ServerEventRead
+не переопределён — Pickable не принимает клиент-статусы кроме
+Pickable-pick через общее pick-событие). Дверь переключается только:
+1) Провода (signal) — гейт нет, но сигнал сам по себе.
+2) Клик (CanInteractWith+RequiredItems в Pickable/Item.Interact).
+IsStuck чек есть. Вектора нет. Skip.
