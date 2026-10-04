@@ -18761,3 +18761,20 @@ RefreshTargets — легит способ СОРВАТЬ работу бото�
 фейковым пожарам через AIObjectiveReport.HumanAIController.ReportProblem
 (reporter = БОТ который услышал, цель = hull). Гриф через ботов работает
 на Vanilla без мода: REPORT ORDER spam на конкретную комнату.
+
+== ВОЛНА 546 — BuyBackSoldItems вечный двигатель ещё жирнее чем думали (452 addendum) ==
+ServerRead каждый пакет вызывает BuyBackSoldItems ДЛЯ ВСЕХ предыдущих
+продаж (MultiPlayerCampaign:1104 prevSoldItems → BuyBackSoldItems →
+наши новые проданные). Логика сервера BuyBackSoldItems (server
+CargoManager:11-26):
+  store.Balance += itemValue;          ← ДО проверки кошелька
+  campaign.TryPurchase(client, itemValue);   ← может fail — неважно
+  storeSpecificItems.Remove(item);     ← запись стёрта в любом случае
+Т.е. НА КОЖДЫЙ СВОЙ SELL-ПАКЕТ: сервер сначала ВЕРНЁТ магазину все
+прошлые «продажи» (баланс ↑), потом купит обратно у тебя (твой
+кошелёк ↓ но у тебя его и не было — TryPurchase fail = 0 loss), потом
+примет НОВЫЕ фейк-продажи. Результирующий net cash на кошелёк = сумма
+itemValue новых позиций БЕЗ вычета. И баланс магазина автоматически
+восстанавливается → лимита «магазин не может платить» практически НЕТ.
+SellById/SellFake модуль может слать ОДНИ И ТЕМ ЖЕ префабом бесконечно
+(каждый пакет самоокупается). Усиление 452.
