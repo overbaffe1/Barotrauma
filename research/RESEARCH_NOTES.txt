@@ -18277,3 +18277,32 @@ persist-ом. Ищите Vector2 поля в edit-пути, а не только
    апгрейда), не байпас денег. Деньги списываются с ЛИЧНОГО кошелька
    (MP GetWallet=PersonalWallet).
 ФИКС-рекомендация: списывать ресурсы только из инвентаря инициатора.
+
+== ВОЛНА 525 — SettingsFlipperModule: пульт канала SERVER_SETTINGS ==
+НОВЫЙ КЛАСС векторов: каналManageSettings (гейт server ServerSettings.cs:167 —
+ТОЛЬКО прямой перм ManageSettings/хост; фоллбэка «пермлесс=все» нет, в отличие
+от 452). Сам канал исследован впервые:
+- netProperties = [MD5-hash(имя, lowercase) → SerializableProperty] для
+  ServerSettings + KarmaManager (оба в одном словаре! KarmaDecay,
+  AllowedRetaliationTime и пр. — сетевые).
+- NetPropertyData.Read: float/int = raw SetValue (БЕЗ IsValid/клампов →
+  NaN в VoteRequiredRatio = ни одно голосование не пройдёт никогда —
+  анти-кик-иммунитет); bool через default-string: [len]["True"/"False"]
+  → TrySetValue(string) парсит; enum/color/rect — свои ветки.
+- Хеш ключа (ToolBoxCore.cs:40): MD5(UTF8(lower(name))) → key=0;
+  foreach b: key=(key<<5)|(key>>27); key^=b; key==0→1. Реплицирован в
+  модуле на чистом .NET.
+- ReadExtraCargo: сервер НЕ проверяет AllowAsExtraCargo (только что это
+  ItemPrefab) → любой предмет идентификатором, ≤10/тип ×20 типов →
+  спавн в суб на старте СЛЕДУЮЩЕГО раунда (GameServer:3167,
+  initialSuppliesSpawned gate).
+- Пакет: byte SERVER_SETTINGS(2) | byte flags=0x04 Properties |
+  u32 cargoCount + {Identifier, byte} | u32 propCount +
+  {u32 key, [VariableUInt32 size + payload]} | bool monsters=false +
+  pad | VariableUInt32 0 (banlist). Битфилдов нет, выравниваний нет.
+ПРЕСЕТЫ МОДУЛЯ: remote-interactions ON (мультипликатор к 452/453/468 —
+снимает 250-юнитовый гейт ВЕЗДЕ), immediate-delivery ON, karma OFF,
+retaliation 99999с, VoteRequiredRatio=NaN (анти-кик), KickVotes 100%,
+transfer-cap 99 999 999, +custom любое свойство, +ExtraCargo спавнер.
+ГРАНИЦА: всё логируется сервером («changed X to Y»), перм проверяется
+жёстко — это «пульт админа с мод-клиентом», не пермлесс-эксплойт.
