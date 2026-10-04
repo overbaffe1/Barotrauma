@@ -18253,3 +18253,27 @@ ChangeProperty-аналог (event-based). Позиция persisted = травм
 кампании для всех, кто откроет щиток после.
 Урок: «безопасный редактор» содержит настоящую ось координат с
 persist-ом. Ищите Vector2 поля в edit-пути, а не только float.
+
+== ВОЛНА 524 — ★★ АПГРЕЙДЫ СУБА: ресурсы списываются с ВСЕЙ ЛОДКИ (в т.ч. ЧУЖИХ контейнеров) ==
+Ревизия пути апгрейдов (MultiPlayerCampaign:1128 → UpgradeManager.TryPurchaseUpgrade).
+ЦЕПОЧКА:
+1) Гейты: HasPermissionToManageUpgrades (= AllowedToManageCampaign
+   (ManageCampaign): пермлесс-серверы/соло — как у продажи 452) +
+   HasCampaignInteractionAvailable(Upgrade) (NPC-апгрейдер в 250, 452-гейт).
+2) Деньги: price = GetBuyPrice (модификаторы репутации). price<0 → только
+   лог «Upgrade price is less than 0!» → TryPurchase(price) → Deduct(price)
+   (семейство 467/471 по отрицательным ценам — здесь клиент ни при чём).
+3) РЕСУРСЫ — ГЛАВНОЕ: клиент только ПРОВЕРЯЕТ HasResourcesToUpgrade,
+   сервер САМ вызывает TryTakeResources(character, level):
+   FindAllItemsOnPlayerAndSub(character) = инвентарь персонажа (recursive)
+   + FindAllSellableItems() = ВСЁ ПРОДАВАЕМОЕ НА ВСЕЙ СУБМАРИНЕ →
+   Entity.Spawner.AddItemToRemoveQueue(item) для найденных.
+   Т.е. платишь деньгами (кошелёк личный!) — а материальные ресурсы
+   (титан/железо/компоненты) сервируются из ОБЩЕГО хранилища суба,
+   включая сундуки товарищей. «Скинулся на апгрейд? Ага, у тебя как раз
+   было 40 титана — списали, спасибо».
+4) Клиент-предикт HasResourcesToUpgrade использует ТОТ ЖЕ общий пул →
+   предикт честен; вектор = социальный (воровство ресурсов под видом
+   апгрейда), не байпас денег. Деньги списываются с ЛИЧНОГО кошелька
+   (MP GetWallet=PersonalWallet).
+ФИКС-рекомендация: списывать ресурсы только из инвентаря инициатора.
