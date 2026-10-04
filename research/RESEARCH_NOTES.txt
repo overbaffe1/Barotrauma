@@ -18745,3 +18745,19 @@ PulseLoop шлёт ENDROUND-рефреш только ПОСЛЕ истечен�
 (GameServer:986 без owner-чека) → LagBubble in-game кульбит работает
 И У ХОСТА листен-сервера (на своём сервере: все остальные будут
 лагать от твоего бэклог-флуда).
+
+== ВОЛНА 545b — КИК-ЛОГИКА ПО ИМЕНИ (соц-инжиниринг через vanilla chat) ==
+Ревизия Order-чата на сервере: order может быть адресован КОНКРЕТНОМУ
+персонажу (u16 targetCharacterId в пакете ORDER-чата). Сервер делает
+orderTargetCharacter.SetOrder(order, isNewOrder) — Character.SetOrder
+проверяет CanHearCharacter(orderGiver). ВАЖНО: бот получит приказ ТОЛЬКО
+если он может «услышать» отправителя (радио/дистанция). Гейт есть —
+целевого БОТА нельзя командовать из другой субы.
+ДЛЯ ИГРОКОВ: SetOrder на ИГРОКЕ-цели ничего не навязывает (игроки не
+AI-объектив менеджер) — только текстовое сообщение в чат.
+Дальше — ReportProblem цепочка (AIObjectiveReport): order
+"reportfire/breach/broken devices/intruders/first aid" заставляет ботов
+RefreshTargets — легит способ СОРВАТЬ работу ботов: спам-репорты по
+фейковым пожарам через AIObjectiveReport.HumanAIController.ReportProblem
+(reporter = БОТ который услышал, цель = hull). Гриф через ботов работает
+на Vanilla без мода: REPORT ORDER spam на конкретную комнату.
