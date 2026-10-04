@@ -18890,3 +18890,12 @@ null, this) — как AI-реплика: спам-фильтр НЕ прове�
 Гриф-угол: если трейтор-ивент целится в тебя с опцией ForceSay
 "Я предатель" в радио — ВСЕ УСЛЫШАТ, хотя ты просто нажал опцию.
 Соц-вектор «не читай опции диалогов».
+
+== ВОЛНА 555 — AssignCampaignInteraction/Status/ChangeProperty хвосты (аудит) ==
+AssignCampaignInteraction: только серверный метод (AssignCampaign
+InteractionTypeProjSpecific) — клиентского read нет, EventData readonly
+struct без Read. Clean.
+EventType.Status: ItemStatusEventData(loadingRound) — тоже сервер-онли.
+ReadPropertyChange — разобран 448/444 (NaN-injection).
+Из EventType (MinValue..MaxValue = ComponentState..RenameConnections?):
+все ветки разной степени чистоты; никакого нового клиен-гейта.
