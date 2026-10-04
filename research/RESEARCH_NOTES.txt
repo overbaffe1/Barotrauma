@@ -18200,3 +18200,56 @@ bool false + pad. Дешёвые (DoSProtection пакетный бюджет е
 lastSentToAll оттягивается назад → события дольше висят в памяти
 (рост RAM длинных раундов). Кик в основном самого гримера.
 Кандидаты 523: тест юзера (CPU сервера по пульсу?), 455 уже готов, FreeHeal.
+
+== ВОЛНА 523 — ★★★ ЭЛЕКТРОЩИТОК (CircuitBox): MoveComponent MoveAmount = РЕАЛЬНАЯ КООРДИНАТА, БЕЗIsValid/клампов ==
+Запрос юзера «что-то новое» → свежий хендлер CIRCUITBOX (GameServer:1541+),
+ранее отмечен «низкий» (448: CircuitBox quirk) — РЕВИЗИЯ НАШЛА ЖИРНЕЕ.
+ХЕНДЛЕР: ClientPacketHeader.CIRCUITBOX → NetCircuitBoxHeader{Opcode,
+ItemID, ComponentIndex} → FindTarget → box.ServerRead(data, sender).
+ОПКОДЫ и гейты (server CircuitBox.cs:118-270):
+- MoveComponent: гейт CanClientAccess ТОЛЬКО. MoveNodesInternal:
+  node.Position += moveAmount (shared:680) — MoveAmount = ВЕКТОР КЛИЕНТА
+  БЕЗ MathUtils.IsValid, БЕЗ клампов, NaN/1e30 ПРОЛЕТАЮТ насквозь.
+- AddComponent: CanAccessAndUnlocked (Locked + CanClientAccess +
+  HasRequiredItems = паяльник/чип в руках) + расход ресурса — честно.
+- DeleteComponent/AddWire/RemoveWire/Labels: CanAccessAndUnlocked — честно.
+- Cursor-ретранслятор: RelayCursorState → SendToAll всем выбравшим щиток,
+  БЕЗ гейтов, RecordedPositions.Length==10 фильтр — только косметика.
+КЛЮЧЕВОЕ: Position узла хранится В КОМПОНЕНТЕ (shared, CircuitBoxNode:
+20, публичный сеттер БЕЗ IsValid — ApplyResize единственный с гардом),
+СЕРИАЛИЗУЕТСЯ В САВ КАМПАНИИ (persist!). Позиция используется клиентской
+UI-матрицей рендера щитка; НЕ влияет на симуляцию (чисто редактор),
+НО: NaN-позиция узла = NaN в DrawRect/выделении/клик-тестах = каждый
+клиент, открывший щиток, ловит NaN-расчёты GUI (undefined поведение
+GUI-каркаса, возможны NRE-спамы per-frame у ВСЕХ смотрящих — аналог
+wire-nodes 447 но с persist в сейв и уроном GUI-фрейму).
+ПАКЕТ (зеркало CreateClientEvent → item.CreateClientEvent(this,
+CircuitBoxEventData(data)) → ClientEventWrite: byte Opcode +
+WriteNetSerializableStruct(data)): EVENT-путь как у PropertyEditor:
+нужен ссылка на internal CircuitBox (GetComponentString/"CircuitBox"),
+internal record-struct события недоступны по имени → сериализация
+руками через рефлексию-делегаты невозможна без names — ПАКЕТ собирать
+байт-в-байт: EVENTNET: заголовок события (entityID + EventType enum
+ComponentState) → хрупко; АЛЬТЕРНАТИВА проще: легитный путь SendMessage
+приватен, но это просто WriteOnlyMessage+CIRCUITBOX+NetCircuitBoxHeader
+(opcode,u16 itemID,byte compIndex)+WriteNetSerializableStruct(MoveEvent).
+NetCircuitBoxHeader/MoveEvent internal → поля пишем РУКАМИ:
+  bitfield: [Opcode enum byte? — NetworkSerialize enum = WriteInt32? нет:
+  enum behavior = WriteInt32 (Enum.ToInt32)] → полный ручной дамп
+  требует зеркалить NetSerializableProperties — ВЫСОКИЙ риск рассинхрона.
+ВЕРДИКТ: вектор подтверждён КОДОМ (нет IsValid в MoveNodesInternal,
+Position с сеттером без гарда, persist в сейв), но КЛИЕНТСКАЯ отправка
+требует либо Harmony-конструктор internal record-структур (Activator
+по generic-пути INetSerializableStruct.Write невозможен из мода без
+доступа к типу), либо точной ручной бит-зеркалировки NetworkSerialize
+(порядок свойств = OrderKey по line number!). ЗАМОРЧЕНО: отложено до
+запроса юзера; если юзер хочет — вариант с partial-mirror (перечитать
+INetSerializableStruct.WriteInternal и вручную повторить порядок
+полей record: TargetIDs, IOs, LabelIDs, MoveAmount = ImmutableArray
+формат = bitfield count + элементы).
+Честный итог: ElectricalDischarger Range (467) оказался НЕ
+InGameEditable; зато CircuitBox.MoveComponent — чистый NaN-канал через
+ChangeProperty-аналог (event-based). Позиция persisted = травма сейва
+кампании для всех, кто откроет щиток после.
+Урок: «безопасный редактор» содержит настоящую ось координат с
+persist-ом. Ищите Vector2 поля в edit-пути, а не только float.
