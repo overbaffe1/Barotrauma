@@ -19054,3 +19054,12 @@ Item.DeconstructItems.Add для мгновенного отклика на св
 OrderChatMessage (внутри SetCharacterOrder) доставляет ордер на сервер,
 сервер его валидирует и рассылает target-боту, бот выполняет AIObjective
 DeconstructItem → несёт в децентратор → разбирает.
+
+== ВОЛНА 562 — OrderSpammer v5: БЕЗ МЕНЮ, клик = бот под курсором разбирает ==
+Юзер: «без меню, навел на бота и кто под курсором это делает». Переделано:
+- OnClick (клик по модулю в CSHUB) = Character.Controlled.FocusedCharacter
+  (ваниль сама определяет персонажа под курсором, Character.cs:793 public)
+- FocusedCharacter проверка: IsBot && !IsDead → CanHearCharacter →
+  SendOrderToFleet → ORDER deconstructthis на ВСЕ его предметы
+- Меню удалено целиком (ShowMenu/CloseMenu GUIMessageBox — не нужны)
+- Update() удалён (B-клавиша не нужна, OnClick = клик по модулю в CSHUB)
