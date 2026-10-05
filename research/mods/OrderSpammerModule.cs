@@ -42,8 +42,8 @@ namespace CSHUB.Modules
         private static int _orderIndex; // 0=deconstruct, 1=wait, 2=follow, 3=dismiss
         private static string _lastOrder = "";
 
-        private static readonly string[] OrderIds = { "deconstructthis", "wait", "follow", "dismissed" };
-        private static readonly string[] OrderNames = { "Разобрать предмет", "Ждать здесь", "Следовать за мной", "Dismiss" };
+        private static readonly string[] OrderIds = { "deconstructthis", "deconstructitems", "wait", "follow", "dismissed" };
+        private static readonly string[] OrderNames = { "Разобрать предмет (1)", "РАЗБИРАЙ ВСЁ (1)", "Ждать здесь", "Следовать за мной", "Dismiss" };
 
         private static readonly Color AccentColor = new Color(100, 200, 255);
         private static readonly Color OwnBotColor = new Color(100, 255, 140);
@@ -319,12 +319,20 @@ namespace CSHUB.Modules
                 }
 
                 int sent = 0;
+                bool isDeconstructThis = OrderIds[_orderIndex] == "deconstructthis";
                 foreach (var item in targets)
                 {
                     try
                     {
                         var order = new Order(prefab, Identifier.Empty, item, null, Character.Controlled);
                         crewManager.SetCharacterOrder(bot, order, isNewOrder: true);
+
+                        // DeconstructThis: локально помечаем в Item.DeconstructItems —
+                        // боты берут цели именно из этого HashSet'а
+                        if (isDeconstructThis)
+                        {
+                            try { Item.DeconstructItems.Add(item); } catch { }
+                        }
                         sent++;
                     }
                     catch { }

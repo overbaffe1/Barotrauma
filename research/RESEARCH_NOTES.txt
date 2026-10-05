@@ -19023,3 +19023,17 @@ default (любой другой identifier + TargetItemComponent != null) →
 3) deconstructitems = AllowInFriendlySubs, работает В ЧУЖИХ субах
 4) follow ЧУЖОМУ боту = бот следует за тобой (для PvP-захвата)
 5) Все ордера на пермлесс-сервере = любой игрок любому боту
+
+== ВОЛНА 560 — OrderSpammer: добавлен "deconstructitems" + Item.DeconstructItems.Add ==
+Юзер: «deconstructitems надо отдавать самому боту ещё, щас не работает».
+1) Добавлен ордер "deconstructitems" в OrderIds (в игре = «РАЗБИРАЙ ВСЁ»,
+   это общее задание ботам собирать предметы для децентратора).
+2) Для "deconstructthis" (точечная разборка): SetCharacterOrder отправляет
+   ORDER-чат на сервер, но чтобы бот реально имел ЦЕЛЬ для разбора
+   (AIObjectiveDeconstructItems.GetList() = Item.DeconstructItems,
+   server-side HashSet), нужно ЛОКАЛЬНО добавить в Item.DeconstructItems.
+   Это публичный static HashSet — добавление работает и синхронизируется
+   сервером через CreateServerEvent пакеты.
+3) Двойной путь: SetCharacterOrder (сервер рассылает пакет) + локальный
+   DeconstructItems.Add (клиент помечает предмет как цель). Бот получит
+   ордер и увидит предмет в DeconstructItems → пойдёт к децентратору.
