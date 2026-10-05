@@ -19118,3 +19118,15 @@ AIObjectiveDeconstructItems (который активируется ордер�
 ДВА ОРДЕРА: "deconstructthis" = ПОМЕТКА конкретного предмета
 (global HashSet), "deconstructitems" = АКТИВАЦИЯ задачи у бота.
 Нужны ОБА!
+
+== ВОЛНА 566 — OrderSpammer v6: двойной ордер реализован ==
+1) Item.DeconstructItems.Add(item) для каждого предмета бота
+2) CrewManager.SetCharacterOrder(bot, order "deconstructitems")
+TargetEntity = bot (сервер игнорирует TargetEntity для этого ордера,
+важен только факт активации AIObjectiveDeconstructItems у бота).
+AIObjectiveDeconstructItems:
+  AllowInFriendlySubs = true (работает в чужих субах)
+  MaxTargets = 10 (разберёт до 10 предметов за раз)
+  GetList() = Item.DeconstructItems (HashSet)
+  IsValidTarget = Prefab.DeconstructItems не требующие других предметов
+  + не в комнате с врагами + не дублируется другим ботом

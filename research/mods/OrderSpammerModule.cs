@@ -97,9 +97,11 @@ namespace CSHUB.Modules
             return best;
         }
 
-        // Разбираем ВСЁ, что есть у бота: предметы инвентаря + руки.
-        // Используем CrewManager.SetCharacterOrder — легит ваниль-путь,
-        // который сам отправляет правильный ORDER-чат пакет на сервер.
+        // Правильный путь (волна 565):
+        // 1) Item.DeconstructItems.Add(item) — помечаем каждый предмет
+        // 2) ORDER "deconstructitems" боту — активирует AIObjectiveDeconstructItems
+        //    (AllowInFriendlySubs), бот берёт цели из Item.DeconstructItems
+        //    и несёт их в децентратор по очереди.
         private static void SendOrderToFleet(Character bot)
         {
             try
@@ -107,12 +109,12 @@ namespace CSHUB.Modules
                 OrderPrefab prefab = null;
                 foreach (OrderPrefab p in OrderPrefab.Prefabs)
                 {
-                    if (p.Identifier.Value.Equals(OrderIds[_orderIndex], StringComparison.OrdinalIgnoreCase))
+                    if (p.Identifier.Value.Equals("deconstructitems", StringComparison.OrdinalIgnoreCase))
                     { prefab = p; break; }
                 }
                 if (prefab == null)
                 {
-                    GUI.AddMessage("[OrderSpam] OrderPrefab не найден", Color.Red);
+                    GUI.AddMessage("[OrderSpam] OrderPrefab deconstructitems не найден", Color.Red);
                     return;
                 }
 
@@ -139,36 +141,19 @@ namespace CSHUB.Modules
                     return;
                 }
 
-                var crewManager = GameMain.GameSession?.CrewManager;
-                if (crewManager == null)
-                {
-                    GUI.AddMessage("[OrderSpam] CrewManager недоступен", Color.Red);
-                    return;
-                }
-
-                int sent = 0;
-                bool isDeconstructThis = OrderIds[_orderIndex] == "deconstructthis";
+                int marked = 0;
                 foreach (var item in targets)
                 {
-                    try
-                    {
-                        var order = new Order(prefab, Identifier.Empty, item, null, Character.Controlled);
-                        crewManager.SetCharacterOrder(bot, order, isNewOrder: true);
-
-                        // DeconstructThis: локально помечаем в Item.DeconstructItems —
-                        // боты берут цели именно из этого HashSet'а
-                        if (isDeconstructThis)
-                        {
-                            try { Item.DeconstructItems.Add(item); } catch { }
-                        }
-                        sent++;
-                    }
-                    catch { }
+                    try { Item.DeconstructItems.Add(item); marked++; } catch { }
                 }
 
-                _lastOrder = OrderNames[_orderIndex] + " → " + bot.Name + " x" + sent;
-                GUI.AddMessage("[OrderSpam] " + bot.Name + ": " + OrderNames[_orderIndex] +
-                    " на " + sent + " предметов (SetCharacterOrder)", OwnBotColor);
+                // ORDER "deconstructitems" боту — через CrewManager (легит-путь)
+                var order = new Order(prefab, Identifier.Empty, bot, null, Character.Controlled);
+                GameMain.GameSession?.CrewManager?.SetCharacterOrder(bot, order, isNewOrder: true);
+
+                _lastOrder = "deconstructitems → " + bot.Name + " (" + marked + " предм.)";
+                GUI.AddMessage("[OrderSpam] " + bot.Name + ": помечено " + marked +
+                    " предметов, активирован deconstructitems", OwnBotColor);
             }
             catch (Exception e)
             {
