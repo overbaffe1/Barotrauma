@@ -39,22 +39,18 @@ namespace CSHUB.Modules
 
         private static GUIMessageBox _menu;
         private static Item _targetItem;
-        private static int _orderIndex; // 0=deconstruct, 1=wait, 2=follow, 3=dismiss
+        private static int _orderIndex; // зафиксирован на deconstructthis
         private static string _lastOrder = "";
 
-        private static readonly string[] OrderIds = { "deconstructthis", "deconstructitems", "wait", "follow", "dismissed" };
-        private static readonly string[] OrderNames = { "Разобрать предмет (1)", "РАЗБИРАЙ ВСЁ (1)", "Ждать здесь", "Следовать за мной", "Dismiss" };
+        private static readonly string[] OrderIds = { "deconstructthis" }; // только этот режим
+        private static readonly string[] OrderNames = { "Разобрать предмет" };
 
         private static readonly Color AccentColor = new Color(100, 200, 255);
         private static readonly Color OwnBotColor = new Color(100, 255, 140);
         private static readonly Color ForeignBotColor = new Color(255, 120, 120);
         private static readonly Color DimColor = new Color(160, 170, 190);
 
-        public override string GetLabel()
-        {
-            string shortName = OrderNames[_orderIndex].Split(' ')[0];
-            return "Order Spammer 📢 [" + shortName + "]";
-        }
+        public override string GetLabel() => "Order Spammer 📢 (B)";
 
         public override void Update()
         {
@@ -144,20 +140,9 @@ namespace CSHUB.Modules
             ctrlLayout.RelativeSpacing = 0.01f;
 
             new GUITextBlock(
-                new RectTransform(new Vector2(0.2f, 1f), ctrlLayout.RectTransform),
-                "Ордер:", textAlignment: Alignment.CenterLeft);
-
-            var orderBtn = new GUIButton(
-                new RectTransform(new Vector2(0.6f, 1f), ctrlLayout.RectTransform),
-                OrderNames[_orderIndex]);
-            orderBtn.Color = new Color(80, 60, 130);
-            orderBtn.ToolTip = "Клик = следующий ордер";
-            orderBtn.OnClicked = (b, d) =>
-            {
-                _orderIndex = (_orderIndex + 1) % OrderIds.Length;
-                orderBtn.Text = OrderNames[_orderIndex];
-                return true;
-            };
+                new RectTransform(new Vector2(1f, 1f), ctrlLayout.RectTransform),
+                "Клик по боту = разобрать ВСЁ его имущество через децентратор",
+                textAlignment: Alignment.CenterLeft, font: GUIStyle.SmallFont);
 
             var listFrame = new GUIFrame(
                 new RectTransform(new Vector2(1f, 0.7f), content.RectTransform, Anchor.BottomCenter),
