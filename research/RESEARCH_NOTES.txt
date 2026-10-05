@@ -18967,3 +18967,59 @@ SetOrder на боте → бот реально идёт разбирать.
 OrderChatMessage-путь (старый).
 Аналог: юзеров Lua-скрипт использует GM.CrewManager.SetCharacterOrder
 на клиенте — тот же путь.
+
+== ВОЛНА 559 — ВСЕ ORDER-IDs и кому могут быть отданы (полная таблица) ==
+Все identifiers из AIObjectiveManager.GetOrderObjective switch:
+follow → AIObjectiveGoTo (к order.OrderGiver). Гейт: OrderGiver != null.
+wait → AIObjectiveGoTo (к target / character). Гейтов нет.
+return → AIObjectiveReturn. Гейт: OrderGiver != null.
+fixleaks → AIObjectiveFixLeaks (+ prioritizedHull = targetEntity as Hull).
+chargebatteries → AIObjectiveChargeBatteries (order.Option).
+rescue → AIObjectiveRescueAll.
+repairsystems/repairmechanical/repairelectrical → AIObjectiveRepairItems
+  (приоритетный item = TargetEntity as Item).
+pumpwater → AIObjectiveOperateItem(targetPump) если target — Pump,
+  иначе AIObjectivePumpWater. Гейт: item.IsInteractable(character).
+extinguishfires → AIObjectiveExtinguishFires.
+fightintruders → AIObjectiveFightIntruders.
+assaultenemy → то же + TargetCharactersInOtherSubs = true (АТАКА ЧУЖИХ СУБ!).
+steer → AIObjectiveOperateItem(Steering), requires IsInteractable.
+setchargepct → AIObjectiveChargeBatteries (order.Option).
+getitem → AIObjectiveGetItem (order.GetTargetItems / RequireItems).
+cleanupitems → AIObjectiveCleanupItems (targetItem или общий).
+escapehandcuffs → AIObjectiveEscapeHandcuffs (shouldSwitchTeams: true!)
+  ★ БАГ/ФИЧА: escapehandcuffs ЧУЖОМУ боту → бот получает shouldSwitchTeams
+  → освобождается от наручников И СМЕНЯЕТ КОМАНДУ на None (Willful).
+  На пермлесс-сервере любой игрок может дестабилизировать чужих security-
+  ботов: послал escapehandcuffs когда бот в наручниках = бот уходит в
+  None-команду = больше не атакует игроков. ИЛИ (свои боты без наручников)
+  — бот будет пытаться "вырваться из наручников" которых нет = простоит.
+findthieves → AIObjectiveFindThieves (боты ищут "воров" = игроки без
+  правильной карты в зоне). На пермлесс = может вывести ботов против
+  случайных игроков.
+prepareforexpedition → AIObjectivePrepare (equip: false, FindAllItems).
+findweapon → AIObjectivePrepare (EvaluateCombatPriority: true).
+loaditems → AIObjectiveLoadItems (?).
+deconstructitems → AIObjectiveDeconstructItems:
+  ★ AllowInFriendlySubs => true (!!) — работает даже В ЧУЖИХ дружественных
+  субах. Гейт цель: Item.DeconstructItems список (пополается через
+  ORDER "deconstructthis" на конкретный item) → AddItemToRemoveQueue →
+  бот несёт в децентратор → РАЗБИРАЕТ. Разборка необратима в кампании.
+  MaxTargets = 10. Проверка врагов в комнате есть, но не проверяется
+  ЧЬЁ это имущество.
+inspectnoises → AIObjectiveInspectNoises (боты идут к звукам).
+default (любой другой identifier + TargetItemComponent != null) →
+  AIObjectiveOperateItem (управление устройством по опции).
+
+КОМУ МОЖНО ОТДАТЬ:
+- БОТАМ: любой ордер, гейт = CanHearCharacter(sender). TeamID не важен.
+- ИГРОКАМ: SetOrder вызывается, но они не AI → только текст в чат.
+- Хускам/монстрам: AIController не HumanAIController → GetOrderObjective
+  может вернуть null или падение. Практически неприменимо.
+
+★ ГЛАВНЫЕ НАХОДКИ:
+1) assaultenemy ЧУЖОМУ боту = атакует чужую субу! (TargetCharactersInOtherSubs)
+2) escapehandcuffs ЧУЖОМУ боту = team change на None
+3) deconstructitems = AllowInFriendlySubs, работает В ЧУЖИХ субах
+4) follow ЧУЖОМУ боту = бот следует за тобой (для PvP-захвата)
+5) Все ордера на пермлесс-сервере = любой игрок любому боту
