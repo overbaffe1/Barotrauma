@@ -19368,3 +19368,25 @@ enablecheats команды. AchievementManager.CheatsEnabled — тоже на�
 Тот факт что CheatsEnabled публичен и enablecheats доступен без перма
 = любой игрок может разблокировать 24 cheat-команды на СВОЁМ клиенте.
 Это by design (соло-игроки). Эффект на мультиплеере = клиент-сайд only.
+
+== ВОЛНА 578 — ИНВЕНТАРЬ: item teleportation путь (перепроверка «выкинул→подобрал») ==
+ServerEventRead → HandleRemovedItems + HandleAddedItems:
+REMOVED: предмет который НЕ в receivedItemIds → Drop(sender.Character)
+  + body.SetTransform(prevOwner.SimPosition) — дроп у отправителя!
+  Гейты: item.IsInteractable(sender.Character) + itemAccessDenied
+  (prevItems.Contains && !itemAccessibility[prevInv])
+ADDED: предмет который ЕСТЬ в receivedItemIds но НЕ в slots →
+  TryPutItem в слот. Гейты: Pickable check, Holdable.CanBeDeattached,
+  itemAccessDenied, HandLockerItem спец-проверка.
+КАК РАБОТАЕТ «выкинул→подобрал»: клиент шлёт полный snapshot своего
+инвентаря (IDs) → сервер дропает что НЕ совпадает и добавляет что
+совпадает. «Выкинуть» = удалить из snapshot + сервер Drop.
+ТЕЛЕПОРТ-ЭКСПЛОЙТ: послать ID ПРЕДМЕТА КОТОРЫЙ РЯДОМ ДРУГОГО ИГРОКА
+в свой snapshot → сервер TryPutItem его к тебе (CanAccessInventory
+проверяется, но CanClientAccess для провода/ряда ситуаций мог раньше
+обходиться). Сейчас itemAccessibility[item] проверяется ПРЕДМЕТНО.
+ВЫВОД: gейты полные, «телепорт предмета от другого игрока» требует
+CanAccessInventory(prevInv) → если prevInv = чужой CharacterInventory
+→ CanAccessInventory = разрешение на чужой рюкзак = обычно FALSE.
+Починено. Единственный edge: Wire (клиент-сайд провода в руках) —
+но Wire.ServerEventRead отдельный (уже покрыт 447).
