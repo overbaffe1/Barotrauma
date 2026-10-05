@@ -18904,3 +18904,20 @@ CrewManager.AddOrder (shared:82) — вход из ChatMessage ORDER-сегме�
 - Server: ChatMessage.ServerRead → ORDER → targetCharacter.SetOrder —
   только CanHearCharacter(orderGiver) — мы уже проверили клиентски.
 - Бот реально разбирает предмет (в кампании — необратимо).
+
+== ВОЛНА 555 — OrderSpammer v2: UI как SellById + чужие боты + закрытие ==
+Юзер: (1) добавить кнопку закрытия + B повторно закрывает, (2) ордера
+ЧУЖИМ ботам, (3) меню красивое как у SellById. Сделано:
+- CloseMenu() + «Закрыть (B)» кнопка в хедере + B-повтор = toggle.
+- Список всех ботов (IsBot, TeamID НЕ проверяется) — свои (зелёные)
+  сортируются первыми, чужие (красные) после. Mark-колонка СВОЙ/ЧУЖОЙ.
+- CanHearCharacter проверяется на строке (слышит ✓/не слышит ✗) —
+  не-слышащим кнопку НЕ блокируем (юзер может отправить, но сервер
+  дропнет SetOrder по CanHearCharacter — предупреждаем только UI).
+- Режим-циклер: кнопка «Ордер: X» циклит deconstructthis/wait/follow/
+  dismissed. targetEntity для всех = hover-предмет (для dismiss тоже —
+  сервер фильтрует сам). GetLabel показывает активный режим.
+- Статус: ботов total + своих/чужих + последний ордер.
+- Чужим ботам ордер БЕЗ кармы (карма видит только урон структур).
+- TeamID чужого не влияет на OrderChatMessage (Base = OrderChatMessage
+  Sender = мы, Target = бот) — сервер не проверяет команду.
