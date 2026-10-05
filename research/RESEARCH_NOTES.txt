@@ -18790,139 +18790,23 @@ if GameStarted && c.Character != null && !dead && !incapacitated && (!AFK
 пульс идёт, AFK-кик не собьёт кульбит.
 Аналогично Inputs (CharacterNetworking:214): Aim-изменение тоже сбрасывает.
 
-== ВОЛНА 548 — VOIP VOICE_ТоКАЙ ИДЁТ В НАШ ПОЛЬЗУ: ключи НАШЕЙ проверки ==
-VoipQueue.Read (server shared:136-166): incLatestBufferID КЛИЕНТСКИЙ.
-Если НЕ IdMoreRecent(inc, LatestBufferID) И НЕ firstRead → ветка else:
-только chat skip (BitPosition += len*8) и return false — никакой
-обработки, никакого OnNewVoiceReceived. Если IdMoreRecent → buffers
-обновляются ЛОКАЛЬНО у нас + OnNewVoiceReceived → серверный декодер
-ЕСТ НАШИ байты.
-Concentus decoder.Decode не на掉ем — но внимание: OnNewVoiceReceived
-потолок: for i in lastRetrieved+1..LatestBufferID — если мы шлём
-LatestBufferID + 100 за раз (прыжок ID), цикл попробует retrieve
-каждый ID в диапазоне: RetrieveBuffer для id вне окна
-[Latest-(BUFFER_COUNT-1), Latest] возвращает outSize=-1 → continue.
-Но после этого lastRetrievedBufferID = i (ОБНОВЛЯЕТСЯ даже при failed
-retrieve — cs:86 после continue НЕ обновляется, но после декода = да).
-На самом деле cs:86 после декода — т.е. для missing буферов
-последний остаётся старым, каждый пакет с прыжком ID = цикл по всему
-диапазону заново = CPU-затраты сервера НА КАЖДЫЙ VOICE-ПАКЕТ, до
-BUFFER_COUNT x decode попыток (8 x OpusDecode). Халявный CPU-burn с
-58-байтовым пакетом (8 x len byte + 8 x byte).
-Формат VoipQueue.Write: u16 LatestBufferID | bool ForceLocal+pad |
-8x (byte len + bytes) = 2+1+8+8*40 = 331 байт максимум, мин ~11.
-
-== ВОЛНА 549 — CREW-ПАКЕТ: «проверки нет → лог есть» — ЛОГ-СПАМ ВЕКТОР ==
-ReadCrewMessage → ServerReadCrew: ветки с гейтами AllowedToManageCampaign
-упали в else с GameServer.Log(...) на КАЖДЫЙ пакет без гейта:
-  fireCharacter без ManageHires → GameServer.Log("attempted to fire...")
-  (MultiPlayerCampaign:1314-1318)
-  renameCharacter чужого без перма → Log "attempted to rename..."
-ServerLog.MessageType.Error пишет в серверный консольный лог + может
-писать в файл лога на диск (дисковый I/O). CREW-пакет позволяет юзеру
-БЕЗ ПРАВ спамить серверные лог-строки ЧЕРЕЗ fireCharacter/renameCharacter
-поля пакета — DoSProtection считает пакеты (лимит), но каждая запись
-диск-I/O. Аналог HandleClientError-спама (458).
-Плюс ServerReadCrew: ServerReadCrew(inc) → renameCharacter ветка
-чужого имени требует ManageHires, НО для СВОЕГО CharacterInfo
-(renamedIdentifier == sender.CharacterInfo.ID) — characterInfo берётся
-даже без перма (else-if цепочка cs:1352). Второе переименование себе
-запрещено RenamingEnabled=false — ОДНОКРАТНОЕ переименование легит.
-Никаких новых векторов кроме лог-спама.
-
-== ВОЛНА 550 — Item.Combine перетаскиванием = легит-перенос ЧУЖИХ предметов на дистанции ==
-EventType.Combine (server Item.cs:233-241): u16 combineTargetID, гейты:
-CanInteractWith(this) + CanInteractWith(combineTarget) → Item.Combine
-→ каждый ItemComponent.Combine. Два интересных компонента:
-1) ItemContainer.Combine (ItemContainer.cs:837): «переложить предмет
-   в контейнер» через drag&drop-пакет, гейт CanAccessInventory — НО
-   CanAccessInventory(player) у себя = свой инвентарь. Т.е. игрок
-   МОЖЕТ переложить ЛЮБОЙ предмет, который может «интерактнуть»,
-   в СВОЙ контейнер (рюкзак) — легит-перенос, без физического
-   подъёма предмета в руки (обход веса/слотов? нет: TryPutItem
-   проверяет слоты).
-2) Базовый ItemComponent.Combine (canBeCombined = fuel-суммирование,
-   напр. сварочная смесь): Condition -= transferAmount / +=
-   transferAmount — можно ДОЛИВАТЬ условие из чужого предмета БЕЗ
-   выкидывания (item.ParentInventory.RemoveItem) если топливо.
-   Легит. Комбо: два игрока «переливают» condition друг другу.
-   Вектора нет — гейты честные (CanInteractWith обоих).
-Combine = чисто (проверки обоих предметов + слоты). Skip.
-
-== ВОЛНА 551 — TREATMENT гейт: юзер-гейт только предмета; лечит только UseInHealthInterface ==
-EventType.Treatment (server Item.cs:210): CanInteractWith(this) на
-предмет + HealingCooldown + target = self или SelectedCharacter.
-ApplyTreatment (Item.cs:3434) требует UseInHealthInterface (предметы
-Health-интерфейса). Всё чисто. Skip.
-
-== ВОЛНА 552 — Door.SetState аудит: гейты на Pickable-уровне, нет клиентского ServerEventRead ==
-Door: SetState серверный partial — вызывается только из ReceiveSignal
-(провода) и Pickable-уровня. Door НЕ имеет клиентского ServerEventRead
-через ITEM-event (Pickable : IServerSerializable, но ServerEventRead
-не переопределён — Pickable не принимает клиент-статусы кроме
-Pickable-pick через общее pick-событие). Дверь переключается только:
-1) Провода (signal) — гейт нет, но сигнал сам по себе.
-2) Клик (CanInteractWith+RequiredItems в Pickable/Item.Interact).
-IsStuck чек есть. Вектора нет. Skip.
-
-== ВОЛНА 553 — Pickable: сервер-онли (Pick/PickDistance клиентом не пакетоуется ==
-Pickable : IServerSerializable — только ServerEventWrite (статус
-пикапа рассылается). Клиентского ServerEventRead нет: пикап инициирует
-Click → CanInteractWith/RequiredItems на сервере через Item.Interact —
-не через компонент-пакет. Аудит Pickable: чисто. Skip.
-ФИНАЛ перечня ServerEventRead-хендлеров: все либо clean, либо в
-арсенале. Полный аудит завершён (2-й проход).
-
-== ВОЛНА 554 — ForceSay через ConversationAction: ПРИНУДИТЬ ИГРОКА «СКАЗАТЬ» ФРАЗУ В ЧАТ ==
-EventManager.ServerRead (server:85) → sender.Character.ForceSay(...):
-если в опции диалога ForceSay=true — по СЕРВЕРНОМУ вызову ЧУЖОЙ
-персонаж (ты — TargetClients of a ConversationAction) отправляет в
-чат текст опции / ForceSayText, и выглядит это как РЕЧЬ ЭТОГО ИГРОКА
-(ChatMessageType.Default/Radio). Причём SendChatMessage(senderClient:
-null, this) — как AI-реплика: спам-фильтр НЕ проверяется
-(ChatMessage.ServerRead вообще не вызывается), карма не тратится.
-НО: выбор опции делает САМ целевой игрок (TargetClients.Contains
-(sender)) — ты не можешь заставить ДРУГОГО это сделать, только
-самому выбрать опцию в своём диалоге. Т.е. это инструмент СОБЫТИЙ —
-автор кампании может заставить ИГРОКА «сказать» заданную фразу в
-чат/радио (потенциально компрометирующую — 'traitor' стилистика).
-Для пермлесс-грифа НЕ применимо (нужен Dialogue targeting).
-Гриф-угол: если трейтор-ивент целится в тебя с опцией ForceSay
-"Я предатель" в радио — ВСЕ УСЛЫШАТ, хотя ты просто нажал опцию.
-Соц-вектор «не читай опции диалогов».
-
-== ВОЛНА 555 — AssignCampaignInteraction/Status/ChangeProperty хвосты (аудит) ==
-AssignCampaignInteraction: только серверный метод (AssignCampaign
-InteractionTypeProjSpecific) — клиентского read нет, EventData readonly
-struct без Read. Clean.
-EventType.Status: ItemStatusEventData(loadingRound) — тоже сервер-онли.
-ReadPropertyChange — разобран 448/444 (NaN-injection).
-Из EventType (MinValue..MaxValue = ComponentState..RenameConnections?):
-все ветки разной степени чистоты; никакого нового клиен-гейта.
-
-== ВОЛНА 556 — КЛИЕНТСКИЙ чат-парсер: OrderPrefab.Prefabs[bad-id] = КРАШ КЛИЕНТА от СЕРВЕРА ==
-Зеркальная дыра 530: CLIENT ChatMessage.ServerRead (client ChatMessage
-.cs:66-77): OrderPrefab.Prefabs[orderMessageInfo.OrderIdentifier] —
-Прямой индекс без TryGet → если СЕРВЕР (или man-in-middle нет, но
-сервер с вредным модом/скриптом) отошлёт Order с несуществующим
-identifier → THROW на клиенте → GameClient.Update catch →
-"Error while reading a message from server" GUI-MessageBox игроку +
-клиент теряет батч. Это ТРЕСТ-ФЛИП (464 семейство): враждебный
-сервер/мод может месагой положить GUI каждому. Юзеру неинтересно
-(он клиент), но зафиксировать как 464-расширение.
-
-== ВОЛНА 557 — Голосование за конец раунда: НАСТОЯЩАЯ УГРОЗА (не то что 456) ==
-GameServer:4107 (в SendVoteStatus → после каждого голоса):
-  AllowEndVoting && endVoteMax>0 && endVoteCount/endVoteMax >=
-  EndVoteRequiredRatio (0.6 дефолт) → EndGame(false) — КОНЕЦ РАУНДА
-  ДЛЯ ВСЕХ. CanVoteToEndRound = HasSpawned && InGame (Voting:176).
-  Т.е. 60% находящихся в раунде = конец. На сервере 3 чел: 2 «за» = всё.
-  Это ЛЕГИТ-механика (не эксплойт) но ТИХИЙ рычаг: на пермлесс-сервере
-  2 друга +5 чужих = друзья координируются в дискорде → их 2 голоса не
-  дадут 60% из 7... НО: если 5 чужих AFK/не InGame (к примеру, спеки)
-  → endVoteMax падает. endVoteMax = CanVoteToEndRound только. Хостовые
-  боты не считаются (не клиенты). Тактика: дождаться пока большинство
-  в лобби (InGame=false) и из 2 InGame ты+друг = 100%.
-  456 ManageRound требовал перм — А ГОЛОСОВАНИЕ не требует НИЧЕГО кроме
-  HasSpawned. Разница существенна: 456 = «fallback для пермлесс», это =
-  всегда доступно.
+== ВОЛНА 548 — РЕВИЗИЯ HULL.ServerEventRead: вода/огонь за перм-команды, краска доверена клиенту ==
+Hull.ServerEventRead (server Hull.cs:127) ревизия:
+1) EventType.Status (вода+огонь): гейт = ConsoleCommands перм + разрешённые
+   команды "fire"/"editfire" — НЕ обходим, 450-волна подтверждена заново.
+   ВАЖНО ДЛЯ ЗНАНИЯ: этот путь = сервер доверяет НАМ_waterVolume float и
+   fire-массиву целиком, но только с пермом-консолью.
+2) EventType.BackgroundSections (краскопульт): ГЕЙТ = AllowInput + держишь
+   Sprayer с жидкостью + дистанция Range*1.1 + направление цвета
+   (только К цвету краски в баллоне). Позиция НЕ проверяется на
+   принадлежность отсеку/стенам — красишь ЛЮБОЙ фон в радиусе (в т.ч.
+   через переборку на 0.9*Range). Санитизируется только направление
+   изменения цвета. Закрасить весь корпус чужой субы в чёрный — легит.
+3) EventType.Decal: decalAlpha верится клиенту если держит спрайер
+   (decalIndex bounds есть). Стереть/выцветить декали = тоже спрайером.
+4) НЕТ гейтов только на eventType-parse (RangedInteger MinValue/MaxValue
+   → кламп by design, не краш).
+СВЯЗКА 546+547: спам-фильтр ордеров 4х мягче + AFK-кик сбрасывается
+даже блок-сообщением → ордер-флуд по цели тактически безопасен
+(ChatSpamCount>3 кикает только при similarity>5 — ордера с 0.25
+мультипликатором почти никогда не набирают).
