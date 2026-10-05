@@ -19329,3 +19329,42 @@ hullRepairCost = location.GetAdjustedMechanicalCost(BASE). НЕ клиент.
 Отличие от клиники: клиника имеет несколько Add-порядок (Price=0 per
 affliction), а ремонт — единый flag, полностью серверный.
 Можно ЧЕСТНО купить ремонт за свои деньги (без изменений в пакете).
+
+== ВОЛНА 576 — КОНСОЛЬ: IsCheat команды и обход ==
+24 CHEAT-команды (isCheat: true в конструкторе Command):
+  editsubs|subeditor, settainted, forcewreck, forcebeaconstation|forcebeacon,
+  reloadcontentfile, setsalary, setsteamtimelinegamemode, color|colour, alpha,
+  cleansub, interactdebugdraw, unlockachievement, limbscale, jointscale,
+  ragdollscale, recreateragdoll, resetragdoll, loadanimation, reloadwearables,
+  loadwearable, reloadsprite|reloadsprites, flipx, head, spawnsub
+
+ГЕЙТ: Command.ClientExecute (client DebugConsole.cs:34-52):
+  if (!allowCheats && !CheatsEnabled && IsCheat) { return; }
+CheatsEnabled = public static bool (shared DebugConsole.cs:159, DEФОЛТ false).
+
+★ ОБОРОТ: CheatsEnabled = public static field! Через мод (рефлексия или
+прямой доступ DebugConsole.CheatsEnabled = true) можно включить БЕЗ
+enablecheats команды. AchievementManager.CheatsEnabled — тоже надо.
+НО: enablecheats и так легитен на клиенте (debлокирует и карает только
+достижениями). Так что обход = просто пропустить флаг достижений.
+
+ВНЕШНИЕ КОМАНДЫ (127 клиентских + 36 серверных):
+- Клиент: OnClientExecute → LOCAL исполнение (без сервера!)
+  НО RelayToServer=true по умолчанию → релеется на сервер если нет локального.
+- Сервер: ExecuteClientCommand (server DebugConsole:2792) требует:
+  1) ClientPermissions.ConsoleCommands (или owner)
+  2) PermittedConsoleCommands.Contains(matchingCommand) (или owner)
+  Двойной перм-гейт — на сервере друга без прав НЕ работает.
+
+★ КЛЮЧЕВОЕ: клиентские команды с OnClientExecute исполняются ЛОКАЛЬНО
+без сервера! Примеры для LuaCS-контекста:
+  reloadcontentfile — хot reload модовых XML
+  cleansub, editsubs — суб-редактор
+  spawnsub — спавн суб (только редактор/DEV?)
+  color|colour, alpha — рендер
+  settainted — генетика tainted флаг (серверный эффект?)
+  unlockachievement — Steam ачивки
+
+Тот факт что CheatsEnabled публичен и enablecheats доступен без перма
+= любой игрок может разблокировать 24 cheat-команды на СВОЁМ клиенте.
+Это by design (соло-игроки). Эффект на мультиплеере = клиент-сайд only.
