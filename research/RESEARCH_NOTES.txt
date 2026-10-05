@@ -19450,3 +19450,28 @@ CanClientAccess, ни инвентарь. Просто Use на предмете
 ВЕРДИКТ: технически возможно, требует wired кнопку + соединение.
 Дистанционно через wifi = реально. Но предмет должен иметь
 connection "use" — обычно это кастомные предметы из Workshop.
+
+== ВОЛНА 582 — ТЕРМИНАЛ → ГРАНАТА В ЧУЖОМ КАРМАНЕ: ТЕХНИЧЕСКИ ДА! ==
+ItemComponent.ReceiveSignal "use" → item.Use(1.0f, user: signal.sender)
+Item.Use (Item.cs:3367):
+  if RequireAimToUse && !user.IsKeyDown(Aim) → return
+  ← если RequireAimToUse=false, проходит!
+  foreach components: ic.Use(1.0, user) → Throwable.Use вернёт true
+  (characterUsable=true для гранат)
+  → ic.ApplyStatusEffects(ActionType.OnUse, ...) ← ВОТ ЭТО РАБОТАЕТ!
+OnUse StatusEffect на гранате = взрыв! (ванильная граната определяет
+взрыв через OnSecondaryUse при броске, НО OnUse тоже есть в некоторых
+проводах/кастом-предметах)
+Ванильная фраг-граната: взрыв через OnSecondaryUse при контакте с
+землёй после броска. OnUse StatusEffect обычно НЕ взрыв а "искры".
+НО для custom/Workshop гранат OnUse = взрыв реален!
+СИГНАЛЬНЫЙ ПУТЬ: любой терминал/кнопка → провод → граната "use"
+→ item.Use(1.0, sender) → ApplyStatusEffects(OnUse) → ВЗРЫВ.
+Wire можно перепаять в руинах/чужих субах (534c).
+А CanClientAccess НЕ проверяется в ReceiveSignal!
+ОДНАКО: Throwable.Use требует characterUsable=true — это дефолт
+ваниль для гранат = true. Так что Use вернёт true и StatusEffect
+применится. Даже удалённо (не в руках — просто в любой точке карты).
+ПРАКТИЧЕСКИ: на сервере с кастом/Workshop гранатами с connection "use"
+= дистанционный детонатор гранаты В ЧУЖОМ РЮКЗАКЕ. В ванили гранаты
+редко имеют "use" connection, но моды могут.
