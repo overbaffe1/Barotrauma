@@ -18948,3 +18948,22 @@ System.Linq по умолчанию для модовых модулей. Фик
   Distinct через HashSet<Item> seen.Add.
 Урок: модовый LuaCS не всегда резолвит extension methods — избегать
 LINQ в CSHUB-модулях, использовать явные циклы.
+
+== ВОЛНА 558 — OrderSpammer v4: CrewManager.SetCharacterOrder путь ==
+Юзер: «боту не отдаётся сам приказ на разбор как команда». Проблема:
+прямой OrderChatMessage через SendChatMessage — это ЧАТ-путь. Сервер
+читает его как чат, вызывает SetOrder на target-персонаже — но если
+цель на СЕРВЕРЕ другой Character-объект (не совпадает с клиентским
+по ID), или OrderChatMessage сериализуется с неполными данными — бот
+не получает команду.
+ФИКС: CrewManager.SetCharacterOrder(bot, order, isNewOrder: true) —
+клиент-путь ванили (CrewManager.cs:851). Он сам:
+  1) создаёт правильный OrderChatMessage (order.WithTargetEntity(...))
+  2) вызывает SendChatMessage → сервер корректно обрабатывает
+  3) локально применяет AddOrder (для мгновенного эффекта в кампании)
+Сервер: ChatMessage.ServerRead → ORDER → CrewManager.AddOrder →
+SetOrder на боте → бот реально идёт разбирать.
+ЕСЛИ CrewManager.SetCharacterOrder недоступен — fallback на
+OrderChatMessage-путь (старый).
+Аналог: юзеров Lua-скрипт использует GM.CrewManager.SetCharacterOrder
+на клиенте — тот же путь.

@@ -269,7 +269,9 @@ namespace CSHUB.Modules
             }
         }
 
-        // Разбираем ВСЁ, что есть у бота: предметы инвентаря + руки
+        // Разбираем ВСЁ, что есть у бота: предметы инвентаря + руки.
+        // Используем CrewManager.SetCharacterOrder — легит ваниль-путь,
+        // который сам отправляет правильный ORDER-чат пакет на сервер.
         private static void SendOrderToFleet(Character bot)
         {
             try
@@ -302,9 +304,17 @@ namespace CSHUB.Modules
                     if (seen.Add(t)) { distinct.Add(t); }
                 }
                 targets = distinct;
+
                 if (targets.Count == 0)
                 {
                     GUI.AddMessage("[OrderSpam] у " + bot.Name + " нет предметов", Color.Orange);
+                    return;
+                }
+
+                var crewManager = GameMain.GameSession?.CrewManager;
+                if (crewManager == null)
+                {
+                    GUI.AddMessage("[OrderSpam] CrewManager недоступен", Color.Red);
                     return;
                 }
 
@@ -314,8 +324,7 @@ namespace CSHUB.Modules
                     try
                     {
                         var order = new Order(prefab, Identifier.Empty, item, null, Character.Controlled);
-                        var om = new OrderChatMessage(order, bot, Character.Controlled, isNewOrder: true);
-                        GameMain.Client?.SendChatMessage(om);
+                        crewManager.SetCharacterOrder(bot, order, isNewOrder: true);
                         sent++;
                     }
                     catch { }
@@ -323,7 +332,7 @@ namespace CSHUB.Modules
 
                 _lastOrder = OrderNames[_orderIndex] + " → " + bot.Name + " x" + sent;
                 GUI.AddMessage("[OrderSpam] " + bot.Name + ": " + OrderNames[_orderIndex] +
-                    " на " + sent + " предметов", OwnBotColor);
+                    " на " + sent + " предметов (SetCharacterOrder)", OwnBotColor);
             }
             catch (Exception e)
             {
