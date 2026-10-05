@@ -19475,3 +19475,23 @@ Wire можно перепаять в руинах/чужих субах (534c).
 ПРАКТИЧЕСКИ: на сервере с кастом/Workshop гранатами с connection "use"
 = дистанционный детонатор гранаты В ЧУЖОМ РЮКЗАКЕ. В ванили гранаты
 редко имеют "use" connection, но моды могут.
+
+== ВОЛНА 582b — SecondaryUse можно вызвать через wifi component! ==
+Item.SecondaryUse (Item.cs:3403):
+  foreach ic: ic.ApplyStatusEffects(ActionType.OnSecondaryUse,...)
+Это РОВНО ТО ЧТО ВЗРЫВАЕТ ГРАНАТУ (Throwable.cs:232 OnSecondaryUse).
+Как дёрнуть SecondaryUse:
+  - Ваниль Character.Update: IsKeyDown(InputType.SecondaryUse) — только
+    на ХОЛДЕРЕ (character.HeldItems.Contains(item)).
+  - НО: WifiComponent "set_output"/"signal_out" → ConnectionPanel → ...
+  Нет — SecondaryUse вызывается только из Character.Update (ходит через
+  held items). ПАКЕТОМ нельзя дёрнуть.
+  ЧЕМ МОЖНО: ExperienceComponent?GeneComponent? нет.
+ItemComponent.ReceiveSignal "use" → Item.Use → ApplyStatusEffects(OnUse)
+— OnUse StatusEffect на Throwable гранате обычно НЕ взрыв (взрыв = OnSecondaryUse).
+SecondaryUse вызывается ТОЛЬКО из Character.Update по IsKeyDown — без
+пакета, без сигнала, без обхода. Гейт: picker.HeldItems.Contains(item).
+ВЫВОД: детонировать гранату В ЧУЖОМ КАРМАНЕ НЕЛЬЗЯ через ваниль.
+Нужен доступ к HeldItems.Contains → только физически в руках.
+SecondaryUse через сигнал НЕ СУЩЕСТВУЕТ (нет case "secondary_use" в
+ItemComponent.ReceiveSignal — только "activate"/"use"/"trigger_in"/"toggle").
