@@ -19226,3 +19226,12 @@ OrderChatMessage конструктор (shared OrderChatMessage.cs:32):
 → SendChatMessage(msg) добавляет в chatMsgQueue → сервер.
 TargetCharacter=null для deconstructthis (TargetAllCharacters).
 TargetCharacter=bot для deconstructitems.
+
+== ВОЛНА 568 — OrderSpammer v7: троттлинг корутинами ==
+Причина «0 реакции» — спам-фильтр сервера: 10-15 мгновенных пакетов →
+ChatSpamSpeed > 5 → всё блок после 5-го. Сервер НЕ добавляет в
+DeconstructItems заблокированные.
+ФИКС: троттлинг 1 пакет/1.2с (ordер multiplier 0.25 + 0.5 base = 0.75
+на пакет; спид падает 1.0/сек → netto отрицательный, фильтр никогда).
+10 предметов = 12с, потом финальная активация deconstructitems.
+Корутины: WaitForSeconds internal → Timing.TotalTime + yield Running.

@@ -97,85 +97,114 @@ namespace CSHUB.Modules
             return best;
         }
 
-        // Волна 566 fixed: НЕ используем SetCharacterOrder (он фильтрует по
-        // TargetAllCharacters и может дропать). Шлём напрямую через
-        // GameMain.Client.SendChatMessage — это тот же путь что ваниль.
-        //
-        // Пакет 1: deconstructthis @ item — сервер: Item.DeconstructItems.Add
-        // Пакет 2: deconstructitems @ bot — сервер: bot.SetOrder → активация AI
+        // Волна 568: троттлинг через корутины.
+        // Спам-фильтр: ChatSpamSpeed += similarity + 0.5 за пакет, блокирует при >5.
+        // 15 мгновенных пакетов = всё после 5-го блок. Фикс: 1 пакет/1.2с.
+        private static int _sendSession;
+        private static int _sent;
+
         private static void SendOrderToFleet(Character bot)
         {
+            var targets = new List<Item>();
             try
             {
-                OrderPrefab markPrefab = null;    // deconstructthis
-                OrderPrefab activatePrefab = null; // deconstructitems
-                foreach (OrderPrefab p in OrderPrefab.Prefabs)
-                {
-                    if (p.Identifier.Value.Equals("deconstructthis", StringComparison.OrdinalIgnoreCase)) { markPrefab = p; }
-                    if (p.Identifier.Value.Equals("deconstructitems", StringComparison.OrdinalIgnoreCase)) { activatePrefab = p; }
-                }
-                if (markPrefab == null || activatePrefab == null)
-                {
-                    GUI.AddMessage("[OrderSpam] OrderPrefab не найден", Color.Red);
-                    return;
-                }
+                targets.AddRange(bot.HeldItems);
+                if (bot.Inventory != null) { targets.AddRange(bot.Inventory.AllItemsMod); }
+            }
+            catch { }
 
-                var targets = new List<Item>();
-                try
-                {
-                    targets.AddRange(bot.HeldItems);
-                    if (bot.Inventory != null) { targets.AddRange(bot.Inventory.AllItemsMod); }
-                }
-                catch { }
+            var distinct = new List<Item>();
+            var seen = new HashSet<Item>();
+            foreach (var t in targets)
+            {
+                if (t == null || t.Removed) { continue; }
+                if (seen.Add(t)) { distinct.Add(t); }
+            }
 
-                var distinct = new List<Item>();
-                var seen = new HashSet<Item>();
-                foreach (var t in targets)
-                {
-                    if (t == null || t.Removed) { continue; }
-                    if (seen.Add(t)) { distinct.Add(t); }
-                }
-                targets = distinct;
+            if (distinct.Count == 0)
+            {
+                GUI.AddMessage("[OrderSpam] у " + bot.Name + " нет предметов", Color.Orange);
+                return;
+            }
 
-                if (targets.Count == 0)
-                {
-                    GUI.AddMessage("[OrderSpam] у " + bot.Name + " нет предметов", Color.Orange);
-                    return;
-                }
+            OrderPrefab markPrefab = null;     // deconstructthis
+            OrderPrefab activatePrefab = null; // deconstructitems
+            foreach (OrderPrefab p in OrderPrefab.Prefabs)
+            {
+                if (p.Identifier.Value.Equals("deconstructthis", StringComparison.OrdinalIgnoreCase)) { markPrefab = p; }
+                if (p.Identifier.Value.Equals("deconstructitems", StringComparison.OrdinalIgnoreCase)) { activatePrefab = p; }
+            }
+            if (markPrefab == null || activatePrefab == null)
+            {
+                GUI.AddMessage("[OrderSpam] OrderPrefab не найден", Color.Red);
+                return;
+            }
 
-                int sent = 0;
-                foreach (var item in targets)
-                {
-                    try
-                    {
-                        // Пакет 1: deconstructthis @ item → сервер DeconstructItems.Add
-                        var markOrder = new Order(markPrefab, Identifier.Empty, item, null, Character.Controlled);
-                        var markMsg = new OrderChatMessage(markOrder, null, Character.Controlled, isNewOrder: true);
-                        GameMain.Client?.SendChatMessage(markMsg);
+            _sendSession++;
+            int session = _sendSession;
 
-                        // Локальная пометка для мгновенного клиентского отклика
-                        try { Item.DeconstructItems.Add(item); } catch { }
-                        sent++;
-                    }
-                    catch { }
-                }
+            GUI.AddMessage("[OrderSpam] " + bot.Name + ": помечаю " + distinct.Count + " предметов (1/1.2с)...", AccentColor);
 
-                // Пакет 2: deconstructitems @ bot → активация AIObjectiveDeconstructItems
-                try
-                {
-                    var activateOrder = new Order(activatePrefab, Identifier.Empty, bot, null, Character.Controlled);
-                    var activateMsg = new OrderChatMessage(activateOrder, bot, Character.Controlled, isNewOrder: true);
-                    GameMain.Client?.SendChatMessage(activateMsg);
-                }
-                catch { }
+            int step = 0;
+            foreach (var item in distinct)
+            {
+                var capturedItem = item;
+                float delay = step * 1.2f;
+                step++;
 
-                _lastOrder = "→ " + bot.Name + " (" + sent + " предм.)";
-                GUI.AddMessage("[OrderSpam] " + bot.Name + ": помечено " + sent +
-                    " предметов + активация deconstructitems", OwnBotColor);
+                CoroutineManager.StartCoroutine(SendMarkStep(bot, markPrefab, capturedItem, session, delay));
+            }
+
+            CoroutineManager.StartCoroutine(SendActivateStep(bot, activatePrefab, session, step * 1.2f + 1.0f));
+        }
+
+        private static IEnumerable<CoroutineStatus> SendMarkStep(
+            Character bot, OrderPrefab markPrefab, Item target, int session, float delay)
+        {
+            double until = Timing.TotalTime + delay;
+            while (Timing.TotalTime < until)
+            {
+                yield return CoroutineStatus.Running;
+            }
+            if (session != _sendSession) { yield break; }
+            if (bot == null || bot.Removed || GameMain.Client == null) { yield break; }
+
+            try
+            {
+                var order = new Order(markPrefab, Identifier.Empty, target, null, Character.Controlled);
+                var msg = new OrderChatMessage(order, null, Character.Controlled, isNewOrder: true);
+                GameMain.Client?.SendChatMessage(msg);
+
+                try { Item.DeconstructItems.Add(target); } catch { }
+                _sent++;
             }
             catch (Exception e)
             {
-                GUI.AddMessage("[OrderSpam] фейл: " + e.Message, Color.Red);
+                GUI.AddMessage("[OrderSpam] mark fail: " + e.Message, Color.Red);
+            }
+        }
+
+        private static IEnumerable<CoroutineStatus> SendActivateStep(
+            Character bot, OrderPrefab activatePrefab, int session, float delay)
+        {
+            double until2 = Timing.TotalTime + delay;
+            while (Timing.TotalTime < until2)
+            {
+                yield return CoroutineStatus.Running;
+            }
+            if (session != _sendSession) { yield break; }
+            if (bot == null || bot.Removed || GameMain.Client == null) { yield break; }
+
+            try
+            {
+                var order = new Order(activatePrefab, Identifier.Empty, bot, null, Character.Controlled);
+                var msg = new OrderChatMessage(order, bot, Character.Controlled, isNewOrder: true);
+                GameMain.Client?.SendChatMessage(msg);
+                GUI.AddMessage("[OrderSpam] " + bot.Name + ": deconstructitems активирован", OwnBotColor);
+            }
+            catch (Exception e)
+            {
+                GUI.AddMessage("[OrderSpam] activate fail: " + e.Message, Color.Red);
             }
         }
 
