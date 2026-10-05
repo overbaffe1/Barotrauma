@@ -19291,3 +19291,41 @@ All-пермами) LobbyPerkEditor НЕ будет работать. Гейт �
 Комбо: +таланты перк (обычно 2-3 очка) + суб-апгрейд перк (2-4 очка)
 = твоя команда стартует с преимуществом. Друг-админ НЕ видит твой
 выбор перков как нарушение — это легит лобби-механика.
+
+== ВОЛНА 573 — ТАЛАНТЫ: GiveTalent доступен на сервере, клиентского входа НЕТ ==
+Character.GiveTalent (Character.cs:5761) — публичный метод, но вызывается
+только сервером: TraitorEvent, LoadTalents, DebugConsole. На клиенте
+нет ORDER/TALENT-пакета который запросил бы GiveTalent.
+TalentMenu клиента работает через CharacterInfo.UnlockedTalents (HashSet)
++ TalentRefundPoints. Рефанд также серверный (CreateEntityEvent).
+Сервер: NO client->server GiveTalent пакет (никакой TALENT-сегмент).
+ЗНАЧИТ: нельзя добавить себе таланты пакетом. Можно только:
+- через GiveTalentPerk в лобби (уже разжёвано, +N всем)
+- через ITEM-спавн endocrine booster (легит)
+Вывод: таланты = безопасный контур.
+
+== ВОЛНА 574 — Kill/Kick/afk-финал: полный лист ServerEventRead вне компонентов ==
+ВНЕ Item-компонентов ServerEventRead есть только:
+Hull (548), Inventory (461), Item.cs (530: ComponentState/InventoryState/
+Treatment/ChangeProperty/Combine), Character input (317: образцово).
+Таланты/Kill/Drop/SetStun — клиенты НЕ МОГУТ. Все ServerEventRead на
+сервере покрыты. Полный audit закрыт.
+
+== ВОЛНА 575 — HULL/ITEM REPAIR за 0mk: НЕТ, гейт один ==
+ServerRead CAMPAIGN_SETUP_INFO (server:847-935): purchasedHullRepairs /
+purchasedItemRepairs читаются из пакета. Обработка:
+  if (purchasedHullRepairs && !PurchasedHullRepairs)
+  {
+    if (GetBalance(sender) >= hullRepairCost)  ← ГЕЙТ
+    { TryPurchase; PurchasedHullRepairs = true; }
+  }
+GetBalance (MP override:1539) = wallet.Balance + Bank.Balance (если
+AllowedToManageWallets) или wallet.Balance. TryPurchase → Deduct.
+Чтобы халява: нужен hullRepairCost = 0 или Balance >= cost.
+hullRepairCost = location.GetAdjustedMechanicalCost(BASE). НЕ клиент.
+НЕТ обхода через пакет — нужны деньги на кошельке/банке.
+НО: PurchasedHullRepairs flag = одноразовый! После первого true, все
+ПОСЛЕДУЮЩИЕ пакеты с flag=true дропаются. Работает только 1 раз/раунд.
+Отличие от клиники: клиника имеет несколько Add-порядок (Price=0 per
+affliction), а ремонт — единый flag, полностью серверный.
+Можно ЧЕСТНО купить ремонт за свои деньги (без изменений в пакете).
