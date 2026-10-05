@@ -97,18 +97,26 @@ namespace CSHUB.Modules
             return best;
         }
 
-        // Правильный путь (волна 566):
-        // ШАГ 1: deconstructthis с character=null (TargetAllCharacters=true) —
-        //        сервер добавляет в Item.DeconstructItems + рассылает всем
-        // ШАГ 2: deconstructitems с character=bot — активирует AIObjectiveDeconstructItems
+        // Волна 566 fixed: НЕ используем SetCharacterOrder (он фильтрует по
+        // TargetAllCharacters и может дропать). Шлём напрямую через
+        // GameMain.Client.SendChatMessage — это тот же путь что ваниль.
+        //
+        // Пакет 1: deconstructthis @ item — сервер: Item.DeconstructItems.Add
+        // Пакет 2: deconstructitems @ bot — сервер: bot.SetOrder → активация AI
         private static void SendOrderToFleet(Character bot)
         {
             try
             {
-                var crew = GameMain.GameSession?.CrewManager;
-                if (crew == null)
+                OrderPrefab markPrefab = null;    // deconstructthis
+                OrderPrefab activatePrefab = null; // deconstructitems
+                foreach (OrderPrefab p in OrderPrefab.Prefabs)
                 {
-                    GUI.AddMessage("[OrderSpam] CrewManager недоступен", Color.Red);
+                    if (p.Identifier.Value.Equals("deconstructthis", StringComparison.OrdinalIgnoreCase)) { markPrefab = p; }
+                    if (p.Identifier.Value.Equals("deconstructitems", StringComparison.OrdinalIgnoreCase)) { activatePrefab = p; }
+                }
+                if (markPrefab == null || activatePrefab == null)
+                {
+                    GUI.AddMessage("[OrderSpam] OrderPrefab не найден", Color.Red);
                     return;
                 }
 
@@ -135,55 +143,35 @@ namespace CSHUB.Modules
                     return;
                 }
 
-                // Найти префабы
-                OrderPrefab markPrefab = null;   // deconstructthis
-                OrderPrefab activatePrefab = null; // deconstructitems
-                foreach (OrderPrefab p in OrderPrefab.Prefabs)
-                {
-                    if (p.Identifier.Value.Equals("deconstructthis", StringComparison.OrdinalIgnoreCase))
-                    { markPrefab = p; }
-                    if (p.Identifier.Value.Equals("deconstructitems", StringComparison.OrdinalIgnoreCase))
-                    { activatePrefab = p; }
-                }
-                if (markPrefab == null || activatePrefab == null)
-                {
-                    GUI.AddMessage("[OrderSpam] OrderPrefab не найден", Color.Red);
-                    return;
-                }
-
-                // ШАГ 1: для каждого предмета — deconstructthis (character=null)
-                // TargetAllCharacters=true → сервер Item.DeconstructItems.Add
-                // CrewManager.SetCharacterOrder(null, order) на клиенте работает:
-                // входит в TargetAllCharacters ветку (не требует character)
-                int marked = 0;
+                int sent = 0;
                 foreach (var item in targets)
                 {
                     try
                     {
-                        var order = new Order(markPrefab, Identifier.Empty, item, null, Character.Controlled);
-                        crew.SetCharacterOrder(null, order, isNewOrder: true);
-                        marked++;
+                        // Пакет 1: deconstructthis @ item → сервер DeconstructItems.Add
+                        var markOrder = new Order(markPrefab, Identifier.Empty, item, null, Character.Controlled);
+                        var markMsg = new OrderChatMessage(markOrder, null, Character.Controlled, isNewOrder: true);
+                        GameMain.Client?.SendChatMessage(markMsg);
+
+                        // Локальная пометка для мгновенного клиентского отклика
+                        try { Item.DeconstructItems.Add(item); } catch { }
+                        sent++;
                     }
-                    catch (Exception e)
-                    {
-                        LuaCsLogger.LogError("[OrderSpam] mark: " + e.Message);
-                    }
+                    catch { }
                 }
 
-                // ШАГ 2: deconstructitems боту — активирует AIObjectiveDeconstructItems
+                // Пакет 2: deconstructitems @ bot → активация AIObjectiveDeconstructItems
                 try
                 {
-                    var order = new Order(activatePrefab, Identifier.Empty, bot, null, Character.Controlled);
-                    crew.SetCharacterOrder(bot, order, isNewOrder: true);
+                    var activateOrder = new Order(activatePrefab, Identifier.Empty, bot, null, Character.Controlled);
+                    var activateMsg = new OrderChatMessage(activateOrder, bot, Character.Controlled, isNewOrder: true);
+                    GameMain.Client?.SendChatMessage(activateMsg);
                 }
-                catch (Exception e)
-                {
-                    LuaCsLogger.LogError("[OrderSpam] activate: " + e.Message);
-                }
+                catch { }
 
-                _lastOrder = "deconstruct → " + bot.Name + " (" + marked + " предм.)";
-                GUI.AddMessage("[OrderSpam] " + bot.Name + ": помечено " + marked +
-                    " предметов + deconstructitems активирован", OwnBotColor);
+                _lastOrder = "→ " + bot.Name + " (" + sent + " предм.)";
+                GUI.AddMessage("[OrderSpam] " + bot.Name + ": помечено " + sent +
+                    " предметов + активация deconstructitems", OwnBotColor);
             }
             catch (Exception e)
             {

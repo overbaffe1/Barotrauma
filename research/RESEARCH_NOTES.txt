@@ -19211,3 +19211,18 @@ OrderIdentifier = deconstructthis → order создан с OrderPrefab = correc
 ВОЗМОЖНО юзер кликает когда не в раунде? Или бот чужой (не в crew)?
 AddOrder не проверяет crew! SetCharacterOrder(bot, ...) тоже только
 CanHearCharacter. Странно. Нужен конкретный дебаг-лог юзера.
+
+== ВОЛНА 568 — ИСПРАВЛЕНО: прямой SendChatMessage вместо SetCharacterOrder ==
+SetCharacterOrder(null, deconstructthis) может тихо дропать если
+TargetAllCharacters=false в XML (дефолт false! а дефолт XML не в репо).
+ФИКС: шлём OrderChatMessage НАПРЯМУЮ через GameMain.Client.SendChatMessage()
+(тот же метод что ванильный CrewManager использует на клиенте, но без
+фильтров SetCharacterOrder). Три пакета:
+1) deconstructthis @ item → сервер: DeconstructItems.Add (per item)
+2) Локально: Item.DeconstructItems.Add (клиент видит сразу)
+3) deconstructitems @ bot → сервер: bot.SetOrder → AIObjective активация
+OrderChatMessage конструктор (shared OrderChatMessage.cs:32):
+  new OrderChatMessage(order, targetCharacter, sender, isNewOrder)
+→ SendChatMessage(msg) добавляет в chatMsgQueue → сервер.
+TargetCharacter=null для deconstructthis (TargetAllCharacters).
+TargetCharacter=bot для deconstructitems.
