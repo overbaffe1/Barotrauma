@@ -18873,3 +18873,16 @@ Buyer=0 → карта «чистая» (без имени). НЕ вектор.
 DockingPort.ServerEventRead: allowOutpostAutoDocking enum byte — гейт
 AllowedToManageCampaign(ManageMap) на запись (серверное свойство), сам
 док/андок — сигналы (551). Чисто.
+
+== ВОЛНА 553 — CrewManager.AddOrder: «deconstruct this» ордер БЕЗ перма ==
+CrewManager.AddOrder (shared:82) — вход из ChatMessage ORDER-сегмента
+(гейт = CanHear для target-бота, волна 545b). Отдельных перм-гейтов
+НЕТ на specific ордеры. Порядок DeconstructThis обрабатывается: bot
+помечает item к разборке (в кампании = реально разобрать). Т.е. игрок
+без прав через ORDER-чат может ЗАКАЗАТЬ БОТАМ разобрать предмет (не
+успевает check wallet?). ВАЖНО: deconstruct ордер — Только для целевых
+ботов (TargetAllCharacters false → o.TargetEntity = конкретная сущность).
+ВОЗМОЖНОСТЬ: подвести бота к любому предмету на субе, приказать
+«разобрать это» (via ORDER-чат, target bot + item) → бот разберёт что
+хочешь. В кампании это может быть необратимо. Не является bypass пермов
+(так и задумано), но интересный вектор социального грифа.
