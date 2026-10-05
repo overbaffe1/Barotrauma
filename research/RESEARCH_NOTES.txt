@@ -18886,3 +18886,21 @@ CrewManager.AddOrder (shared:82) — вход из ChatMessage ORDER-сегме�
 «разобрать это» (via ORDER-чат, target bot + item) → бот разберёт что
 хочешь. В кампании это может быть необратимо. Не является bypass пермов
 (так и задумано), но интересный вектор социального грифа.
+
+== ВОЛНА 554 — OrderSpammerModule (навёлся на предмет → B → бот разбирает) ==
+Юзер: «навожусь на предмет мышкой, нажимаю клавишу, меню какому боту
+отдать приказ — тем кто сможет меня услышать».
+- Триггер: PlayerInput.KeyHit(Keys.B) (публичен, PlayerInput.cs:436 —
+  AllowInput + old.IsKeyUp && now.IsKeyDown — edge-detect ванили).
+- Цель: FindItemUnderCursor — ближайший Item в 150px от
+  Cam.ScreenToWorld(MousePosition).
+- Меню: боты CharacterList (IsBot && !IsDead && TeamID==my) фильтр
+  bot.CanHearCharacter(me) (радиус/рация — гейт, который проверяет
+  сервер) → клик = отправка.
+- Отправка: new Order(deconstructthis-prefab, Identifier.Empty, target,
+  null, me) + new OrderChatMessage(order, bot, me, isNewOrder: true)
+  → GameMain.Client.SendChatMessage(msg) — легит-путь ванили
+  (CrewManager:934-937).
+- Server: ChatMessage.ServerRead → ORDER → targetCharacter.SetOrder —
+  только CanHearCharacter(orderGiver) — мы уже проверили клиентски.
+- Бот реально разбирает предмет (в кампании — необратимо).
