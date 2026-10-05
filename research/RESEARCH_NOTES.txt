@@ -19248,3 +19248,46 @@ CreateNetworkEvent(spawn) сервер НЕ узнает → предмет не
 СЕРЬЁЗНОГО ЭКСПЛОЙТА НЕТ — сервер синк перетрёт.
 АЛЬТЕРНАТИВА (лучше): SellById с любым prefab = сервер СПАВНИТ и
 НЕ удаляет (itemId=0) => РЕАЛЬНЫЙ дюп предмета на сервере. Уже есть.
+
+== ВОЛНА 571 — «сервер друга = админ-друг»: will perks work? ==
+Вопрос юзера: друг создал сервер → друг = владелец → друг имеет
+ClientPermissions.All (SetPermissions(All, ...) в OnOwnerDetermined
+GameServer:284). Значит otherClients.Any(c.HasPermission(ManageSettings))
+= TRUE (друг имеет перм!) → HasPermissionToChangePerks возвращает FALSE
+для тебя → SERVER_SETTINGS_PERKS сервер просто ДРОПНЕТ твой пакет.
+
+ЧЁСТНЫЙ ОТВЕТ: НЕТ, на сервере друга (где друг-владелец = админ с
+All-пермами) LobbyPerkEditor НЕ будет работать. Гейт блокирует:
+- не-PvP: any other client с ManageSettings → false
+- PvP: anyone в ТВОЕЙ команде с ManageSettings → false (владелец
+  обычно NoneTeam → но формула проверяет твою команду → если друг
+  не в твоей PvP-команде, может работать в PvP!)
+
+Открыто только:
+1) Пермлесс-сервер (никто не имеет ManageSettings — including владелец)
+2) PvP где друг НЕ в твоей команде (friend Team1, ты Team2 →
+   проверяется только Team2)
+3) Друг вышел из сервера (список ConnectedClients без него)
+
+== ВОЛНА 572 — PvP-командная лазейка: ЧТО ПОЛУЧАЕШЬ ==
+Условие: PvP, ты в Team1, админ в Team2 (или наоборот — гейт смотрит
+только ТВОЮ команду). HasPermissionToChangePerks → true.
+Валидация: ValidatedDisembarkPoints вызывается при старте раунда
+(GameServer:2573) → если сумма Cost > DisembarkPointAllowance (дефолт 7)
+→ TryStartGameResult.PerksExceedAllowance → НЕ стартанёт. НЕ обходимо
+через клиентский пакет — сервер проверяет.
+ЧТО МОЖНО (в рамках лимита 7 очков):
+- GiveTalentPointPerk (+N талантов ВСЕЙ команде на старте раунда)
+- SpawnItemPerk (Identifier/Tag + MinAmount + PerPlayer — спавн ЛЮБЫХ
+  предметов по Identifier в контейнеры субы)
+- UpgradeSubmarinePerk (Identifier + CategoryIdentifier + Level —
+  +Level любого апгрейда субы на старте)
+- SubItemSwapPerk (TargetItem → ReplacementItem — подмена предметов)
+ВАЖНО: набор перков ОГРАНИЧЕН теми что в DisembarkPerkPrefab.Prefabs
+(загружены из XML ванили + модов). Нельзя создать свой перк через пакет
+— можно только ВЫБРАТЬ из существующих по uintIdentifier (MD5 хеш).
+Так что сама "лазейка" позволяет ВЫБРАТЬ ЛЮБЫЕ ПЕРКИ до 7 очков
+БЕЗ админа, но не имбовые 1000-очковые.
+Комбо: +таланты перк (обычно 2-3 очка) + суб-апгрейд перк (2-4 очка)
+= твоя команда стартует с преимуществом. Друг-админ НЕ видит твой
+выбор перков как нарушение — это легит лобби-механика.
