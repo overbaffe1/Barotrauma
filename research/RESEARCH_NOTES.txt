@@ -19153,3 +19153,42 @@ AIObjectiveDeconstructItems:
 Оба пути — чисто ванильные через CrewManager.SetCharacterOrder.
 Ключевой инсайт: deconstructthis требует character=null (не бота!),
 иначе уходит в else-ветку и NOT в DeconstructItems.
+
+== ВОЛНА 567 — CrewManager public vs internal ==
+Проверка: CrewManager = partial class БЕЗ модификатора = internal
+в Barotrauma сборке. Из CSHUB-мода недоступен напрямую!
+Тот факт что юзерский код компилируется = LuaCS компилятор в CSHUB
+имеет IgnoresAccessChecksTo или аналогичный обход — значит прямой вызов
+GameMain.GameSession.CrewManager.SetCharacterOrder должен работать.
+Но юзер говорит «все равно не идёт» = либо SetCharacterOrder не
+вызывается (тихо исключение?), либо ордер доходит но бот не реагирует.
+Вероятная причина №2: SetCharacterOrder(null, order, isNewOrder=true)
+в TargetAllCharacters ветке вызывает AddOrder(order.WithTargetEntity(hull))
+— это ЛОКАЛЬНОЕ добавление ордера в ActiveOrders. И SendChatMessage
+отправляет OrderChatMessage на сервер. НО: SendChatMessage не отправляет
+если ClientPeer?.ServerConnection == null, или chatMsgQueue переполнен
+(ваниль буферизует чат-пакеты!). chatMsgQueue обрабатывается в Update —
+если много сообщений подряд (10-15 предметов = 10-15 пакетов) они
+могут копиться и не уходить мгновенно.
+Вероятная причина №3: Order prefab с TargetAllCharacters=true имеет
+TargetEntity = item, но AddOrder(order.WithTargetEntity(hull)) заменяет
+на Hull — и для deconstructthis это отрезает item-цель!
+Смотрим CrewManager.cs:864: if (order.IsReport) { ... } — IsReport =
+TargetAllCharacters && !MustSetTarget. Если deconstructthis имеет
+MustSetTarget=true, IsReport=false → идёт в if(IsDeconstructOrder) →
+order.TargetEntity is Item → DeconstructItems.Add(stack) — правильно.
+Дальше OrderChatMessage(order.WithTargetEntity(order.IsReport ? hull :
+order.TargetEntity), null, order.OrderGiver) — с Item.
+Это доходит до сервера как chat ORDER.
+НА СЕРВЕРЕ ChatMessage.ServerRead: case Order → если TargetAllCharacters
+→ AddOrder(...); если DeconstructOrder → Item.DeconstructItems.Add(stack)
+на СЕРВЕРЕ. Потом SendOrderChatMessage(orderMsg) — рассылает всем.
+БОТ получает ORDER чат-сообщение → ClientEventRead → CrewManager.
+ReadOrder... на КЛИЕНТЕ бота? Нет — сервер. На сервере ORDER ChatMessage
+→ ChatMessage.ServerRead → AddOrder + DeconstructItems.Add.
+А бот — это сервер-сущность, у него CrewManager.AddOrder → он видит
+ActiveOrders → SetOrder для конкретного character... но тут
+SetCharacterOrder(null, ...) = BROADCAST без конкретного бота.
+Боту нужно ИНДИВИДУАЛЬНОЕ SetOrder. Значит деconstructitems ордер
+с character=bot и есть нужный активатор.
+Root cause всё ещё неясен. Нужен DebugConsole лог от юзера.
