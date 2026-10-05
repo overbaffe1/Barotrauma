@@ -18937,3 +18937,14 @@ UI: строка бота показывает «предметов: N» (жёл
 но спам-фильтр 4x мягче ордеров (0.25) → кик-риск низкий.
 Чужие боты = тоже работает (TeamID не гейт) → приказа на разборку
 оружия чужого security-бота достаточно чтобы он беззащитен.
+
+== ВОЛНА 557 — CS1501/CS1061 фиксы OrderSpammer ==
+Ошибка юзера: .Count() на HeldItems/AllItemsMod (CS1501) и .Where/.Distinct
+(CS1061 List<Item>). Причина: LuaCs-компилятор не подхватывает
+System.Linq по умолчанию для модовых модулей. Фиксы:
+- добавлен using System.Linq (частично), но надёжнее — заменены на
+  явные foreach-циклы без LINQ:
+  itemCount через foreach (HeldItems / AllItemsMod);
+  Distinct через HashSet<Item> seen.Add.
+Урок: модовый LuaCS не всегда резолвит extension methods — избегать
+LINQ в CSHUB-модулях, использовать явные циклы.

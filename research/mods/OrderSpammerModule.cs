@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Barotrauma;
 using Barotrauma.Networking;
 using Microsoft.Xna.Framework;
@@ -196,8 +197,11 @@ namespace CSHUB.Modules
                 int itemCount = 0;
                 try
                 {
-                    itemCount += bot.HeldItems.Count();
-                    if (bot.Inventory != null) { itemCount += bot.Inventory.AllItemsMod.Count(); }
+                    foreach (var hi in bot.HeldItems) { itemCount++; }
+                    if (bot.Inventory != null)
+                    {
+                        foreach (var ai in bot.Inventory.AllItemsMod) { itemCount++; }
+                    }
                 }
                 catch { }
 
@@ -290,7 +294,14 @@ namespace CSHUB.Modules
                 }
                 catch { }
 
-                targets = targets.Where(t => t != null && !t.Removed).Distinct().ToList();
+                var distinct = new List<Item>();
+                var seen = new HashSet<Item>();
+                foreach (var t in targets)
+                {
+                    if (t == null || t.Removed) { continue; }
+                    if (seen.Add(t)) { distinct.Add(t); }
+                }
+                targets = distinct;
                 if (targets.Count == 0)
                 {
                     GUI.AddMessage("[OrderSpam] у " + bot.Name + " нет предметов", Color.Orange);
