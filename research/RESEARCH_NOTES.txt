@@ -19390,3 +19390,22 @@ CanAccessInventory(prevInv) → если prevInv = чужой CharacterInventory
 → CanAccessInventory = разрешение на чужой рюкзак = обычно FALSE.
 Починено. Единственный edge: Wire (клиент-сайд провода в руках) —
 но Wire.ServerEventRead отдельный (уже покрыт 447).
+
+== ВОЛНА 579 — ТАЛАНТЫ ЧЕРЕЗ UpdateTalents: НЕТ ПРОВЕРКИ КОЛИЧЕСТВА ОЧКОВ! ==
+CharacterNetworking.cs ServerEventRead case UpdateTalents (строка ~305):
+  CanManageTalents(c) → только для СЕБЯ (client.Character == this) — ВСЕГДА TRUE
+  далее: НЕ ПРОВЕРЯЕТСЯ GetAvailableTalentPoints! Только IsViableTalentForCharacter
+  (tree prerequisites + blocking trees), НО:
+  - IsViableTalentForCharacter проверяет ДЕРЕВО (prerequisite/blocked)
+  - НО НЕ проверяет ХВАТИТ ЛИ ОЧКОВ
+  - GetAvailableTalentPoints вызывается только на КЛИЕНТЕ для UI
+  ПОЭТОМУ: отправив UpdateTalents с talentCount=100 и 100 валидных ID
+  → все 100 талантов будут выданы! БЕЗ ограничений дерева! (пока
+  prerequisite пары удовлетворены в списке)
+  Хуже: если прислать только ПОСЛЕДНИЕ таланты без prerequisite →
+  IsViableTalentForCharacter вернёт false → НЕ выдадутся. Но можно
+  прислать ВСЁ ДЕРЕВО подряд → все prerequisites satisfied → всё выдано!
+  Использование: максимум талантов своему капиту на старте.
+  GiveTalent(prefab) → UnlockedTalents.Add + ActivateTalent = скиллы/статы
+  Применение: скиллы×100, относительные бонусы, лечение, доп. слоты.
+  ЗАЩИТА: CanManageTalents (только для себя + ManageBotTalents для чужих).
