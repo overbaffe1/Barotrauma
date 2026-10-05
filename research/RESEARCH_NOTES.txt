@@ -19130,3 +19130,26 @@ AIObjectiveDeconstructItems:
   GetList() = Item.DeconstructItems (HashSet)
   IsValidTarget = Prefab.DeconstructItems не требующие других предметов
   + не в комнате с врагами + не дублируется другим ботом
+
+== ВОЛНА 566 — ИСПРАВЛЕНО: двойной vanilla-путь deconstructthis + deconstructitems ==
+Проблема: CrewManager.SetCharacterOrder(bot, deconstructitems) НЕ работает
+потому что сервер ждёт что предметы УЖЕ в Item.DeconstructItems HashSet.
+А MarkDeconstructItems (deconstructthis) ДОЛЖЕН идти с character=null
+(TargetAllCharacters=true) чтобы сервер добавил в HashSet.
+ПРАВИЛЬНЫЙ ПАТОК:
+ШАГ 1: crew.SetCharacterOrder(null, deconstructthis_order, true)
+  → CrewManager.cs:851 TargetAllCharacters ветка
+  → IsDeconstructOrder = true
+  → order.Identifier == Tags.DeconstructThis → TRUE
+  → Item.DeconstructItems.Add(stackedItem) ДЛЯ КАЖДОГО
+  → OrderChatMessage → SendChatMessage → серверу
+  → сервер broadcast'ит всем + ботам
+ШАГ 2: crew.SetCharacterOrder(bot, deconstructitems_order, true)
+  → character != null → else ветка
+  → OrderChatMessage → SendChatMessage
+  → сервер: bot.SetOrder → AIObjectiveManager → case "deconstructitems"
+  → AIObjectiveDeconstructItems активируется у бота
+  → бот читает Item.DeconstructItems → идёт к децентратору
+Оба пути — чисто ванильные через CrewManager.SetCharacterOrder.
+Ключевой инсайт: deconstructthis требует character=null (не бота!),
+иначе уходит в else-ветку и NOT в DeconstructItems.
