@@ -19192,3 +19192,22 @@ SetCharacterOrder(null, ...) = BROADCAST без конкретного бота.
 Боту нужно ИНДИВИДУАЛЬНОЕ SetOrder. Значит деconstructitems ордер
 с character=bot и есть нужный активатор.
 Root cause всё ещё неясен. Нужен DebugConsole лог от юзера.
+
+== ВОЛНА 568 — НАЙДЕНА ТОЧНАЯ ПРИЧИНА: CrewManager.AddOrder требует IsDeconstructOrder ==
+Server: ChatMessage.ServerRead → order.TargetAllCharacters=true →
+CrewManager.AddOrder(order). CrewManager.AddOrder (shared:82):
+if (order.IsDeconstructOrder) → if (order.TargetEntity is Item) →
+if (order.Identifier == Tags.DeconstructThis) → foreach stackedItem →
+Item.DeconstructItems.Add(stackedItem) ← ВОТ ГДЕ МЕТКА ПРОИСХОДИТ!
+IsDeconstructOrder = Identifier == DeconstructThis || DontDeconstructThis.
+Наш ОРДЕР создан через Order(prefab=deconstructthis, option=Empty, item).
+Identifier = deconstructthis. IsDeconstructOrder = true. TargetEntity = item.
+→ Должно работать!
+ЕСЛИ НЕ РАБОТАЕТ: возможно OrderChatMessage сериализуется и десериализуется
+на сервере, и Identifier теряется/искажается при сериализации.
+Проверка: юзер шлёт пакет → сервер ChatMessage.ServerRead → ReadOrder →
+OrderIdentifier = deconstructthis → order создан с OrderPrefab = correct.
+→ AddOrder → DeconstructItems.Add. Должно работать.
+ВОЗМОЖНО юзер кликает когда не в раунде? Или бот чужой (не в crew)?
+AddOrder не проверяет crew! SetCharacterOrder(bot, ...) тоже только
+CanHearCharacter. Странно. Нужен конкретный дебаг-лог юзера.
