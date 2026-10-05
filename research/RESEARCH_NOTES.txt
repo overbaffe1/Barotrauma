@@ -19063,3 +19063,7 @@ DeconstructItem → несёт в децентратор → разбирает.
   SendOrderToFleet → ORDER deconstructthis на ВСЕ его предметы
 - Меню удалено целиком (ShowMenu/CloseMenu GUIMessageBox — не нужны)
 - Update() удалён (B-клавиша не нужна, OnClick = клик по модулю в CSHUB)
+
+== ВОЛНА 563 — CS0111 дубликат CloseMenu ==
+При удалении ShowMenu не удалился старый CloseMenu (двойной). Фикс:
+один CloseMenu = заглушка. Меню больше нет.

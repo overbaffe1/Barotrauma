@@ -78,17 +78,7 @@ namespace CSHUB.Modules
             SendOrderToFleet(bot);
         }
 
-        private static void CloseMenu()
-        {
-            // заглушка — меню больше нет
-        }
-
-        private static void CloseMenu()
-        {
-            _menu?.Close();
-            _menu = null;
-            _targetItem = null;
-        }
+        private static void CloseMenu() { }
 
         private static Item FindItemUnderCursor()
         {
