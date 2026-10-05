@@ -19409,3 +19409,14 @@ CharacterNetworking.cs ServerEventRead case UpdateTalents (строка ~305):
   GiveTalent(prefab) → UnlockedTalents.Add + ActivateTalent = скиллы/статы
   Применение: скиллы×100, относительные бонусы, лечение, доп. слоты.
   ЗАЩИТА: CanManageTalents (только для себя + ManageBotTalents для чужих).
+
+== ВОЛНА 580 — TalentFloodModule (579 в CSHUB) ==
+Модуль: TalentFloodModule.cs
+- B-кнопка не нужна, клик по модулю в CSHUB
+- TalentTree.JobTalentTrees.TryGet(jobId) → AllTalentIdentifiers (public)
+- Multi-pass prerequisite-сортировка через TalentTree.IsViableTalentForCharacter
+  (public static, TalentTree.cs:60, comment "i hate this function - markus")
+- SendUpdateTalents: UPDATE_INGAME | segment CharacterInput |
+  RangedInteger(11, 0, 15) | u16 count | u32 uintIdentifier×N
+- uintIdentifier = TalentPrefab.UintIdentifier (MD5 hash, public)
+- EventType.UpdateTalents = 11 (CharacterEventData.cs:25)
