@@ -19067,3 +19067,54 @@ DeconstructItem → несёт в децентратор → разбирает.
 == ВОЛНА 563 — CS0111 дубликат CloseMenu ==
 При удалении ShowMenu не удалился старый CloseMenu (двойной). Фикс:
 один CloseMenu = заглушка. Меню больше нет.
+
+== ВОЛНА 565 — ПОЧЕМУ deconstructthis НЕ ДОХОДИТ: на сервере SetOrder вызывается только если c.Character живой ==
+ChatMessage.ServerRead (server ChatMessage.cs:103):
+  if (type == ChatMessageType.Order)
+  {
+    if (c.Character == null || c.Character.SpeechImpediment >= 100.0f
+        || c.Character.IsDead) { return; }  ← вот это!
+    ...
+    orderTargetCharacter.SetOrder(order, isNewOrder);
+  }
+Т.е. ордер ОБРАБАТЫВАЕТСЯ сервером, но если отправитель мёртв/без перса
+— он молча дропается. Также порядок: сначала HandleSpamFilter → кик
+если similarity > 5 (нас не должно касаться, ордера 0.25×).
+Но реальная проблема юзера: он живой, он в раунде — почему не доходит?
+ОДИН из вариантов: OrderChatMessage сериализуется через
+ChatMessage.WriteServer (проверить это) и поле Order сериализуется
+как Identifier + Option, но TargetEntity — как ushort ID. Если у юзера
+предмет в руках — FocusedItem != null, а FocusedCharacter возвращает
+ Character если навёлся на персонажа. Но мы шлём не через ваниль
+ CrewManager UI, а напрямую — и VanillaOrderChatMessage.Write может
+ терять данные. Либо бот реально получает SetOrder, но цель НЕ
+ deconstructthis-предмет из DeconstructItems HashSet, поэтому бот
+ не идёт разбирать. Надо логировать.
+Ещё вариант: CanHearCharacter меряет ГОЛОС-дистанцию, и если юзер
+без рации и далеко — бот «не слышит» и SetOrder просто return.
+Решение: добавить force=true или проверку на CanUseRadio.
+Также SetOrder(order, isNewOrder) — isNewOrder=true означает
+"новый ордер" а не rearrange. Проверим — bots.AIObjectiveManager
+получит Order через AddOrder(order) который создаёт AIObjective.
+DeconstructThis: AIObjectiveManager.GetOrderObjective case "deconstruct
+items" = AIObjectiveDeconstructItems (общая цель). DeconstructThis
+(concrete item) = AIObjectiveDeconstructItem (конкретный предмет).
+Concrete path: orderTargetCharacter.SetOrder → AIObjectiveManager
+.CreateOrder → case "deconstructitem"? Проверить — возможно нужно
+"deconstructitem" а не "deconstructthis" в case!
+grep AIObjectiveManager case deconstruct: НЕ НАЙДЕНО case
+"deconstructthis"! Значит default: AIObjectiveOperateItem если
+TargetItemComponent != null. Для Item без компонента → return null.
+Это значит: Concrete deconstructthis ордер на бот = SetOrder вызывает
+AIObjectiveManager.AddOrder(order) → GetOrderObjective → default → null
+→ ордер НЕ создаётся как AIObjective для бота!
+НО: Item.DeconstructItems.Add(item) — это globальный HashSet для
+AIObjectiveDeconstructItems (который активируется ордером
+"deconstructitems" на ВСЕХ ботов сразу). Т.е. правильный путь:
+1) Item.DeconstructItems.Add(target) локально
+2) Отправить ордер "deconstructitems" (не deconstructthis) боту →
+   у бота включается AIObjectiveDeconstructItems → он видит
+   target в Item.DeconstructItems → идёт разбирать.
+ДВА ОРДЕРА: "deconstructthis" = ПОМЕТКА конкретного предмета
+(global HashSet), "deconstructitems" = АКТИВАЦИЯ задачи у бота.
+Нужны ОБА!
