@@ -122,7 +122,7 @@ namespace CSHUB.Modules
 
             var headerText = new GUITextBlock(
                 new RectTransform(new Vector2(0.66f, 1f), header.RectTransform, Anchor.CenterLeft),
-                "Цель: " + (target != null ? target.Name + " #" + target.ID : "[нет — Wait/Follow/Dismiss]"),
+                "Наведись на БОТА → клик = разобрать ВСЁ, что у него есть",
                 textAlignment: Alignment.CenterLeft, wrap: true, font: GUIStyle.SmallFont);
             headerText.TextColor = AccentColor;
 
@@ -193,12 +193,21 @@ namespace CSHUB.Modules
                 var captured = bot;
                 var job = bot.Info?.Job?.Name.Value ?? "?";
 
+                int itemCount = 0;
+                try
+                {
+                    itemCount += bot.HeldItems.Count();
+                    if (bot.Inventory != null) { itemCount += bot.Inventory.AllItemsMod.Count(); }
+                }
+                catch { }
+
                 var row = new GUIButton(
                     new RectTransform(new Vector2(1f, 0.09f), list.Content.RectTransform), style: null);
                 row.Color = new Color(34, 42, 58, 230);
                 row.HoverColor = new Color(70, 90, 130, 255);
-                row.ToolTip = (hears ? "✓ слышит тебя" : "✗ НЕ слышит (далеко/без рации)")
-                    + "\nКоманда: " + bot.TeamID + (own ? " (своя)" : " (ЧУЖАЯ)");
+                row.ToolTip = (hears ? "слышит тебя" : "НЕ слышит")
+                    + " | предметов: " + itemCount
+                    + " | Команда: " + bot.TeamID + (own ? " (своя)" : " (ЧУЖАЯ)");
 
                 var rowLayout = new GUILayoutGroup(
                     new RectTransform(new Vector2(0.98f, 0.88f), row.RectTransform, Anchor.Center),
@@ -222,11 +231,11 @@ namespace CSHUB.Modules
                     job, textAlignment: Alignment.CenterLeft, font: GUIStyle.SmallFont);
                 jobText.TextColor = DimColor;
 
-                var hearText = new GUITextBlock(
+                var cntText = new GUITextBlock(
                     new RectTransform(new Vector2(0.18f, 1f), rowLayout.RectTransform),
-                    hears ? "слышит ✓" : "не слышит ✗",
+                    "предметов: " + itemCount,
                     textAlignment: Alignment.Center, font: GUIStyle.SmallFont);
-                hearText.TextColor = hears ? new Color(120, 255, 140) : new Color(255, 120, 120);
+                cntText.TextColor = itemCount > 0 ? new Color(255, 220, 100) : DimColor;
 
                 row.OnClicked = (b, d) =>
                 {
@@ -235,7 +244,7 @@ namespace CSHUB.Modules
                         GUI.AddMessage("[OrderSpam] " + captured.Name + " тебя не слышит", Color.Orange);
                         return true;
                     }
-                    SendOrder(captured, target);
+                    SendOrderToFleet(captured);
                     return true;
                 };
             }
@@ -256,30 +265,54 @@ namespace CSHUB.Modules
             }
         }
 
-        private static void SendOrder(Character bot, Item target)
+        // Разбираем ВСЁ, что есть у бота: предметы инвентаря + руки
+        private static void SendOrderToFleet(Character bot)
         {
             try
             {
-                string orderId = OrderIds[_orderIndex];
                 OrderPrefab prefab = null;
                 foreach (OrderPrefab p in OrderPrefab.Prefabs)
                 {
-                    if (p.Identifier.Value.Equals(orderId, StringComparison.OrdinalIgnoreCase))
+                    if (p.Identifier.Value.Equals(OrderIds[_orderIndex], StringComparison.OrdinalIgnoreCase))
                     { prefab = p; break; }
                 }
                 if (prefab == null)
                 {
-                    GUI.AddMessage("[OrderSpam] OrderPrefab " + orderId + " не найден", Color.Red);
+                    GUI.AddMessage("[OrderSpam] OrderPrefab не найден", Color.Red);
                     return;
                 }
 
-                var order = new Order(prefab, Identifier.Empty, target, null, Character.Controlled);
-                var msg = new OrderChatMessage(order, bot, Character.Controlled, isNewOrder: true);
-                GameMain.Client?.SendChatMessage(msg);
+                var targets = new List<Item>();
+                try
+                {
+                    targets.AddRange(bot.HeldItems);
+                    if (bot.Inventory != null) { targets.AddRange(bot.Inventory.AllItemsMod); }
+                }
+                catch { }
 
-                _lastOrder = OrderNames[_orderIndex] + " → " + bot.Name;
+                targets = targets.Where(t => t != null && !t.Removed).Distinct().ToList();
+                if (targets.Count == 0)
+                {
+                    GUI.AddMessage("[OrderSpam] у " + bot.Name + " нет предметов", Color.Orange);
+                    return;
+                }
+
+                int sent = 0;
+                foreach (var item in targets)
+                {
+                    try
+                    {
+                        var order = new Order(prefab, Identifier.Empty, item, null, Character.Controlled);
+                        var om = new OrderChatMessage(order, bot, Character.Controlled, isNewOrder: true);
+                        GameMain.Client?.SendChatMessage(om);
+                        sent++;
+                    }
+                    catch { }
+                }
+
+                _lastOrder = OrderNames[_orderIndex] + " → " + bot.Name + " x" + sent;
                 GUI.AddMessage("[OrderSpam] " + bot.Name + ": " + OrderNames[_orderIndex] +
-                    (target != null ? " (" + target.Name + ")" : ""), OwnBotColor);
+                    " на " + sent + " предметов", OwnBotColor);
             }
             catch (Exception e)
             {
