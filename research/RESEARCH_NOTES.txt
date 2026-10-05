@@ -18829,3 +18829,21 @@ MineralScanner проверяется, но это свойство суб-пр�
 seed). Практически: 1) мод-клиент видит все руды без апгрейда (факт),
 2) НЕ-мод-эксплойта на сервер нет.
 Параллельно: Sonar.ServerEventRead_zoom/direction/RangedSingle — клампы ✓.
+
+== ВОЛНА 550 — CUSTOM INTERFACE: кнопки на предмете В ЧУЖОМ ИНВЕНТАРЕ жмутся ВЛАДЕЛЬЦЕМ (не вором!) ==
+CustomInterface.ServerEventRead гейт: (c.Character != null &&
+DrawHudWhenEquipped && item.ParentInventory?.Owner == c.Character) ||
+item.CanClientAccess(c). Т.е. предмет с DrawHudWhenEquipped в ЧУЖОМ
+рюкзаке: нажать кнопку может ТОЛЬКО владелец рюкзака (Owner==sender),
+вор стоящий рядом — нет (CanClientAccess не пройдёт — CanInteractWith
+не пройдёт для чужого инвентаря без пермов). ЭТО НАОБОРОТ интересная
+защита-перевёртыш: автор субы может сделать «дистанционный пульт в
+кармане капитана», и никто кроме капитана не дёрнет.
+Number-элементы: int.TryParse/float-TryParseInvariant — float С ГРАДИЩЕМ
+→ ValueChanged(float) → Signal=value.ToString() → SetPropertyValueToSignal
++ StatusEffects. ТЕКСТ СВОБОДНЫЙ (не кламп) → Signal строкой → в схемы.
+Что значит practically: автор субы рискует — если он положил кастом-
+интерфейс в рюкзак игрока (спавн в инвентаре), ИГРОК сам себе даёт
+любой Signal из этого интерфейса. Чит-комбо на авторских субах:
+интерфейс с полем «любой текст» подключённый к реактору/турели = игрок
+сам вводит что хочет. Не сервер-эксплойт, но авторский грешок.
