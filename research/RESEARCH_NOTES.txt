@@ -18862,3 +18862,14 @@ owner-вопрос (autodock prompt при signal.sender==null для аутпо
 Main нюанс: dockingCooldown предотвращает спам-док (кулдаун после
 каждого дока). Эксплойта нет; опасность = троллинг «расстегнуть субу
 друга» стоя у его стыковочного люка с кнопкой-компонентом.
+
+== ВОЛНА 552 — ID-КАРТА ПРИПИСЫВАЕТСЯ КУПИВШЕМУ (без байпаса, но интересно) ==
+IdCard purchase flow: DeliverItemsToCharacter → ItemSpawned → если
+BuyerCharacterInfoIdentifier задан → InitPurchasedIDCard → idCard.
+Initialize(spawnpoint, owner-персона). Т.е. купленная карта = имя/долж-
+ность владельца из кампании. Обхода нет: Buyer приходит сервером из
+client.CharacterInfo.ID (не клиент-управляемо). Квирк: в некампейне
+Buyer=0 → карта «чистая» (без имени). НЕ вектор.
+DockingPort.ServerEventRead: allowOutpostAutoDocking enum byte — гейт
+AllowedToManageCampaign(ManageMap) на запись (серверное свойство), сам
+док/андок — сигналы (551). Чисто.
