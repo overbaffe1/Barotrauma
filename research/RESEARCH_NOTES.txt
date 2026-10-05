@@ -19420,3 +19420,33 @@ CharacterNetworking.cs ServerEventRead case UpdateTalents (строка ~305):
   RangedInteger(11, 0, 15) | u16 count | u32 uintIdentifier×N
 - uintIdentifier = TalentPrefab.UintIdentifier (MD5 hash, public)
 - EventType.UpdateTalents = 11 (CharacterEventData.cs:25)
+
+== ВОЛНА 581 — ГРАНАТА В ЧУЖОМ ИНВЕНТАРЕ: ItemComponent "use" сигнал ==
+ItemComponent.ReceiveSignal (shared:527-535):
+  case "activate": case "use": case "trigger_in":
+    if (signal.value != "0") { item.Use(1.0f, user: signal.sender); }
+Т.е. ЛЮБОЙ предмет с connection "use" можно дёрнуть СИГНАЛОМ.
+Кто шлёт сигнал: ваниль-кнопка/терминал/wifi — любой источник.
+CanClientAccess НЕ проверяется в ReceiveSignal!
+item.Use(1.0f, user: signal.sender) — это Item.Use → Throwable.Use →
+граната начинает throw (если characterUsable и не ranged-locked).
+НО: Throwable.Use требует characterUsable и return'ит — бросание
+обрабатывается в Update через IsKeydown(InputType.Use) на ХОЛДЕРЕ.
+Сигналом можно вызвать только Use() проверку, сам throw происходит
+только когда ХОЛДЕР жмёт Use. Т.е. ThrowState включится если
+characterUsable=true и使用者 = брошенный thrower...
+
+НО ГЛАВНОЕ: item.Use(1.0f, user: signal.sender) на предмете В ЧУЖОМ
+ИНВЕНТАРЕ = вообще без гейтов! ReceiveSignal не проверяет ни
+CanClientAccess, ни инвентарь. Просто Use на предмете.
+Для НЕ-Throwable предметов это триггерит StatusEffects (взрывы,
+электрошок, лечение).
+Если у предмета есть OnUse StatusEffect с Launch (взрыв) — можно
+подорвать гранату В ЧУЖОМ КАРМАНЕ через кнопку+провод!
+Нужен: предмет в чужом инвентаре с connection "use" + любой сигнал.
+У Throwable в инвентаре (не активен) гранаты обычно не детонируют,
+но StatusEffect.OnUse может подорвать (если XML описывает).
+
+ВЕРДИКТ: технически возможно, требует wired кнопку + соединение.
+Дистанционно через wifi = реально. Но предмет должен иметь
+connection "use" — обычно это кастомные предметы из Workshop.
