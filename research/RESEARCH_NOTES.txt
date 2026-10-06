@@ -16882,8 +16882,6 @@ Barotrauma разложен по винтикам от handshake до титро
   ВЕРДИКТ: v2 — это уже играбельный FP-конверсионный слой с честным
   инпут-мостом (не noclip!) и перспетивной экструзией геометрии.
   Сильная работа; главные точки роста — Sprite.Depth-Z, кэши, свет.
-<<<<<<< HEAD
-=======
 ===============================================================================
 [WAVE 473 — ПАТЧ Sprite.Depth→Z ДЛЯ FP-МОДА (реализован)]
 ===============================================================================
@@ -16916,7 +16914,6 @@ Barotrauma разложен по винтикам от handshake до титро
   - Полосы 16 → при желании 32 (Begin/End ×32 всё ещё дёшево)
   - Двери/лестницы можно тоже загнать в полосы по их SpriteDepth
   - Связка с экструзией: стенам с одинаковым SpriteDepth — общая толщина
->>>>>>> 36f55e7 (Wave 473: implemented FirstPersonDepthPatch.cs — Sprite.Depth->Z for user's FP mod (partial class, 16 depth bands from editor's SpriteDepth slider, NumPad9 toggle, far-band fade via SpriteColor save/restore); v2 file patched: partial class + Draw3DWorld branch + toggle; awaiting user compile/test)
 ===============================================================================
 [WAVE 474 — ПАТЧ ВЛИТ В v2 (один самодостаточный CSHUB-файл)]
 ===============================================================================
@@ -19602,3 +19599,65 @@ Rate limit 5/10s (announce+kick). JobVariants: HiddenJob отбрасывает�
 с произвольными Identifier'ами. Отпадёт в дефолт → только косметика (низкий).
 HandleClientError: клиентский ERROR-пакет → серверный лог/консоль «Missing character...»
 с клиентскими подстроками (кап MaxSubNameLengthInErrorMessages) — мусор в логах, низкий.
+
+== ВОЛНА 585 — TRANSFERVOTE: деньги ИЗ ЛЮБОГО кошелька + Lidgren catch-all + роутер лобби ==
+
+## ★★★ [585] VoteType.TransferMoney — вотчина-перевод БЕЗ ManageMoney, БЕЗ капа, ОТ ЛЮБОГО КОШЕЛЬКА (подтверждено)
+Путь: Vote-сегмент (UPDATE_LOBBY/UPDATE_INGAME) → Voting.ServerRead case TransferMoney:
+  bool startVote = true → int amount = ReadInt32() RAW, byte fromClientId, byte toClientId RAW.
+  Find(SessionId) → NULL = БАНК (From==null → bank). SessionId 0 = ХОСТ.
+  Гейт: только ShouldRejectVote = 1-мин кулдаун ПОСЛЕ проваленной вотчины. ВСЁ.
+  НЕТ: ManageMoney-перма, НЕТ Amount>0, НЕТ MaximumMoneyTransferRequest, НЕТ InGame-гейта.
+TransferVote.Finish(passed):
+  fromWallet = From==null ? Bank : From.Character?.Wallet;
+  TryDeduct(amount) → toWallet?.Give(amount);
+ОТРИЦАТЕЛЬНЫЙ amount: CanAfford(-X)=Balance>=-X=true → Deduct(-X)=Balance+=X.
+  = принтер денег БЕЗ перм (волна 455 подтверждена + уточнена).
+ПОЛОЖИТЕЛЬНЫЙ amount + from=victim: TryDeduct(жертвы) → Give(тебе) = КРАЖА КОШЕЛЬКА жертвы
+  голосованием (жертва голосует против, но не-голосовавшие НЕ считаются в total!).
+ПРОХОЖДЕНИЕ (Voting.Update): Timer>=VoteTimeout(30с) ИЛИ inGameClients==1 → финиш.
+  eligible = in-game КРОМЕ стартера; yes/(yes+no) >= VoteRequiredRatio(дефолт 0.6).
+  Неответившие НЕ в total → 1 голос «за» от сообщника проходит при любом числе молчунов.
+  ★ inGameClients.Count()==1 → вотчина мгновенно фейлится (total=0) → СОЛО-ТЕСТ ВСЕГДА FAIL!
+  На сервере друга: нужен +1 «за» (сообщник/доверчивый игрок) — иначе nothing.
+Кап MaximumMoneyTransferRequest (дефолт 999999!) проверяется ТОЛЬКО в прямом пути
+  ServerReadMoney (банк→себя через StartTransferVote c cap). Вотчинный путь СВОБОДЕН.
+Прямой путь (TRANSFER_MONEY): Amount<=0 → return; Sender==Some → только СВОЙ CharacterID
+  (или ManageMoney); Sender==None + не-менеджер → банк→себя с капом; менеджер → банк свободно.
+
+## ★ [585] LidgrenServerPeer.Update — ВНЕШНИЙ catch-all подтверждён (уточнение цепочки 584)
+HandleDataMessage обёрнут catch(NetStructReadException) (kick malformed), а ВЕСЬ цикл
+  сообщений — catch(Exception) → лог + GameAnalytics, сервер ЖИВЁТ.
+  ⇒ ПЕРВЫЙ throw EventManager.ServerRead (584) глотается ИМЕННО ЗДЕСЬ.
+  Смерть приходит через ПЕРСИСТЕНТНЫЙ SelectedOption на след. тике (не в net-хендлере —
+  try/catch вокруг EventManager.Update в GameMain.Run() НЕТ).
+  Побочка catch-all: buffered entity events глотаются ПОСОБЫТИЙНО (ServerEntityEventManager:189)
+  — семейство «throw → батч-дроп» живёт там.
+  Malformed AUTH-пакет от pending-клиента = МГНОВЕННЫЙ БАН IP (сурово, ok).
+
+## [585] Роутер ClientReadLobby/ClientReadIngame — полная карта клиентских сегментов
+LOBBY-сегменты: SyncIds (клампы NetIdUtils.Clamp — ок), ChatMessage, Vote.
+INGAME-сегменты: SyncIds, ChatMessage, CharacterInput (гейт c.Character!=null), EntityState
+  (entityEventManager.Read — гейты в хендлерах, волна 584), Vote, ★SpectatingPos.
+SPECTATINGPOS: c.SpectatePos = new Vector2(ReadSingle(), ReadSingle()) — RAW float БЕЗ IsValid!
+  NaN-инъекция (семейство NaN). Влияние: GetPositionUpdateInterval считает дистанцию от
+  SpectatePos → NaN дистанция → NaN interval → приоритизация апдейтов себе ломается.
+  SELF-DoS (ломает только свой синк), врать ЧУЖОЙ синк нельзя. Гейта SpectateOnly НЕТ —
+  играющий клиент тоже может. Низкий, но в копилку NaN-семейства.
+SyncIds lobby: ReadClientNameChange — имя через TryChangeClientName (IsNameValid + кулдаун),
+  newJob HiddenJob фильтр. newTeam = (CharacterTeamType)ReadByte() RAW enum — невалидное
+  значение сохранится в PreferredTeam; RefreshPvpTeamAssignments его не сломает (сравнения).
+  Косметика.
+
+## [585] Kick-вотчины: хост защищён (опровергнут кик-хоста)
+VoteType.Kick: AllowVoteKick гейт, DisallowKickVoteTime (120с после входа), kicked.Connection
+  != OwnerConnection (хост НЕ кикается), HasKickVoteFrom — 1 голос/цель/отправитель.
+  UpdateKickVotes — сервер считает сам. Подделать чужой голос нельзя (SetVote по sender).
+
+## [585] Мелочи
+- Traitor vote: blame-кнопка шлёт RADIO-сообщение через SendChatMessage(Radio) — гейт
+  CanUseRadio внутри SendChatMessage применяется и тут → без рации не сработает. Чисто.
+- StartOrEnqueueVote: pendingVotes очередь — спам стартов ограничен ShouldRejectVote
+  (1 мин после провала per voteType) — переполнить нельзя.
+- HasCampaignInteractionAvailable: CanInteractWith(otherChar, maxDist:250) либо
+  AllowRemoteCampaignInteractions (сеттинг для SettingsFlipper).
