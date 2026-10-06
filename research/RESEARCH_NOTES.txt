@@ -19661,3 +19661,84 @@ VoteType.Kick: AllowVoteKick гейт, DisallowKickVoteTime (120с после в
   (1 мин после провала per voteType) — переполнить нельзя.
 - HasCampaignInteractionAvailable: CanInteractWith(otherChar, maxDist:250) либо
   AllowRemoteCampaignInteractions (сеттинг для SettingsFlipper).
+
+== ВОЛНА 586 — МЁРТВЫЙ АДМИН = ВСЕМ АДМИНКА + CampaignSettings без клампов + FileSender/Crew чисты ==
+
+## ★★★ [586] AnyOneAllowedToManageCampaign: окно «админ мёртв/недееспособен» = ПОЛНЫЕ КАМПЕЙН-ПЕРМЫ ВСЕМ (подтверждено)
+CampaignMode.cs:18 AllowedToManageCampaign =
+  HasPermission || ManageCampaign || IsOwner || AnyOneAllowedToManageCampaign.
+AnyOneAllowedToManageCampaign (CampaignMode.cs:197):
+  - ConnectedClients.Count == 1 → TRUE (соло = всегда полный доступ)
+  - ЛОББИ: true если НИ у кого нет перма (permless)
+  - В РАУНДЕ, есть перм-холдер:
+    * RoundDuration < 60с → false (грейс)
+    * иначе → TRUE если НИ ОДИН перм-холдер не в состоянии
+      InGame && !IsIncapacitated && !IsDead
+    = АДМИН МЁРТВ, В СТУПОРЕ, ГРУЗИТСЯ ИЛИ СПЕКТАТОРИТ → ЛЮБОЙ КЛИЕНТ = АДМИН.
+Дизайн-комментарий «allow managing if no-one with permissions is alive and in-game» —
+задумано для AFK-админа, окно на деле ОТКРЫВАЕТСЯ КАЖДУЮ СМЕРТЬ админа.
+ЧТО ДОСТУПНО В ОКНЕ (все гейты = AllowedToManageCampaign):
+  - TRANSFER_MONEY: Sender=None → TransferMoney(Bank) БЕЗ КАПА (кап только для не-менеджеров);
+    Sender=Some(id != свой) → TransferMoney(ЧУЖОГО wallet) = прямая кража кошелька id
+  - CREW: FireCharacter ВСЕМ ботам (ManageHires; HasCampaignInteractionAvailable = близость
+    к crew NPC на субе — ок), переименование чужих
+  - CAMPAIGN_SETUP_INFO isNew=false: savePath = СТРОКА ОТ КЛИЕНТА (CampaignDataPath.CreateRegular
+    БЕЗ валидации пути) → LoadCampaign парсит ЛЮБОЙ файл по пути (существование/парс-оракул,
+    краш через мусорный файл); isBackup → GetBackupPath(savePath, index)
+  - CAMPAIGN_SETUP_INFO isNew=true: ServerSettings.CampaignSettings = КЛИЕНТСКИЕ настройки +
+    SaveSettings() (персист!) + StartNewCampaign
+  - ResetSalaries (ManageMoney)
+РЕЦЕПТ на сервере друга: админ умирает (легитный геймплей) → окно → банк в нули,
+кошельки в нули, боты уволены, новая кампания с твоими настройками. После 60й секунды раунда.
+
+## ★★ [586] CampaignSettings: ВСЕ множители — raw float на проводе, клампы ТОЛЬКО в клиентском UI
+CampaignSettings.cs: CrewVitalityMultiplier / NonCrewVitalityMultiplier / OxygenMultiplier /
+FuelMultiplier / MissionRewardMultiplier / ExperienceRewardMultiplier / RepairFailMultiplier /
+ShopPriceMultiplier / ShipyardPriceMultiplier — все [Serialize, NetworkSerialize] БЕЗ
+MinValueFloat/MaxValueFloat. Словарь _multiplierSettings (Min/Max 0.2..2.0 и т.д.) юзается
+ТОЛЬКО UI-слайдером. Через CAMPAIGN_SETUP_INFO isNew=true (нужно окно из [586]):
+  CrewVitalityMultiplier = NaN/0.0001 → хп экипажа в новой кампании
+  MissionRewardMultiplier = 1e9 → миссии платят астроном
+  ShopPriceMultiplier = 0 → бесплатные покупки
+Значения ПЕРСИСТЯТСЯ в новый сейв + SaveSettings(). NaN → известное семейство NaN-каскада.
+MaxMissionCount единственный клампнут (NetworkSerialize(MinValueInt=1, MaxValueInt=10)).
+
+## [586] Мелочи CAMPAIGN_SETUP_INFO
+- isNew=true: CreateSavePath(saveName) вызывается ДО перм-чека (File.Exists скан до 1000 итераций
+  — копеечный IO без DoS-паузы). Санитизация: RemoveInvalidFileNameChars (ToolBox:160) убирает
+  ;<>/\|" и пр., НО НЕ ТОЧКИ → saveName=".." → Path.Combine(folder,"..")+".save" = запись
+  родитель/.save (один уровень вверх). Требует ManageRound для самого StartNewCampaign → нужен
+  [586]-окно. Косметика.
+- isNew=false: CreateRegular(savePath) без проверки, что файл в папке сейвов (см. [586] выше).
+
+## [586] FILE_REQUEST/FileSender.ReadFileRequest — ЧИСТО (опровергнут произвольный чит файлов)
+- Submarine: имя+MD5 резолвятся в серверный SavedSubmarines → путь серверный
+- Mod: гейт AllowModDownloads + резолв по ХЭШУ пакета → путь серверный
+- CampaignSave: отдаётся ТЕКУЩИЙ сейв кампании всем желающим (by design, клиенты должны грузить)
+- Cancel/Data: только СВОИ трансферы (t.Connection == inc.Sender); манипуляция offset:
+  KnownReceivedOffset = Max(клиентское expecting) → можно перемотать СВОЙ трансфер в конец
+  (Status=Finished) или отмотать — SELF-DoS, чужое не тронуть
+- Гейт AllowFileTransfers на весь case ✓
+
+## [586] CREW-пакет (ServerReadCrew) — ЧИСТО
+- Fire: ManageHires + HasCampaignInteractionAvailable(Crew=близость к NPC) + цель IsBot ✓
+- Rename чужих: ManageHires + близость; СВОЙ персонаж: renamedIdentifier == свой CharacterInfo.ID,
+  одноразовый флаг RenamingEnabled (остаётся после take-over бота) ✓
+- validateHires → TryHireCharacter за деньги ✓
+- updatePending: клиент формирует лист найма, но ID резолвятся против GetHireableCharacters(),
+  MaxCrewSize кламп активных ✓ (легит UI-флоу)
+
+## [586] ReadyCheck / стартовые пакеты
+- ReadyCheck.ServerRead: любой клиент СТАРТУЕТ ready-check (если нет активного; жизнь 30с =
+  самоограничение), Update только СВОЕГО SessionId ✓. UI-гриф: попап каждые 30с максимум.
+- RESPONSE_CANCEL_STARTGAME: гейт ТОЛЬКО isRoundStartWarningActive — ЛЮБОЙ клиент отменяет
+  старт раунда (окно предупреждения 15с). ВАНИЛЬНАЯ КНОПКА у всех клиентов (NetLobbyScreen:5786)
+  = by design; сбрасывает голоса старта + AutoRestartTimer. Гриф «не даю стартовать» = легит.
+- RESPONSE_STARTGAME: свои ReadyToStart/AFK + UpdateCharacterInfo (rate limiter внутри) ✓
+- REQUEST_STARTGAMEFINALIZE: гейты connectedClient + GameStarted ✓
+- ResetRewardDistribution → ResetSalaries: гейт AllowedToManageWallets (= AllowedToManageCampaign
+  (ManageMoney) → тоже открывается [586]-окном!) ✓/⚠
+
+## [586] ServerReadInput: memInput без капа (минор)
+Список входов растёт без лимита (255/пакет), deque 1/тик + idle-skip. Память ~8Б/инпут,
+ограничена пропускной способностью клиента. DoSProtection посчитает пакеты. Не вектор.
