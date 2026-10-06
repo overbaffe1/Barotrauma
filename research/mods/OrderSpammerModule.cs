@@ -172,7 +172,12 @@ namespace CSHUB.Modules
             try
             {
                 var order = new Order(markPrefab, Identifier.Empty, target, null, Character.Controlled);
-                var msg = new OrderChatMessage(order, null, Character.Controlled, isNewOrder: true);
+                // ВОЛНА 584 — ФИКС: раньше здесь передавался targetCharacter: null.
+                // OrderChatMessage.ClientWrite пишет TargetCharacter.ID в пакет
+                // (null → 0), на сервере orderTargetCharacter == null →
+                // SetOrder() НЕ вызывается: ордер уходит только в чат, бот его
+                // не получает. Ваниль всегда передаёт бота — делаем так же.
+                var msg = new OrderChatMessage(order, bot, Character.Controlled, isNewOrder: true);
                 GameMain.Client?.SendChatMessage(msg);
 
                 try { Item.DeconstructItems.Add(target); } catch { }

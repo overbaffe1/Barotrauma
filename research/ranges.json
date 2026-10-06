@@ -308,7 +308,7 @@
   "Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerDistributor.cs": [
     [
       1,
-      33
+      40
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/ButtonTerminal.cs": [
@@ -1060,13 +1060,13 @@
   "Barotrauma/BarotraumaClient/ClientSource/Networking/ChatMessage.cs": [
     [
       1,
-      200
+      220
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs": [
     [
       1,
-      16
+      18
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Networking/EntitySpawner.cs": [
@@ -2256,7 +2256,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Events/Event.cs": [
     [
       1,
-      88
+      90
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Events/EventActions/ConversationAction.cs": [
@@ -15145,6 +15145,12 @@
     [
       2395,
       2425
+    ]
+  ],
+  "research/mods/OrderSpammerModule.cs": [
+    [
+      1,
+      225
     ]
   ]
 }

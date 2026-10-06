@@ -244,7 +244,7 @@ Barotrauma/BarotraumaClient/ClientSource/Map/WayPoint.cs,508,done,508
 Barotrauma/BarotraumaClient/ClientSource/Media/Video.Internal.cs,59,done,59
 Barotrauma/BarotraumaClient/ClientSource/Media/Video.cs,193,done,193
 Barotrauma/BarotraumaClient/ClientSource/Networking/BanList.cs,211,done,211
-Barotrauma/BarotraumaClient/ClientSource/Networking/ChatMessage.cs,200,done,200
+Barotrauma/BarotraumaClient/ClientSource/Networking/ChatMessage.cs,200,done,220
 Barotrauma/BarotraumaClient/ClientSource/Networking/ChildServerRelay.cs,92,done,92
 Barotrauma/BarotraumaClient/ClientSource/Networking/Client.cs,228,done,228
 Barotrauma/BarotraumaClient/ClientSource/Networking/ConnectCommand.cs,139,done,139
@@ -256,7 +256,7 @@ Barotrauma/BarotraumaClient/ClientSource/Networking/KarmaManager.cs,148,done,148
 Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/ClientEntityEventManager.cs,297,done,297
 Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/NetEntityEvent.cs,24,done,24
 Barotrauma/BarotraumaClient/ClientSource/Networking/NetStats.cs,95,done,95
-Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs,16,done,16
+Barotrauma/BarotraumaClient/ClientSource/Networking/OrderChatMessage.cs,16,done,18
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/DualStackP2PSocket.cs,83,done,83
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/EosP2PSocket.cs,106,done,106
 Barotrauma/BarotraumaClient/ClientSource/Networking/Primitives/P2PSocket/P2PSocket.cs,69,done,69
@@ -450,7 +450,7 @@ Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Pump.cs,66,do
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Reactor.cs,59,done,59
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Steering.cs,135,done,135
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerContainer.cs,31,done,34
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerDistributor.cs,33,done,33
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerDistributor.cs,33,done,40
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Projectile.cs,87,done,90
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Repairable.cs,59,done,100
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Rope.cs,32,done,32
@@ -803,7 +803,7 @@ Barotrauma/BarotraumaShared/SharedSource/DisembarkPerks/PerkBehaviors/UpgradeSub
 Barotrauma/BarotraumaShared/SharedSource/Enums.cs,779,done,779
 Barotrauma/BarotraumaShared/SharedSource/Eos/Session.cs,117,done,117
 Barotrauma/BarotraumaShared/SharedSource/Events/ArtifactEvent.cs,136,done,136
-Barotrauma/BarotraumaShared/SharedSource/Events/Event.cs,88,done,88
+Barotrauma/BarotraumaShared/SharedSource/Events/Event.cs,88,done,90
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/AddScoreAction.cs,84,done,84
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/AfflictionAction.cs,97,done,97
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/BinaryOptionAction.cs,117,done,117

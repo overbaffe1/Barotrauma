@@ -19511,3 +19511,94 @@ Map.AllowDebugTeleport = true локально (client-side). Но сервер
 На СЕРВЕРЕ ДРУГА (с LuaCS): можно выполнить Server LuaCS
 Map.AllowDebugTeleport = true → потом SendCampaignSetupInfo
 с текущим LocIndex = телепорт anywhere. Только свой сервер.
+
+== ВОЛНА 584 — EVENTMANAGER крашер + причина Order Spammer + движение/чат/TAKEOVERBOT ==
+
+## ★★ [584] EVENTMANAGER_RESPONSE: selectedOption — сырой байт → КРАШ СЕРВЕРА (подтверждено по коду)
+Цепочка:
+1) Клиент шлёт EVENTMANAGER_RESPONSE: u16 actionId + byte selectedOption (255=ignore).
+   GameServer case → EventManager.ServerRead (ServerSource/Events/EventManager.cs:28).
+2) Ищется ConversationAction по Identifier == actionId, гейт: sender ∈ TargetClients
+   (чужой ответ игнорится — ок), option ещё не выбран.
+3) ДАЛЕЕ БЕЗ ВАЛИДАЦИИ ВЕРХНЕЙ ГРАНИЦЫ:
+   convAction.SelectedOption = selectedOption;   // состояние ПОРТИТСЯ ДО проверки
+   if (Options.Any() && !GetEndingOptions().Contains(selectedOption))
+       { var option = Options[selectedOption]; } // ← IndexOutOfRange при option >= Options.Count
+4) Первый throw глотается peer catch-all (сервер жив), НО SelectedOption=200 УЖЕ СОХРАНЁН.
+5) Каждый следующий кадр: EventManager.Update → ev.Update → ConversationAction.IsFinished
+   (Shared ConversationAction.cs:240 `Options[selectedOption].IsFinished`) и Update (:411
+   `Options[selectedOption].Update`) — guard только `selectedOption >= 0`, верхней границы НЕТ.
+6) EventManager.Update вызывается из Server GameMain.Run() цикл — вокруг Screen.Selected.Update/
+   Server.Update НЕТ try/catch → необработанный exception → падение ПРОЦЕССА dedicated server.
+Гейт для атаки: активный событийный диалог, где атакер в TargetClients и опция не выбрана
+(аутпост-разговоры, кампанийные события). Один пакет = смерть сервера на следующем тике.
+Фикс от разработчиков: проверять selectedOption < Options.Count ДО присвоения свойства.
+
+## ★ [584] ORDER SPAMMER — ПРИЧИНА НАЙДЕНА (фикс v8 выдан)
+research/mods/OrderSpammerModule.cs SendMarkStep создавал
+OrderChatMessage(order, null, sender) — targetCharacter=null!
+OrderChatMessage.ClientWrite → WriteOrder пишет TargetCharacter.ID (null → 0).
+Сервер (ChatMessage.cs ServerRead): orderTargetCharacter = FindEntityByID(0) = null →
+ветка `else if (orderTargetCharacter != null) { SetOrder(order, isNewOrder); }` НЕ вызывается.
+Ордер уходил ВСЕМ В ЧАТ (SendOrderChatMessage), но бот его не получал.
+SendActivateStep (deconstructitems) бота передавал правильно — поэтомуActivate мог работать.
+ФИКС v8: в SendMarkStep `new OrderChatMessage(order, bot, Character.Controlled, isNewOrder: true)`.
+Бонус-находка: сервер НЕ проверяет CanHearCharacter(sender→target) для адресных ордеров —
+только SpeechImpediment/IsDead отправителя. Клиент-гейт «слышит ли» чисто косметика:
+адресный ордер МОЖНО отдать ЛЮБОМУ боту НА КАРТЕ из любой точки (подтверждено по коду).
+
+## [584] ДВИЖЕНИЕ: сервер-авторитетно, телепорта НЕТ (опровергнуто)
+Character.Networking: клиент шлёт ТОЛЬКО ServerReadInput: u16 networkUpdateID, byte count,
+на инпут: ReadRangedInteger(InputNetFlags), u16 aim, u16 interact-ID. ПОЗИЦИИ В ПАКЕТЕ НЕТ.
+Симуляция физики/движения — на сервере (Character.UpdateNetInput.dequeue). IServerPositionSync:
+ServerWritePosition (сервер пишет) / ClientReadPosition (клиент читает). Телепот-вектора нет.
+interact-ID: FindEntityByID → CanInteractWith(item) / CanInteractWith(char, maxDist:250)
+гейтит фокус — ок (дистанция в display units, без unit mismatch).
+
+## [584] TAKEOVERBOT: угон тела живого игрока НЕВОЗМОЖЕН (опровергнуто) + спавн bench-бота
+ReadTakeOverBotMessage ветка 3: botInfo.Character != null && IsBot → TryTakeOverBot.
+IsBot => !IsPlayer && AIController is HumanAIController { Enabled: true };
+IsPlayer => IsLocalPlayer || IsRemotePlayer; SetOwnerClient ставит IsRemotePlayer=true.
+Занятый игроком бот → IsBot=false → ветка 2 «could not find a bot» → угон закрыт.
+TryTakeOverBot гейты: RespawnMode.Permadeath + свой CharacterInfo.PermanentlyDead.
+ВАЖНО: ветка 2 (SpawnAndTakeOverBot из reserve bench / new hire) НЕ требует permadeath
+и НЕ требует «ты мёртв» — только НЕ Ironman. AllowBotTakeoverOnPermadeath default=TRUE
+([Serialize(true)]). Любой клиент в кампании может в любой момент заспавнить себе bench-бота.
+
+## [584] ЧАТ: канал чистый (опровергнуты имперсонация/радио/инъекция)
+- Тип из пакета ОТБРАСЫВАЕТСЯ: `type: type == ChatMessageType.Team ? type : null` —
+  Server/ServerMessageBox/Console клиентом не подделать.
+- ChatMode.Radio от клиента → type=Radio, НО гейт `CanUseRadio(senderCharacter, out radio)`
+  в SendChatMessage — без рации return. Радио-текст уходит в TransmitSignal wifi (законно).
+- Dead-чат: форсится/блокируется по IsDead/SpeechImpediment.
+- Private: только когда ОБА мертвы (в раунде).
+- Санитизация: SanitizeText убирает '‖' (U+2016) без SpamImmunity. RichString реагирует
+  ТОЛЬКО на '‖' (один Contains) — инъекции форматирования нет.
+- Спам-фильтр: Levenshtein по 10 последним, similarity*0.25 для ордеров, kick после 3 блоков.
+
+## [584] ItemComponent-события с малым покрытием: чисто (клампы на месте)
+- PowerContainer.ServerEventRead: ReadRangedInteger(0,10)/10 * maxRechargeSpeed — КЛАМП ЕСТЬ.
+- PowerDistributor: eventType ReadRangedInteger(0,1); индекс группы ReadRangedInteger(0,Count-1)
+  (Count==0 → throw в peer catch-all — известное семейство, minor); Ratio ReadRangedInteger
+  (0, SupplyRatioSteps)*Step — КЛАМП ЕСТЬ; имя Take(MaxNameLength). NaN-инъекции нет.
+- ButtonTerminal: ReadRangedInteger(0, Signals.Length-1) + CanClientAccess + серверный лог.
+- Deconstructor: SetActive(active, c.Character) за CanClientAccess — лут генерит сервер.
+- DockingPort: allowOutpostAutoDocking за AllowedToManageCampaign(ManageMap) — чисто.
+
+## [584] Роутер событий ServerEntityEventManager.Read: подтверждение корневого паттерна
+Entity.FindEntityByID(entityID) as IClientSerializable — entity-ID ИЗ ПАКЕТА доверяется,
+более НИКАКИХ гейтов на уровне роутера: только per-handler (CanClientAccess и др.).
+RequireCharacter = entity is not Hull — Hull единственный можно дёргать БЕЗ персонажа
+(комментарий: «hull updates can be sent without a character ... editing water and fire
+in spectator mode»). eventCount = ReadByte (255 событий на пакет).
+
+## [584] UPDATE_CHARACTERINFO: чисто (валидация образцовая)
+Имя: SanitizeName + IsNameValid. Цвета: validateColor ПРОТИВ supported colors головы
+(клиент не может поставить произвольный цвет!). Кампейн: существующий CharacterCampaignData
+→ модификации ИГНОРИРУЮТСЯ («Client attempted to modify their CharacterInfo... Ignoring»).
+Rate limit 5/10s (announce+kick). JobVariants: HiddenJob отбрасывается; диз-аллоуд-job
+нет (ванного ограничения профессий в MP нет — не баг).
+МИНУС: netInfo.Tags (head tags) НЕ валидируются против VarTags пресета — RecreateHead
+с произвольными Identifier'ами. Отпадёт в дефолт → только косметика (низкий).
+HandleClientError: клиентский ERROR-пакет → серверный лог/консоль «Missing character...»
+с клиентскими подстроками (кап MaxSubNameLengthInErrorMessages) — мусор в логах, низкий.
