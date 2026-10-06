@@ -19827,3 +19827,31 @@ UPDATE_LOBBY → сегмент Vote → byte TransferMoney → bool true → In
 2) Сообщник (третий in-game) голосует ЗА (клавиша голосования в UI).
 3) Через 30с Finish: TryDeduct(-X) → у тебя +X, у жертвы -X навсегда
    (кошельки персистятся в кампанию).
+
+== ВОЛНА 589 — NegTransfer v2: переписан под рабочий паттерн юзера ==
+
+## Почему v1 «не работал» (разбор по рабочему BankTransferModule юзера)
+1) СОЛО-ТЕСТ ВОТЧИНЫ ВСЕГДА ФЕЙЛ (Voting.Update: inGameClients==1 → total=0 →
+   Finish(passed: false)). Юзер тестил соло → ничего. Соло работает ТОЛЬКО прямой
+   путь: соло-клиент = AllowedToManageWallets (AnyOneAllowed: Count==1) →
+   ServerReadMoney TransferMoney(Bank) БЕЗ вотчины. ЭТО и есть его «рабочая
+   банк трансферка» (Sender=None, Receiver=я, +X).
+2) v1 писал битфилды Option вручную (SimpleBitWriter) — уязвимо к рассинхрону
+   с INetSerializableStruct.Write. v2 использует НАСТОЯЩУЮ структуру
+   NetWalletTransfer { Sender, Receiver, Amount } + transfer.Write(msg) —
+   зеркало TabMenu.SendTransaction:1489 и модуля юзера.
+3) Открытие: ВАНИЛЬНЫЙ КЛИЕНТ НИКОГДА не шлёт старт transfer-вотчины —
+   client Voting.ClientWrite case TransferMoney пишет ТОЛЬКО голос
+   (bool false + Int32). Стартует вотчину сервер сам (ServerReadMoney,
+   банк-запрос с капом). Серверный start-ветка (true+amount+from+to) —
+   легальная, но недоступная из ваниль UI = наш вектор.
+
+## Новые механики v2
+- ГОЛОС ЗА: GameMain.Client.Vote(VoteType.TransferMoney, 2) — ПУБЛИЧНЫЙ
+  ваниль-метод (GameClient.cs:2952). Клиент пишет bool false + Int32(2);
+  сервер читает ReadByte (младший байт LE) → SetVote 2 = yes.
+  2 = ЗА, 1 = ПРОТИВ (Voting.Update: yes==2, no==1).
+- ЖЕРТВА→МНЕ прямой: Sender=Some(victim) — гейт server:1186 требует
+  AllowedToManageWallets → обычный сервер отклонит, окно 586/соло/перм = сработает.
+- Режимы v2: [БАНК→МНЕ прямой (соло-OK)] [ВОТЧИНА от меня] [ВОТЧИНА от банка]
+  [ГОЛОС ЗА] [ЖЕРТВА→МНЕ прямой (окно 586)].

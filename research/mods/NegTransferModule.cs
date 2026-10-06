@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Barotrauma;
 using Barotrauma.Networking;
 using Microsoft.Xna.Framework;
@@ -8,39 +7,48 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  NEG TRANSFER (волна 588) — «выбрал жертву из списка → минус».
+    //  NEG TRANSFER v2 (волна 589) — переписан под РАБОЧИЙ паттерн
+    //  BankTransferModule юзера: настоящий NetWalletTransfer +
+    //  transfer.Write(msg) (как TabMenu.SendTransaction:1489).
     //
-    //  ПРЯМОЙ путь (TRANSFER_MONEY) минус РЕЖЕТ: ServerReadMoney
-    //  `if (transfer.Amount <= 0) return`. Поэтому вотчинный путь:
-    //  Vote TransferMoney amount = ReadInt32() БЕЗ ≤0-чека.
-    //  TransferVote.Finish: fromWallet.TryDeduct(-X) — CanAfford
-    //  = Balance >= -X ВСЕГДА true → Deduct(-X) = +X отправителю;
-    //  toWallet.Give(-X) = −X получателю.
+    //  ТРИ РЕЖИМА:
+    //  1) БАНК → МНЕ (прямой, РАБОТАЕТ СОЛО):
+    //     Sender=None, Receiver=Some(я), Amount=+X.
+    //     Соло-сервер = я менеджер (Count==1) → TransferMoney(Bank)
+    //     без вотчины. На сервере друга = вотчина с КАПОМ
+    //     (MaximumMoneyTransferRequest, дефолт 999999).
+    //     = это та самая «рабочая банк трансферка».
     //
-    //  Комбо (Finish в Voting.cs:76):
-    //   ОТ=Я, К=жертва:  жертва −X, ты +X        (кража кошелька)
-    //   ОТ=Я, К=0xFF:    банк −X, ты +X          (налог на банк)
-    //   ОТ=БАНК, К=жертва: банк −X, жертва −X    (могила)
-    //   БОНУС: жертва без персонажа (не в раунде) → To.Character?.Wallet
-    //   = null → Give пропущен: ты +X, НИКТО не потерял (из воздуха).
+    //  2) ЖЕРТВА → МНЕ (прямой, +X):
+    //     Sender=Some(жертва), Receiver=Some(я).
+    //     Гейт server:1186: чужой Sender требует AllowedToManageWallets
+    //     → работает только в «окно 586» (админ мёртв/соло) или с пермом.
+    //     В окне = прямая кража кошелька БЕЗ голосования!
     //
-    //  ПРОХОЖДЕНИЕ (Voting.Update): нужен минимум 1 голос «ЗА» от
-    //  ДРУГОГО in-game клиента (стартер в quorum НЕ входит, соло =
-    //  мгновенный фейл total=0). Голосуют после 30с таймаута;
-    //  неответившие не считаются. Вотчина ВИДНА ВСЕМ.
-    //  Отрицательная сумма проходит ВСЕГДА независимо от баланса.
+    //  3) МИНУС-ВОТЧИНА (2+ игрока):
+    //     От меня/банка отрицательная сумма жертве. Прямой путь режет
+    //     Amount<=0 (server:1182), вотчинный — НЕ режет:
+    //     TransferVote.Finish: TryDeduct(-X) всегда true → я +X, жертва -X.
+    //     ПАКЕТ СТАРТА: UPDATE_LOBBY → сегмент Vote → byte TransferMoney →
+    //     bool true + Int32 amount + byte fromSession + byte toSession
+    //     (server Voting.cs:313-329; 0xFF = банк).
+    //     ПРОХОЖДЕНИЕ: 30с таймаут → quorum in-game КРОМЕ стартера,
+    //     нужен 1 голос «ЗА» (неответившие не в total). СОЛО = ФЕЙЛ
+    //     (total=0) — соло тестить минус БЕСПОЛЕЗНО, только режимы 1/2!
+    //     Кнопка «ГОЛОС ЗА» = легальный GameMain.Client.Vote(TransferMoney, 2)
+    //     — жмёт второй аккаунт/сообщник.
     // ============================================================
     public class NegTransferModule : CSModuleBase
     {
         public override string Id   => "neg_transfer";
         public override string Name => "Neg Transfer";
         public override string Description =>
-            "Перевод ОТ СЕБЯ МИНУСОМ выбранному игроку.\n\n" +
-            "• Список игроков → клик = жертва\n" +
-            "• ОТ: Я или БАНК | сумма: -1К ... -1М или своя\n" +
-            "• TryDeduct(-X) всегда true → ты +X, цель -X\n" +
-            "• Нужно 1 голос ЗА от другого игрока (30с)\n" +
-            "• Вотчина видна всем — договаривайся/отвлекай";
+            "Переводы кошельков кампании.\n\n" +
+            "• БАНК→МНЕ прямой (соло-OK, как банк-трансферка)\n" +
+            "• ЖЕРТВА→МНЕ прямой (нужно окно 586)\n" +
+            "• МИНУС-ВОТЧИНА от меня/банка (нужен 1 голос ЗА)\n" +
+            "• Кнопка ГОЛОС ЗА для сообщника\n\n" +
+            "Минус на соло НЕ тестить — вотчина фейлится (total=0)!";
 
         public override string Category => "exploit";
 
@@ -55,21 +63,34 @@ namespace CSHUB.Modules
         private static GUIListBox _list;
         private static GUITextBlock _status;
         private static GUITextBox _amountBox;
-        private static GUIButton _fromMeBtn;
-        private static GUIButton _fromBankBtn;
+        private static GUIButton _modeMeBtn;
+        private static GUIButton _modeBankBtn;
+        private static GUIButton _modeVictimBtn;
 
-        private static bool _fromMe = true;      // true = мой кошелёк, false = банк
-        private static int  _amount = -10000;    // ВСЕГДА минус
-        private static Client _target;           // выбранный получатель
+        // режим вотчины: true = от меня, false = от банка
+        private static bool _fromMe = true;
+        private static int  _amount = 10000;     // для вотчины шлём как -_amount
+        private static Client _target;
         private static string _lastNote = "";
 
-        public override string GetLabel() => "Neg Transfer ➖💸";
+        public override string GetLabel()
+        {
+            int bank = 0, mine = 0;
+            try
+            {
+                var camp = GameMain.GameSession?.Campaign;
+                if (camp?.Bank != null) { bank = camp.Bank.Balance; }
+                if (Character.Controlled?.Wallet != null) { mine = Character.Controlled.Wallet.Balance; }
+            }
+            catch { }
+            return $"Neg Transfer (Bank: {bank} | Me: {mine})";
+        }
 
         public override void OnClick()
         {
             if (GameMain.Client == null)
             {
-                GUI.AddMessage("[NegTr] Нет подключения к серверу", DangerColor);
+                GUI.AddMessage("[NegTr] Нет подключения", DangerColor);
                 return;
             }
             if (GameMain.GameSession?.Campaign == null)
@@ -87,43 +108,43 @@ namespace CSHUB.Modules
             {
                 _target = null;
                 _lastNote = "";
-                _window = new GUIMessageBox("Neg Transfer", "", Array.Empty<LocalizedString>(), new Vector2(0.6f, 0.85f));
+                _window = new GUIMessageBox("Neg Transfer v2", "", Array.Empty<LocalizedString>(), new Vector2(0.62f, 0.88f));
                 var content = _window.Content;
                 content.ClearChildren();
 
-                // ---- статус-строка ----
+                // ---- статус ----
                 _status = new GUITextBlock(
-                    new RectTransform(new Vector2(1f, 0.09f), content.RectTransform),
+                    new RectTransform(new Vector2(1f, 0.085f), content.RectTransform),
                     "", textAlignment: Alignment.CenterLeft);
                 _status.TextColor = AccentColor;
                 _status.CanBeFocused = false;
 
-                // ---- ряд ОТ ----
-                var fromFrame = new GUIFrame(
+                // ---- режим ----
+                var modeFrame = new GUIFrame(
                     new RectTransform(new Vector2(1f, 0.075f), content.RectTransform, Anchor.TopCenter)
-                        { RelativeOffset = new Vector2(0f, 0.095f) }, style: null);
-                var fromLayout = new GUILayoutGroup(
-                    new RectTransform(new Vector2(0.98f, 0.9f), fromFrame.RectTransform, Anchor.Center), isHorizontal: true);
-                var fromLabel = new GUITextBlock(
-                    new RectTransform(new Vector2(0.16f, 1f), fromLayout.RectTransform), "ОТ:");
-                fromLabel.CanBeFocused = false;
-                _fromMeBtn = new GUIButton(new RectTransform(new Vector2(0.42f, 0.9f), fromLayout.RectTransform), "Я (мой кошелёк)");
-                _fromMeBtn.OnClicked = (b, d) => { _fromMe = true; UpdateFromButtons(); UpdateStatus(); return true; };
-                _fromBankBtn = new GUIButton(new RectTransform(new Vector2(0.42f, 0.9f), fromLayout.RectTransform), "БАНК 🏦");
-                _fromBankBtn.OnClicked = (b, d) => { _fromMe = false; UpdateFromButtons(); UpdateStatus(); return true; };
-                UpdateFromButtons();
+                        { RelativeOffset = new Vector2(0f, 0.09f) }, style: null);
+                var modeLayout = new GUILayoutGroup(
+                    new RectTransform(new Vector2(0.98f, 0.9f), modeFrame.RectTransform, Anchor.Center), isHorizontal: true);
+                _modeMeBtn = new GUIButton(new RectTransform(new Vector2(0.33f, 0.9f), modeLayout.RectTransform), "ВОТЧИНА: от МЕНЯ");
+                _modeMeBtn.OnClicked = (b, d) => { _fromMe = true; UpdateModeButtons(); UpdateStatus(); return true; };
+                _modeBankBtn = new GUIButton(new RectTransform(new Vector2(0.33f, 0.9f), modeLayout.RectTransform), "ВОТЧИНА: от БАНКА");
+                _modeBankBtn.OnClicked = (b, d) => { _fromMe = false; UpdateModeButtons(); UpdateStatus(); return true; };
+                var quickBankBtn = new GUIButton(new RectTransform(new Vector2(0.33f, 0.9f), modeLayout.RectTransform), "БАНК→МНЕ (соло)");
+                quickBankBtn.Color = new Color(60, 90, 60);
+                quickBankBtn.OnClicked = (b, d) => { BankToMeDirect(); return true; };
+                UpdateModeButtons();
 
                 // ---- список игроков ----
                 var listLabel = new GUITextBlock(
                     new RectTransform(new Vector2(1f, 0.045f), content.RectTransform, Anchor.TopCenter)
-                        { RelativeOffset = new Vector2(0f, 0.175f) },
-                    "Кому (клик = выбрать):", textAlignment: Alignment.CenterLeft);
+                        { RelativeOffset = new Vector2(0f, 0.17f) },
+                    "Жертва (клик = выбрать):", textAlignment: Alignment.CenterLeft);
                 listLabel.TextColor = DimColor;
                 listLabel.CanBeFocused = false;
 
                 var listFrame = new GUIFrame(
-                    new RectTransform(new Vector2(1f, 0.38f), content.RectTransform, Anchor.TopCenter)
-                        { RelativeOffset = new Vector2(0f, 0.22f) }, style: null);
+                    new RectTransform(new Vector2(1f, 0.36f), content.RectTransform, Anchor.TopCenter)
+                        { RelativeOffset = new Vector2(0f, 0.215f) }, style: null);
                 _list = new GUIListBox(new RectTransform(Vector2.One, listFrame.RectTransform));
                 _list.Color = new Color(20, 25, 35);
                 RefreshPlayers();
@@ -131,13 +152,13 @@ namespace CSHUB.Modules
                 // ---- суммы ----
                 var amountFrame = new GUIFrame(
                     new RectTransform(new Vector2(1f, 0.075f), content.RectTransform, Anchor.TopCenter)
-                        { RelativeOffset = new Vector2(0f, 0.61f) }, style: null);
+                        { RelativeOffset = new Vector2(0f, 0.585f) }, style: null);
                 var amountLayout = new GUILayoutGroup(
                     new RectTransform(new Vector2(0.98f, 0.9f), amountFrame.RectTransform, Anchor.Center), isHorizontal: true);
-                MakeAmountBtn(amountLayout, 0.13f, "-1К", -1000);
-                MakeAmountBtn(amountLayout, 0.13f, "-10К", -10000);
-                MakeAmountBtn(amountLayout, 0.13f, "-100К", -100000);
-                MakeAmountBtn(amountLayout, 0.13f, "-1М", -1000000);
+                MakeAmountBtn(amountLayout, 0.13f, "1К", 1000);
+                MakeAmountBtn(amountLayout, 0.13f, "10К", 10000);
+                MakeAmountBtn(amountLayout, 0.13f, "100К", 100000);
+                MakeAmountBtn(amountLayout, 0.13f, "1М", 1000000);
                 var customFrame = new GUIFrame(new RectTransform(new Vector2(0.22f, 1f), amountLayout.RectTransform), style: null);
                 _amountBox = new GUITextBox(new RectTransform(Vector2.One, customFrame.RectTransform), _amount.ToString());
                 var applyBtn = new GUIButton(new RectTransform(new Vector2(0.2f, 1f), amountLayout.RectTransform), "СВОЯ");
@@ -146,11 +167,22 @@ namespace CSHUB.Modules
                 // ---- кнопки действия ----
                 var actionLayout = new GUILayoutGroup(
                     new RectTransform(new Vector2(0.98f, 0.07f), content.RectTransform, Anchor.TopCenter)
-                        { RelativeOffset = new Vector2(0f, 0.69f) }, isHorizontal: true);
-                var goBtn = new GUIButton(new RectTransform(new Vector2(0.66f, 0.95f), actionLayout.RectTransform), "★ ЗАПУСТИТЬ ГОЛОСОВАНИЕ ★");
+                        { RelativeOffset = new Vector2(0f, 0.67f) }, isHorizontal: true);
+                var goBtn = new GUIButton(new RectTransform(new Vector2(0.4f, 0.95f), actionLayout.RectTransform), "★ МИНУС-ВОТЧИНА ★");
                 goBtn.Color = SelColor;
-                goBtn.OnClicked = (b, d) => { Launch(); return true; };
-                var closeBtn = new GUIButton(new RectTransform(new Vector2(0.32f, 0.95f), actionLayout.RectTransform), "Закрыть");
+                goBtn.OnClicked = (b, d) => { LaunchMinusVote(); return true; };
+                var yesBtn = new GUIButton(new RectTransform(new Vector2(0.27f, 0.95f), actionLayout.RectTransform), "ГОЛОС ЗА ✋");
+                yesBtn.Color = new Color(60, 110, 60);
+                yesBtn.OnClicked = (b, d) => { VoteYes(); return true; };
+                var victimBtn = new GUIButton(new RectTransform(new Vector2(0.31f, 0.95f), actionLayout.RectTransform), "ЖЕРТВА→МНЕ прямой");
+                victimBtn.Color = new Color(110, 70, 60);
+                victimBtn.OnClicked = (b, d) => { VictimToMeDirect(); return true; };
+
+                // ---- закрывашка ----
+                var closeLayout = new GUILayoutGroup(
+                    new RectTransform(new Vector2(0.98f, 0.055f), content.RectTransform, Anchor.TopCenter)
+                        { RelativeOffset = new Vector2(0f, 0.745f) }, isHorizontal: true);
+                var closeBtn = new GUIButton(new RectTransform(new Vector2(0.2f, 0.9f), closeLayout.RectTransform), "Закрыть");
                 closeBtn.OnClicked = (b, d) => { CloseWindow(); return true; };
 
                 UpdateStatus();
@@ -178,21 +210,21 @@ namespace CSHUB.Modules
         {
             if (_amountBox == null) { return; }
             int v;
-            if (int.TryParse(_amountBox.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out v) && v != 0)
+            if (int.TryParse(_amountBox.Text.Trim(), out v) && v != 0)
             {
-                _amount = v > 0 ? -v : v; // храним ТОЛЬКО минус
+                _amount = Math.Abs(v);
                 UpdateStatus();
             }
             else
             {
-                GUI.AddMessage("[NegTr] Не число: " + _amountBox.Text, DangerColor);
+                GUI.AddMessage("[NegTr] Не число", DangerColor);
             }
         }
 
-        private static void UpdateFromButtons()
+        private static void UpdateModeButtons()
         {
-            if (_fromMeBtn != null) { _fromMeBtn.Color = _fromMe ? SelColor : RowColor; }
-            if (_fromBankBtn != null) { _fromBankBtn.Color = !_fromMe ? SelColor : RowColor; }
+            if (_modeMeBtn != null) { _modeMeBtn.Color = _fromMe ? SelColor : RowColor; }
+            if (_modeBankBtn != null) { _modeBankBtn.Color = !_fromMe ? SelColor : RowColor; }
         }
 
         private static void RefreshPlayers()
@@ -206,14 +238,14 @@ namespace CSHUB.Modules
                     new RectTransform(new Vector2(1f, 0.09f), _list.Content.RectTransform), style: null);
                 header.Color = new Color(50, 60, 80);
                 var headerText = new GUITextBlock(new RectTransform(Vector2.One, header.RectTransform),
-                    "Игроки на сервере (жертва получает −X, ты +X):", textAlignment: Alignment.CenterLeft);
+                    "Игроки сервера:", textAlignment: Alignment.CenterLeft);
                 headerText.TextColor = AccentColor;
                 headerText.CanBeFocused = false;
 
                 var clients = GameMain.Client?.ConnectedClients;
                 if (clients == null || clients.Count == 0)
                 {
-                    AddNoteRow("Список пуст (ты один?)");
+                    AddNoteRow("Список пуст");
                     return;
                 }
 
@@ -230,8 +262,7 @@ namespace CSHUB.Modules
                     catch { }
 
                     string tag = cc.Character == null ? " [не в раунде]" : "";
-                    string suffix = "";
-                    if (_target == cc) { suffix = "  ◀ ВЫБРАН"; }
+                    string suffix = _target == cc ? "  ◀ ЦЕЛЬ" : "";
 
                     var row = new GUIButton(
                         new RectTransform(new Vector2(1f, 0.09f), _list.Content.RectTransform),
@@ -240,7 +271,6 @@ namespace CSHUB.Modules
                     row.OnClicked = (b, d) =>
                     {
                         _target = cc;
-                        GUI.AddMessage("[NegTr] цель: " + cc.Name, AccentColor);
                         RefreshPlayers();
                         UpdateStatus();
                         return true;
@@ -267,30 +297,88 @@ namespace CSHUB.Modules
         private static void UpdateStatus()
         {
             if (_status == null) { return; }
-            string from = _fromMe ? "Я" : "БАНК";
-            string to = _target == null ? "выбери из списка" : _target.Name;
+            string to = _target == null ? "не выбран" : _target.Name;
             string note = string.IsNullOrEmpty(_lastNote) ? "" : "\n" + _lastNote;
-            _status.Text = "ОТ: " + from + "  →  К: " + to + "   СУММА: " + _amount + " мк" + note;
+            _status.Text = "Режим: " + (_fromMe ? "от МЕНЯ" : "от БАНКА") +
+                " | Цель: " + to + " | Сумма: " + _amount + " мк" + note;
         }
 
-        private static void Launch()
+        // ========================================================
+        //  1) ПРЯМОЙ: БАНК → МНЕ (зеркало BankTransferModule юзера)
+        // ========================================================
+        private static void BankToMeDirect()
         {
+            Character me = Character.Controlled;
+            if (me == null) { GUI.AddMessage("[NegTr] Нужен персонаж в раунде", DangerColor); return; }
             ParseCustom();
-            if (_amount >= 0)
+            try
             {
-                GUI.AddMessage("[NegTr] Сумма должна быть ОТРИЦАТЕЛЬНОЙ", DangerColor);
-                return;
+                INetSerializableStruct transfer = new NetWalletTransfer
+                {
+                    Sender = Option<ushort>.None(),
+                    Receiver = Option<ushort>.Some(me.ID),
+                    Amount = _amount
+                };
+                IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.TRANSFER_MONEY);
+                transfer.Write(msg);
+                GameMain.Client?.ClientPeer?.Send(msg, DeliveryMethod.Reliable);
+                _lastNote = "БАНК→МНЕ " + _amount + " мк отправлен (соло/менеджер = сразу)";
+                GUI.AddMessage("[NegTr] " + _lastNote, OkColor);
             }
+            catch (Exception e)
+            {
+                GUI.AddMessage("[NegTr] fail: " + e.Message, DangerColor);
+            }
+            UpdateStatus();
+        }
+
+        // ========================================================
+        //  2) ПРЯМОЙ: ЖЕРТВА → МНЕ (+X, чужой Sender — только
+        //     в «окно 586» или с пермом ManageMoney)
+        // ========================================================
+        private static void VictimToMeDirect()
+        {
+            Character me = Character.Controlled;
+            if (me == null) { GUI.AddMessage("[NegTr] Нужен персонаж в раунде", DangerColor); return; }
+            if (_target?.Character == null) { GUI.AddMessage("[NegTr] Цель не в раунде", DangerColor); return; }
+            ParseCustom();
+            try
+            {
+                INetSerializableStruct transfer = new NetWalletTransfer
+                {
+                    Sender = Option<ushort>.Some(_target.Character.ID),
+                    Receiver = Option<ushort>.Some(me.ID),
+                    Amount = _amount
+                };
+                IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.TRANSFER_MONEY);
+                transfer.Write(msg);
+                GameMain.Client?.ClientPeer?.Send(msg, DeliveryMethod.Reliable);
+                _lastNote = "ЖЕРТВА→МНЕ " + _amount + " мк отправлен (сработает в окне 586)";
+                GUI.AddMessage("[NegTr] " + _lastNote, AccentColor);
+            }
+            catch (Exception e)
+            {
+                GUI.AddMessage("[NegTr] fail: " + e.Message, DangerColor);
+            }
+            UpdateStatus();
+        }
+
+        // ========================================================
+        //  3) МИНУС-ВОТЧИНА (старт-пакет, сервер Voting.cs:313)
+        // ========================================================
+        private static void LaunchMinusVote()
+        {
             if (_target == null)
             {
-                GUI.AddMessage("[NegTr] Сначала выбери получателя из списка", DangerColor);
+                GUI.AddMessage("[NegTr] Выбери жертву из списка", DangerColor);
                 return;
             }
+            ParseCustom();
 
             byte fromSession = _fromMe ? GetMySession() : (byte)0xFF;
             if (_fromMe && fromSession == 0xFF)
             {
-                GUI.AddMessage("[NegTr] Себя не нашёл в списке (не в раунде?)", DangerColor);
+                GUI.AddMessage("[NegTr] Себя не нашёл (не в раунде?) — выбери «от БАНКА»", DangerColor);
                 return;
             }
             byte toSession = _target.SessionId;
@@ -304,8 +392,8 @@ namespace CSHUB.Modules
                     segmentTable.StartNewSegment(ClientNetSegment.Vote);
                     msg.WriteByte((byte)VoteType.TransferMoney);
                     msg.WriteBoolean(true);          // startVote
-                    msg.WriteInt32(_amount);         // отрицательный — чека ≤0 тут НЕТ
-                    msg.WriteByte(fromSession);      // 0xFF не матчится ни одному → банк
+                    msg.WriteInt32(-_amount);        // отрицательный: чека <=0 НЕТ
+                    msg.WriteByte(fromSession);      // 0xFF = банк
                     msg.WriteByte(toSession);
                     msg.WritePadBits();
                 }
@@ -317,12 +405,30 @@ namespace CSHUB.Modules
                 return;
             }
 
-            _lastNote = "Вотчина запущена! Через 30с нужен 1 голос ЗА от другого игрока.\n" +
-                        "Соло = мгновенный фейл. Вотчину видят все.";
-            GUI.AddMessage("[NegTr] вотчина: " + _amount + " мк, " +
+            _lastNote = "Вотчина -" + _amount + " мк запущена! Сообщник жмёт «ГОЛОС ЗА».\n" +
+                        "СОЛО = фейл. Вотчину видят все.";
+            GUI.AddMessage("[NegTr] вотчина: -" + _amount + " мк, " +
                 (_fromMe ? "от тебя" : "от банка") + " → " + _target.Name, OkColor);
-            GUI.AddMessage("[NegTr] нужен 1 голос ЗА (30с), видна всем!", AccentColor);
+            GUI.AddMessage("[NegTr] нужен голос ЗА от другого in-game (30с)", AccentColor);
             UpdateStatus();
+        }
+
+        // ========================================================
+        //  ГОЛОС ЗА: легальный ваниль-метод GameMain.Client.Vote.
+        //  Клиент пишет bool false + Int32(2); сервер читает ReadByte
+        //  → 2 = yes. Жмёт ВТОРОЙ аккаунт/сообщник.
+        // ========================================================
+        private static void VoteYes()
+        {
+            try
+            {
+                GameMain.Client?.Vote(VoteType.TransferMoney, 2);
+                GUI.AddMessage("[NegTr] голос ЗА отправлен", OkColor);
+            }
+            catch (Exception e)
+            {
+                GUI.AddMessage("[NegTr] vote fail: " + e.Message, DangerColor);
+            }
         }
 
         private static byte GetMySession()
@@ -348,8 +454,8 @@ namespace CSHUB.Modules
             _list = null;
             _status = null;
             _amountBox = null;
-            _fromMeBtn = null;
-            _fromBankBtn = null;
+            _modeMeBtn = null;
+            _modeBankBtn = null;
         }
 
         public override void Dispose()
