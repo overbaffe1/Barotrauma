@@ -19495,3 +19495,19 @@ SecondaryUse вызывается ТОЛЬКО из Character.Update по IsKeyD
 Нужен доступ к HeldItems.Contains → только физически в руках.
 SecondaryUse через сигнал НЕ СУЩЕСТВУЕТ (нет case "secondary_use" в
 ItemComponent.ReceiveSignal — только "activate"/"use"/"trigger_in"/"toggle").
+
+== ВОЛНА 583b — ПЕРЕМЕЩЕНИЕ НА КАРТЕ: AllowDebugTeleport гейт ==
+ServerRead CAMPAIGN_SETUP_INFO (MultiPlayerCampaign:941):
+  if (currentLocIndex < Map.Locations.Count && Map.AllowDebugTeleport)
+  { Map.SetLocation(currentLocIndex); }
+AllowDebugTeleport = public static bool (Map.cs:13), дефолт false.
+Ставится true через:
+1) DebugConsole команду (needs ConsoleCommands perm) — server:1852
+2) Клиентский path (client MultiPlayerCampaign:610) — это CLIENT side
+   только (данные от сервера), не наоборот.
+Vector: ванильно НЕ включается. НО: из CSHUB мода можно попробовать
+Map.AllowDebugTeleport = true локально (client-side). Но сервер
+проверяет на СВОЁЙ копии → не поможет без server-side LuaCS.
+На СЕРВЕРЕ ДРУГА (с LuaCS): можно выполнить Server LuaCS
+Map.AllowDebugTeleport = true → потом SendCampaignSetupInfo
+с текущим LocIndex = телепорт anywhere. Только свой сервер.
