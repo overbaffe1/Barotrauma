@@ -19742,3 +19742,60 @@ MaxMissionCount единственный клампнут (NetworkSerialize(MinV
 ## [586] ServerReadInput: memInput без капа (минор)
 Список входов растёт без лимита (255/пакет), deque 1/тик + idle-skip. Память ~8Б/инпут,
 ограничена пропускной способностью клиента. DoSProtection посчитает пакеты. Не вектор.
+
+== ВОЛНА 587 — ПОЛНАЯ КАРТА ServerRead + AUTH/karma/voice чисты + CampaignHijack модуль ==
+
+## [587] ПОЛНАЯ ЭНУМЕРАЦИЯ клиент→сервер хендлеров (финальная карта)
+grep по всем `void ServerRead|ServerEventRead` в Server+Shared: 38 методов.
+Непокрытых НЕТ. Ложная тревога: DoSProtection.ServerRead = doc-комментарий
+(пример использования), реального пакета нет — DoS-состояние чисто серверное.
+Полный список: Character(ServerReadInput+ServerEventRead), DebugConsole(SERVER_COMMAND),
+EventManager, MultiPlayerCampaign(ServerRead+ServerReadCrew+ServerReadMoney+
+ServerReadRewardDistribution), MedicalClinic, ReadyCheck, ItemComponent-ы (16 шт,
+все разобраны 440-586), Inventory, Item, Hull, ChatMessage, ServerSettings,
+Voting, Sonar.
+
+## [587] REWARD_DISTRIBUTION — ЧИСТО (закрыт правильно)
+NetWalletSetSalaryUpdate.NewRewardDistribution: [NetworkSerialize(MinValueInt=0,
+MaxValueInt=100)] — КЛАМП НА ПРОВОДЕ ✓. Гейт AllowedToManageWallets (= окно 586
+открывает и это, но отрицательный/гигантский % не поставить — фреймворк-кламп
+сработал там, где забыт у множителей CampaignSettings).
+
+## [587] AUTH/HANDSHAKE — ЧИСТО (ServerPeer.cs ReadConnectionInitializationStep)
+- AuthInfoAndVersion: IsValidName + IsCompatible(version) + АНТИИМПЕРСОНАЦИЯ:
+  Homoglyphs.Compare(lower) против имён подключённых — юникод-двойников не зайти.
+- Password: соль выдаётся per-connection (PasswordSalt), клиент шлёт соль-хэш,
+  replay между сессиями бесполезен. IsPasswordCorrect = SequenceEqual (не
+  constant-time, но game-password timing-атака непрактична).
+  BanAfterWrongPassword default TRUE, MaxPasswordRetriesBeforeBan = 3.
+  Счётчик на PendingClient — реконнект сбрасывает, но бан по IP/AccountId.
+- Malformed PeerPacketHeaders от pending = МГНОВЕННЫЙ БАН (LidgrenServerPeer:236).
+- NetBiography: OwnerConnection = создатель listen-сервера (локальный коннект),
+  пакетом не спуфится (58343-заметка) — «стать хостом» нельзя.
+
+## [587] KARMAMANAGER — НЕ ПИШЕТСЯ КЛИЕНТОМ (опровергнут karma-инъект)
+0 упоминаний IReadMessage/ServerRead в серверном KarmaManager. Все хуки —
+серверный пайплайн: OnCharacterHealthChanged, OnItemTakenFromPlayer, OnBallastFloraDamaged,
+OnItemRepaired, OnReactorOverHeating/Meltdown, OnExtinguishingFire, OnWireDisconnected,
+OnSpamFilterTriggered, OnClientDisconnected, OnRoundEnded. Карма считается только
+из сервер-авторитетных событий. Просадить чужую карму пакетом нельзя; косвенно —
+только через легальные события (спам-фильтр жертвы и т.п.).
+
+## [587] VOICE — гейты на месте (451 остаётся единственной дырой)
+GameServer:962: SessionId в пакете обязан совпадать с отправителем ✓, Muted-гейт ✓,
+VoiceChatEnabled ✓. Дальше VoipServer.Read → VoipQueue.Read (TOC/OpusException = 451,
+батч-дроп тика — уже в дайджесте). Расстояние/гэрбл считаются сервером от позиций.
+
+## ★ НОВАЯ ФУНКЦИЯ: research/mods/CampaignHijackModule.cs (волна 587)
+Автоматизатор окна 586 одним кликом:
+1) PROBE — TRANSFER_MONEY Sender=None Receiver=я Amount=(client cap+1):
+   кап проверяется ТОЛЬКО в не-менеджерской ветке → дельта баланса = вердикт окна
+   (менеджерский путь исполняет любой amount). Отказ молчалив — проба бесплатна.
+2) ОКНО ОТКРЫТО → DrainBank (Bank.Balance себе) + SweepWallets
+   (Sender=Some(victim), Amount=victim.Wallet.Balance, только Team1 игроки)
+   + FireAllBots (CREW: false,false,false,true,u16 Info.ID).
+Корутина: проба → 3с ожидание NetWalletUpdate → дельта → добивка.
+Переиспользует SimpleBitWriter из MoneyTransferModule (одна сборка LuaCS).
+ЗАМЕТКА: комментарий в MoneyTransferModule «соло вотчина проходит мгновенно»
+ПРОТИВОРЕЧИТ коду Voting.Update (inGameClients==1 → total=0 → FAIL — волна 585).
+Соло-тест negative pump НЕ РАБОТАЕТ; нужен второй in-game клиент «за».
