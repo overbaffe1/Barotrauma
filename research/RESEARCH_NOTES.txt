@@ -20020,3 +20020,41 @@ BYPASS-список верхнего перм-чека: только ManageRound
 внутренними гейтами). ВСЕ ОСТАЛЬНЫЕ (Kick/Ban/Unban/SelectSub/SelectMode/
 ConsoleCommands/ManagePermissions/ManageMap-подобные) = жёсткий HasPermission(command).
 ManagePermissions: цель != sender != OwnerConnection (волна с «ManagePermissions holder»).
+
+== ВОЛНА 594 — СВОДНЫЙ РЕЕСТР КРАШЕЙ СЕРВЕРА (все волны) + МОДУЛЬ Crash Menu ==
+
+Классификация: [INSTANT] процесс умирает сразу / [CRASHLOOP] умирает циклом на след. тик /
+[DOS] батч-дроп (catch-all LidgrenServerPeer.Update:585, процесс жив) / [PERM] нужен перм / [SAVE] порча персистится.
+
+1. [INSTANT, USER-CONFIRMED] DescriptionTag (Property Editor): сервер падает мгновенно при
+   смене Item.DescriptionTag. Код-путь: сеттер → TextManager.Get(value) + немедленный
+   ChangeProperty broadcast (Item.cs:343-365). Точный локус выброса за пределами catch-all
+   в сорсфорке не трассирован (возможно отличие бинарника) — эмпирика юзера: смерть сразу.
+   Условия: CanClientAccess + PropertyEditorModule.
+2. [CRASHLOOP, CONFIRMED-584] EVENTMANAGER selectedOption: byte 200 → SelectedOption персистентен →
+   ConversationAction.IsFinished/Update кидают IndexOutOfRange каждый кадр → в GameMain.Run()
+   try/catch НЕТ → смерть процесса на след. тике. Гейт: активный диалог таргетит тебя.
+   ПАКЕТ: EVENTMANAGER_RESPONSE u16 actionId + byte option.
+3. [DOS, CONFIRMED-42] SoldItems unknown prefab: SERVER_COMMAND+ManageCampaign, ReadSoldItems
+   парсит ItemPrefab.Prefabs[id] на строке 854 ДО всех перм-проверок → KeyNotFound → батч-дроп.
+4. [DOS, CONFIRMED-26] CIRCUITBOX не-Cursor opcode: NetCircuitBoxHeader(Opcode,ItemID,ComponentIndex)
+   → switch бросает ArgumentOutOfRangeException → батч-дроп.
+5. [DOS, CONFIRMED-30] Чат ORDER с неизвестным identifier: OrderPrefab.Prefabs[unknown] throw
+   (до спам/ID-чеков), работает ИЗ ЛОББИ (UPDATE_LOBBY ChatMessage сегмент).
+6. [DOS, CONFIRMED-35] CharacterInput count=255 с обрывом: OOB чтение инпутов.
+7. [DOS, CONFIRMED-28] VOIP: 8 буферов × 255 байт заявлено, 0 данных → BlockCopy OOB;
+   вариант 451: 1 байт TOC → OpusException → дроп тика.
+8. [DOS, CONFIRMED-27] SegmentTable битые указатели UPDATE_LOBBY/INGAME: чтение таблицы
+   с мусорного смещения → IndexOutOfRange.
+9. [DOS, CONFIRMED-26] Inventory.SharedRead: receivedItemIds[i] OOB (байты без клампа).
+10. [PERM-DOS, CONFIRMED-41] SelectMode: GameModes[raw u16] OOB (нужен перм SelectMode).
+11. [SAVE, CONFIRMED-523] CircuitBox MoveComponent NaN: MoveAmount raw Vector2 персистится
+    в сейв кампании → краши/глюки ПОСЛЕ рестарта. Опасно: необратимо.
+Архитектурная база (585): первый throw почти всего глотается catch(Exception) в
+LidgrenServerPeer.Update → поэтому большинство = DOS. Единственный путь до смерти процесса —
+throw из ИГРОВОГО цикла (EventManager Update, 584) или из путей вне catch-all (DescriptionTag).
+
+## МОДУЛЬ research/mods/ServerCrashMenuModule.cs
+GUI: список 11 методов (клик = способ+описание+условия), кнопка EXEC у 6 автоматизированных
+(2,3,4,5,6,7). Форматы пакетов сверен по исходникам. Справочник: 1 (через PropertyEditor),
+8-11 (ручные/перм).
