@@ -323,6 +323,28 @@ namespace CSHUB.Modules
             },
             new Method
             {
+                Title = "🔧 NET PROPERTIES: прямая запись по uint-ключу",
+                Desc =
+"НОВОЕ (608)! SERVER_SETTINGS(Properties) хранит ВСЕ серверные\n" +
+"настройки в словаре netProperties<uint32 hash → property>.\n" +
+"Ключ = MD5-XOR-rotate-5 хеш от lowercase имени свойства —\n" +
+"МОЖНО ВЫЧИСЛИТЬ ОФФЛАЙН! Ставит ЛЮБОЙ bool/float/int сеттинг.\n\n" +
+"Жёсткий гейт ManageSettings (или свой сервер).\n" +
+"Кнопка пишет пачку известных ключей.",
+                Exec = ExecNetProperties
+            },
+            new Method
+            {
+                Title = "🔧 KARMA HACK: отключить карму (по ключу)",
+                Desc =
+"KarmaManager свойства В ТОМ ЖЕ словаре (ключ = хеш имени).\n" +
+"KarmaEnabled=false → сервер перестаёт считать карму →\n" +
+"спам-фильтр и авто-кики по карме мертвы.\n" +
+"Тот же жёсткий ManageSettings.",
+                Exec = ExecKarmaOff
+            },
+            new Method
+            {
                 Title = "🎁 UNBAN SPAM: разморозка по перебору ID",
                 Desc =
 "SERVER_SETTINGS(Properties)+BanList: c пермами Ban+Unban.\n" +
@@ -1195,6 +1217,89 @@ namespace CSHUB.Modules
                 sent++;
             }
             return "Mission types добавлены: " + sent + " шт (тёмные/убранные миссии активны)";
+        }
+
+        // ========================================================
+        //  🔧 NET PROPERTIES (волна 608): прямая запись по хеш-ключу
+        //  Формат: SERVER_SETTINGS + NetFlags.Properties + ReadExtraCargo (пусто)
+        //  + VariableUInt32 propertyCount + (VariableUInt32 key +
+        //  VariableUInt32 size + raw value bytes) × count
+        //  + bool monsterChanged+pad + VariableUInt32 banCount=0
+        //  Ключ = ToolBoxCore.StringToUInt32Hash(имя.ToLower(), MD5):
+        //  key=0; foreach b in md5(str): key=rotl(key,5)^b
+        // ========================================================
+        private static uint HashNetProperty(string name)
+        {
+            byte[] hash = System.Security.Cryptography.MD5.Create()
+                .ComputeHash(Encoding.UTF8.GetBytes(name.ToLowerInvariant()));
+            uint key = 0;
+            foreach (byte b in hash)
+            {
+                key = (key << 5) | (key >> 27);
+                key ^= b;
+            }
+            return key == 0 ? 1u : key;
+        }
+
+        private static IWriteMessage BuildNetPropertyPacket(out int len)
+        {
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS);
+            msg.WriteByte((byte)4);              // NetFlags.Properties
+            msg.WriteVariableUInt32(0);          // ExtraCargo count = 0
+            len = 0;
+            return msg;
+        }
+
+        private static void WriteNetProp(IWriteMessage msg, string name, bool value)
+        {
+            msg.WriteUInt32(HashNetProperty(name));   // сервер читает ReadUInt32 (фикс. 4 байта)
+            msg.WriteVariableUInt32(1);               // size = 1 байт
+            msg.WriteBoolean(value);
+        }
+
+        private static void WriteNetProp(IWriteMessage msg, string name, float value)
+        {
+            msg.WriteUInt32(HashNetProperty(name));
+            msg.WriteVariableUInt32(4);               // size = 4 байта
+            msg.WriteSingle(value);
+        }
+
+        private static string ExecNetProperties(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            int len;
+            IWriteMessage msg = BuildNetPropertyPacket(out len);
+
+            // открываем сервер всем желающим + смягчаем анти-абьюз
+            WriteNetProp(msg, "KarmaEnabled", false);
+            WriteNetProp(msg, "EnableDoSProtection", false);
+            WriteNetProp(msg, "AllowRemoteCampaignInteractions", true);
+            WriteNetProp(msg, "AllowFileTransfers", true);
+            WriteNetProp(msg, "AllowBotTakeoverOnPermadeath", true);
+            WriteNetProp(msg, "VoiceChatEnabled", true);
+            // хвост Properties-секции
+            msg.WriteUInt32(0);                  // net props = конец
+            msg.WriteBoolean(false); msg.WritePadBits();
+            msg.WriteVariableUInt32(0);          // BanList count
+
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "NetProperties: 6 ключей отправлено (Karma off, DoS off, RemoteCampaign on...). Гейт: ManageSettings или свой сервер.";
+        }
+
+        private static string ExecKarmaOff(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            int len;
+            IWriteMessage msg = BuildNetPropertyPacket(out len);
+            WriteNetProp(msg, "KarmaEnabled", false);
+            WriteNetProp(msg, "KicksBeforeBan", 0f);
+            WriteNetProp(msg, "KickBanThreshold", 0f);
+            msg.WriteUInt32(0);
+            msg.WriteBoolean(false); msg.WritePadBits();
+            msg.WriteVariableUInt32(0);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "Karma OFF (гейт: ManageSettings/свой сервер)";
         }
 
         private static string ExecSegmentTable(int n)

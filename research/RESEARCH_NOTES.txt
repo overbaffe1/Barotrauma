@@ -20438,3 +20438,38 @@ ManageSettings тому, у кого уже есть ManagePermissions. На п�
 packetHeader.IsServerMessage() у remote sender → ThrowError "Got server
 message from {endpoint}" (лог-спам DoS?) + return. На сервере — reject.
 Только овнер может слать сервер-пакеты.
+
+== ВОЛНА 608 — NET PROPERTIES: прямая запись серверных настроек по MD5-хешу ==
+
+## ОТКРЫТИЕ: netProperties — словарь <uint32 MD5-хеш имени → property>
+ServerSettings.netProperties заполняется из ВСЕХ [Serialize]-свойств
+ServerSettings + KarmaManager. Ключ = ToolBoxCore.IdentifierToUint32Hash:
+  str = имя свойства lowercase; key=0; foreach b in md5(str): key=rotl32(key,5)^b;
+  if(key==0) key=1 (0 = конец секции). Полностью офлайн-вычислимо!
+
+## ФОРМАТ чтения (SERVER_SETTINGS + NetFlags.Properties):
+  ReadExtraCargo (uint count = 0 → пусто)
+  uint netPropCount = ReadUInt32 (0 = конец!)
+  per prop: uint key = ReadUInt32 (FIXED 4 байта, не variable!)
+            uint size = ReadVariableUInt32 (валидация: bool=1, float=4)
+            value (bool = ReadBoolean, float = ReadSingle, ...)
+  bool monsterChanged + pad
+  BanList.ServerAdminRead (uint count=0 при перме Ban → skip; иначе skip тоже)
+
+## ЧТО МОЖНО ПЕРЕКЛЮЧИТЬ (34 кнопки в модуле уже есть):
+KarmaEnabled=false → карма мертва; EnableDoSProtection=false → DoS-protection
+превращается в тыкву (spам без киков); AllowRemoteCampaignInteractions=true →
+клиника/перки/покупки ИЗ ЛЮБОЙ ТОЧКИ; AllowFileTransfers=true;
+AllowBotTakeoverOnPermadeath=true; VoiceChatEnabled=true.
+НЕТ ограничений по значениям — сервер просто property.SetValue(raw).
+
+## ГЕЙТ: ServerRead общий = ManageSettings (ЖЁСТКИЙ). Но свой сервер/выданный
+перм = полная свобода. ЛЮБОЙ [Serialize] prop ServerSettings/KarmaManager
+доступен (98 + 32 свойства). ServerName, пароль, MaxPlayers, голоса,
+тим-настройки, всё.
+
+## ВЫЧИСЛЕННЫЕ КЛЮЧИ (для кнопок):
+KarmaEnabled=0xA5124A7D, EnableDoSProtection=0x0DF9A6DB (посчитаю при вставке),
+AllowRemoteCampaignInteractions=0xB39A60BA, AllowFileTransfers=0xC65B8CD7,
+AllowBotTakeoverOnPermadeath=0xA26DFC80, VoiceChatEnabled=0x0BDD2D1E,
+KarmaDecay=0x19D928F7, KickBanThreshold=0x595B4EF1 (полный список в модуле).
