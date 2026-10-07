@@ -15162,5 +15162,45 @@
       40,
       55
     ]
+  ],
+  "Barotrauma/Barotrauma/BarotraumaShared/SharedSource/GameSession/CargoManager.cs": [
+    [
+      265,
+      330
+    ],
+    [
+      379,
+      400
+    ]
+  ],
+  "Barotrauma/Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs": [
+    [
+      11,
+      66
+    ],
+    [
+      78,
+      86
+    ]
+  ],
+  "Barotrauma/Barotrauma/BarotraumaShared/SharedSource/GameSession/GameModes/CampaignMode.cs": [
+    [
+      915,
+      930
+    ],
+    [
+      1017,
+      1040
+    ]
+  ],
+  "Barotrauma/Barotrauma/BarotraumaShared/SharedSource/Map/Map/Location.cs": [
+    [
+      125,
+      160
+    ],
+    [
+      370,
+      430
+    ]
   ]
 }

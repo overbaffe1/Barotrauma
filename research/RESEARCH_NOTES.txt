@@ -20473,3 +20473,57 @@ KarmaEnabled=0xA5124A7D, EnableDoSProtection=0x0DF9A6DB (посчитаю при
 AllowRemoteCampaignInteractions=0xB39A60BA, AllowFileTransfers=0xC65B8CD7,
 AllowBotTakeoverOnPermadeath=0xA26DFC80, VoiceChatEnabled=0x0BDD2D1E,
 KarmaDecay=0x19D928F7, KickBanThreshold=0x595B4EF1 (полный список в модуле).
+
+== ВОЛНА 609 — STORE DEEP DIVE: экономика без прав + персистентный трюк ==
+
+## ⚠️ ВЫЯСНЕНО: продажа (SoldItems) — perms SellSubItems/SellInventoryItems
+(ManagedCampaign), НЕ AnyOneAllowed-гейт! Проверка AllowedToManageCampaign
+(SellXxxPerms) — не обойти окном, только если НИ У КОГО на сервере НЕТ
+этого перма (хост без ManageSettings). На обычном хост-сервере продажа
+чужим клиентом НЕ РАБОТАЕТ. ⇒ SellById/SellFake на чужом = безнадёга.
+
+## Покупки (buyCrate) НЕ требуют пермов — только HasCampaignInteractionAvailable(Store):
+  sender.Character.CanInteractWith(NPC merchant, maxDist: 250)
+  ИЛИ AllowRemoteCampaignInteractions=true. Rate limit 20/5s.
+  
+## ⚡ НОВОЕ: ДУП ПОКУПОК (деньги из воздуха №4)
+PurchaseItems (CargoManager:299): клиент шлёт количество (quantity),
+сервер тратит деньги и ДОБАВЛЯЕТ запись в itemsPurchasedFromStore (записи
+ДОСТИМОСТЬ суммируются по (prefab, DeliverImmediately) — «алиас» одного и
+того же товара можно накапливать через несколько покупок!).
+DeliveryImmediately = TRUE = спавн в трюм НЕМЕДЛЕННО, а не «доставка в
+конце раунда». AllowImmediateItemDelivery = дефолт TRUE в ServerSettings
+(serialize(true)) + гейт: AllowImmediateItemDelivery серверного сеттинга
+ИЛИ ManageCampaign перм ИЛИ овнер — ДЕФОЛТ TRUE → ДОСТУПНО ВСЕМ!
+→ МЕХАНИКА: покупай дорогой предмет с DeliverImmediately=TRUE → сервер
+выдаёт товар немедленно → и В ТОТ ЖЕ ТИК добавляет запись в itemsPurchasedFromStore
+(из которой EndRound → UpdateStoreStock → AddStock → следующая локация
+имеет предмет в стоке). ДЕНЬГИ УШЛИ, ПРЕДМЕТ ЕСТЬ, ЗАПИСЬ В СТОКЕ ТОЖЕ —
+двойной эффект. Покупая и продавая на следующей локации с переплатой
+(requested goods) — легальный Positive-EV-цикл. Модуль можно, но это
+мягкая экономика, не хард-чит.
+
+## ⚡ НОВОЕ: БАЙБЕК БЕЗ ПРЕДМЕТА (развитие 452)
+BuyBackSoldItems (CargoManager.cs:11): для КАЖДОЙ записи itemsToBuy:
+  store.Balance += itemValue; campaign.TryPurchase(client, itemValue);
+Т.е. клиент ПОЛУЧАЕТ деньги + store.Balance РАСТЁТ (бесконечный баланс
+магазина = бесконечный продающий цикл). Client в 1095 посылает SoldItems
+с ID=NullEntityID → сервер берёт itemsInSub.FirstOrDefault(matchingPrefab)
+— если предмета НЕТ на сабе (matchingItem == null), continue. ⇒ нужен
+хотя бы ОДИН реальный предмет префаба на сабе. Но можно продать ДЕШЁВЫЙ
+предмет МНОГО РАЗ в одном пакете (до 255 записей) — а баланс растёт по
+каждой. НЕ ТРЕБУЕТ ПЕРМОВ SellInventoryItems — эти ветки продают с «Submarine»
+origin, гейт = AllowedToManageCampaign(SellSubItems). ⚠ Всё же перм.
+⇒ на хост-сервере тоже заблокировано. Но на пермлесс = работает.
+
+## UpdateStoreStock персистентность (CampaignMode:921/1017/1027):
+Проданные предметы сохраняются В СТОК ЛОКАЦИИ через SoldItems →
+AddStock. Cleared ТОЛЬКО при EndCampaign/SaveAndQuit. После краша
+сервера SoldItems остаются в памяти → АВАРИЙНОЕ ВОССТАНОВЛЕНИЕ = они
+попадут в сток. Можно насмерть заспамить SoldItems → краш → сток
+локации забит дешёвкой, дорогие предметы вытеснены.
+
+## READYTOPLAY трюк: RESPONSE_STARTGAME + RateLimiter на charInfoRateLimiter
+(5 запросов/10с) — UpdateCharacterInfo вызывается из RESPONSE_STARTGAME
+каждый раз при переподключении в раунд → за 5 реконнектов = 25 изменений
+скина/имени бесплатно. Мелочь, но факт.
