@@ -19931,3 +19931,38 @@ PermittedConsoleCommands per-command (хост без лимита) + MathUtils.
 → SelectMode/ManageMap/ManagePermissions/ConsoleCommands — все с перм-гейтами;
 ManagePermissions: цель != sender != OwnerConnection, ReadPermissions от пакета
 (волна с «ManagePermissions holder can...» уже в нотах).
+
+== ВОЛНА 592 — ITEM SWAP: полная инструкция (права/деньги/байт-лейаут) + модуль ==
+
+## ОТВЕТЫ на вопросы юзера (всё перепроверено)
+ПРАВА: роутер SERVER_COMMAND перм ManageCampaign НЕ проверяет (отложен), гейт
+внутри = HasPermissionToManageUpgrades = AllowedToManageCampaign(ManageCampaign=0x40):
+перм/хост/permless/лобби-хост/окно586/соло. Плюс HasCampaignInteractionAvailable(Upgrade):
+NPC-апгрейдер в 250 юнитах ИЛИ AllowRemoteCampaignInteractions=true (тогда ДИСТАНЦИОННО).
+ДЕНЬГИ: ДА — цена нового префаба (SwappableItem.GetPrice(локация)) × linkedItems.Count,
+СПИСЫВАЕТСЯ С ТВОЕГО личного кошелька (GetWallet(client)=character.Wallet; без
+персонажа = InvalidWallet.Balance=0 → TryDeduct false → молча фейл). БЕСПЛАТНО если
+цель уже в item.AvailableSwaps (атрибут availableswaps сейва = этот свап уже делали;
+после свапа UpgradeManager:378-382 добавляет оба префаба → повторные свапы 0₽).
+Банк/чужие кошельки не трогаются. MaxLevel-клампа у свапов нет (это только у upgrades).
+
+## БАЙТ-ЛЕЙАУТ пакета (проверен по ServerRead:835-884)
+SERVER_COMMAND → u16 0x0040 (ManageCampaign) → payload:
+u16 currentLocIndex, u16 selectedLocIndex (посылать ТЕКУЩИЙ индекс! 65535=UInt16.MaxValue
+→ SelectLocation(-1) → SelectRandomLocation(preferUndiscovered) — в пермлесс-окне
+ManageMap-гейт ОТКРЫТ и карта рандомнётся!), byte selectedMissionCount,
+bool×3 (ремонты), ReadPurchasedItems×3 (byte storeCount=0 каждый),
+ReadSoldItems (byte storeCount=0), u16 upgradeCount, u16 swapCount,
+per swap: u16 itemId + Identifier prefabId. После свапов чтение заканчивается.
+
+## ReadPurchasedItems формат (для будущих модулей закупок)
+byte storeCount → per store: Identifier storeId, u16 itemCount → per item:
+Identifier prefabId, bool deliverImmediately, RangedInteger(0, MaxQuantity) quantity.
+ReadSoldItems: byte storeCount → per store: Identifier storeId, u16 count →
+per item: Identifier prefabId, u16 itemId, bool removed, byte sellerId, byte origin.
+
+## Свап-кандидаты на клиенте
+Prefab.SwappableItem != null + !HiddenInGame + AllowSwapping. Замены-подсказки:
+SwappableItem.ConnectedItemsToSwap (tag→swapTo Identifier) или item.AvailableSwaps.
+Модуль: research/mods/ItemSwapModule.cs — список мировых свапаемых (до 80), клик
+заполняет ID + подсказку замены, ручной ввод ID/префаба, точный пакет.
