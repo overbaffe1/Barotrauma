@@ -20527,3 +20527,56 @@ AddStock. Cleared ТОЛЬКО при EndCampaign/SaveAndQuit. После кра
 (5 запросов/10с) — UpdateCharacterInfo вызывается из RESPONSE_STARTGAME
 каждый раз при переподключении в раунд → за 5 реконнектов = 25 изменений
 скина/имени бесплатно. Мелочь, но факт.
+
+== ВОЛНА 610 — COMBINE + ENGINE/PUMP/TURRET Tinkering + Fabricator RequiredMoney ==
+
+## ⚠ ВАЖНОЕ ОТКРЫТИЕ про v608 NET PROPERTIES: AllowImmediateItemDelivery
+дефолт TRUE — DeliveryImmediately доступно ВСЕМ. AllowRemoteCampaignInteractions
+добавляет доступ к магазинам/клинике ИЗ ЛЮБОЙ ТОЧКИ КАРТЫ (не только 250ю).
+
+## ⚡ COMBINE (EventType=4): передача ПРЕДМЕТА В ЧУЖОЙ КОНТЕЙНЕР без прав
+Item.ServerEventRead case Combine (Item.cs:233):
+  read u16 combineTargetID; гейт = CanInteractWith(this) && CanInteractWith(target).
+  НЕТ CanClientAccess! Target может быть ЧУЖИМ контейнером.
+  ItemContainer.Combine (ItemContainer:837):
+    AllowDragAndDrop && slotRestrictions.MatchesItem(item) &&
+    user.CanAccessInventory(Inventory) && !GeneticMaterial
+    → Inventory.TryPutItem(item, user) → ПЕРЕНОС ПРЕДМЕТА.
+  TryPutItem сам ставит item.ParentInventory = targetInventory.
+  ⇒ клиентские CanInteractWith проверки 250ю — можно класть предметы
+  в контейнеры на чужой субе если рядом. Мягкая утилита/гриф
+  («подкинуть другу гранату в рюкзак»), но не чит.
+
+## ⚡ Combine для canBeCombined предметов (ItemComponent:547):
+  перекачка Condition между одинаковыми префабами. Server не проверяет
+  CanClientAccess — только CanInteractWith. Перенос Condition между
+  предметами (переливание топлива из чужого в свой — если оба рядом).
+
+## ⚡ ENGINE FORCE (EventType через ServerEventRead, Engine.cs:15):
+  ReadRangedInteger(-10, 10) * 10.0f → кламп в [-100, +100]
+  CanClientAccess(this item) гейт. Чисто.
+  
+## ⚡ PUMP TINKERING (Pump.cs:100): TinkeringSpeedIncrease = 4.0f
+  currFlow *= 1 + tinkeringStrength * 4.0f — насос ×5 скорость при
+  tinkeringStrength = 1. Requires AbilityFlags.CanTinker.
+## ⚡ ENGINE Tinkering (Engine.cs:92): TinkeringForceIncrease = 1.5f
+  engine force ×2.5 при tinkeringStrength=1
+## ⚡ TURRET Tinkering (Turret.cs:88): TinkeringPowerCostReduction = 0.2f
+  расход энергии турели / (1 + str * 0.2f)
+## ⚡ FABRICATOR/DECONSTRUCTOR Tinkering: TinkeringSpeedIncrease = 2.5f
+  крафт/разборка ×3.5 при tinkeringStrength=1
+  ALL требуют AbilityFlags.CanTinker (только через таланты/перки).
+
+## ⚡ FABRICATOR RequiredMoney = ПЛАТНАЯ КРАФТ-ВАЛЮТА
+Fabricator.ServerEventRead: client шлёт recipeHash + amountToFabricate.
+Сервер: fabricationRecipes[recipeHash] — InvalidKey if recipeHash not found!
+⇒ THROW (не краш, батч-дроп — catch-all Lidgren). DoS.
+fabricationRecipes.Add в Fabricator:144 — заполняется из ContentPackageManager
+(fabricable item XML). RecipeHash = GenerateHash от (Amount|outputId|RequiredTime|
+RequiresRecipe|requiredItems|requiredSkills) — офлайн вычислим, но проще взять
+из клиента (перебор ID вызывает событие ошибки).
+RequiredMoney — только за ПЛАТНЫЕ рецепты (в ванили они опциональны).
+Client шлёт amountToFabricate через ReadRangedInteger(1,99) — до 99 за раз.
+
+## ✅ ИТОГ ДОБАВЛЕНО: 0 новых кнопок (всё с гейтами или утилита),
+но подокументированы механики для будущих трюков.
