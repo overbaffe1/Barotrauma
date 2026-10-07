@@ -341,8 +341,14 @@ namespace CSHUB.Modules
                 ushort locIndex = 0;
                 try
                 {
-                    var loc = GameMain.GameSession?.Campaign?.Map?.CurrentLocation;
-                    if (loc != null) { locIndex = (ushort)loc.LocationIndex; }
+                    // CurrentLocationIndex в Map уже реализован через Locations.IndexOf,
+                    // но luaCS иногда не резолвит — пишем явно через List.IndexOf.
+                    var map = GameMain.GameSession?.Campaign?.Map;
+                    if (map?.CurrentLocation != null)
+                    {
+                        int idx = map.Locations.IndexOf(map.CurrentLocation);
+                        if (idx >= 0) { locIndex = (ushort)idx; }
+                    }
                 }
                 catch { }
                 msg.WriteUInt16(locIndex);        // currentLocIndex
