@@ -427,7 +427,7 @@ namespace CSHUB.Modules
         private static void AddSpacer()
         {
             var gap = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.014f), _list.Content.RectTransform), style: null);
+                new RectTransform(new Vector2(1f, 0.02f), _list.Content.RectTransform), style: null);
             gap.Color = new Color(15, 18, 26);
             gap.CanBeFocused = false;
         }
@@ -445,16 +445,17 @@ namespace CSHUB.Modules
             bool hasNote = Notes.TryGetValue(mm.Title, out note);
 
             var row = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.085f), _list.Content.RectTransform), style: null);
-            row.Color = fav ? new Color(70, 60, 25) : RowColor;
+                new RectTransform(new Vector2(1f, 0.1f), _list.Content.RectTransform), style: null);
+            row.Color = fav ? new Color(90, 76, 32) : new Color(45, 54, 70);
             var layout = new GUILayoutGroup(
-                new RectTransform(new Vector2(0.985f, 0.92f), row.RectTransform, Anchor.Center), isHorizontal: true);
-            try { layout.RelativeSpacing = 0.008f; } catch { }
+                new RectTransform(new Vector2(0.985f, 1f), row.RectTransform, Anchor.Center), isHorizontal: true);
+            try { layout.RelativeSpacing = 0.012f; } catch { }
 
             var favBtn = new GUIButton(
-                new RectTransform(new Vector2(0.06f, 0.9f), layout.RectTransform),
+                new RectTransform(new Vector2(0.06f, 1f), layout.RectTransform),
                 fav ? "★" : "☆");
-            favBtn.Color = fav ? new Color(150, 120, 30) : new Color(50, 55, 70);
+            favBtn.Color = fav ? new Color(180, 145, 40) : new Color(80, 90, 110);
+            favBtn.HoverColor = new Color(120, 110, 60);
             favBtn.OnClicked = (b, d) =>
             {
                 Fav[mm.Title] = !IsFav(mm.Title);
@@ -464,8 +465,9 @@ namespace CSHUB.Modules
             };
 
             var execBtn = new GUIButton(
-                new RectTransform(new Vector2(0.14f, 0.9f), layout.RectTransform), "EXEC ▶");
-            execBtn.Color = SelColor;
+                new RectTransform(new Vector2(0.14f, 1f), layout.RectTransform), "EXEC ▶");
+            execBtn.Color = new Color(150, 60, 60);
+            execBtn.HoverColor = new Color(190, 80, 80);
             execBtn.OnClicked = (b, d) =>
             {
                 ParseRepeat();
@@ -476,9 +478,10 @@ namespace CSHUB.Modules
 
             string title = mm.Title + (hasNote ? "  ✏" : "");
             var nameBtn = new GUIButton(
-                new RectTransform(new Vector2(0.79f, 0.9f), layout.RectTransform),
+                new RectTransform(new Vector2(0.79f, 1f), layout.RectTransform),
                 title, textAlignment: Alignment.CenterLeft);
-            nameBtn.Color = fav ? new Color(80, 70, 30) : new Color(40, 48, 64);
+            nameBtn.Color = fav ? new Color(110, 95, 40) : new Color(60, 72, 95);
+            nameBtn.HoverColor = new Color(85, 100, 130);
             if (hasNote) { nameBtn.ToolTip = "Заметка: " + note; }
             nameBtn.OnClicked = (b, d) =>
             {
