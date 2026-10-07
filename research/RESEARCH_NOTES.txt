@@ -19872,3 +19872,62 @@ UPDATE_LOBBY → сегмент Vote → byte TransferMoney → bool true → In
 голосования СУЩЕСТВУЕТ. Кворум не обходится: свой голос стартера исключён,
 молчуны не в total, старт сам по себе не голос. Соц-инженерия / второй
 клиент (Dummy жмёт ГОЛОС ЗА) / третий игрок — единственные пути.
+
+== ВОЛНА 591 — STORE-КАНАЛ MultiPlayerCampaign.ServerRead + ITEM SWAP без владения + перм-гейты продажи ==
+
+## ★ [591] ITEM SWAP: свапается ЛЮБОЙ предмет МИРА по клиентскому ID (подтверждено)
+MultiPlayerCampaign.ServerRead (роут: SERVER_COMMAND → ClientPermissions.ManageCampaign,
+GameServer:1955): purchasedItemSwaps[] = { u16 itemToRemoveID (ЛЮБОЙ Item мира),
+Identifier itemToInstall }. PurchaseItemSwap (UpgradeManager:304):
+  ГЕЙТЫ: HasPermissionToManageUpgrades (= AllowedToManageCampaign(ManageCampaign)
+  → ПЕРМЛЕСС/ОКНО-586 отпирает), CanUpgradeSub, HiddenInGame, AllowSwapping,
+  одна upgrade-категория по тегам, Prefab.SwappableItem != null.
+  ВЛАДЕНИЕ/РАСПОЛОЖЕНИЕ НЕ ПРОВЕРЯЕТСЯ → можно свапнуть предмет на ЧУЖОЙ субе/
+  в ЧУЖОМ инвентаре. Цена: если itemToInstall не в AvailableSwaps цели —
+  платит СВОПЕР (GetWallet(client)=личный кошелёк, MultiPlayerCampaign:26).
+  = платный дистанционный ГРИФ: чужой рельсовик → дешёвая болванка,
+  деньги твои. Кампания: необратимо (persisted). Радиус: только рядом с
+  upgrade-NPC (HasCampaignInteractionAvailable(Upgrade)).
+  itemToInstall = ЛЮБОЙ prefab (ItemPrefab.Find по identifier из пакета),
+  но должен совпасть по тегам категории — иначе throw (catch-all).
+
+## ★★ [591] ГЛАВНЫЙ ПРАКТИЧЕСКИЙ ИНСАЙТ: продажа гейтится пермами → модули юзера молчат на сервере друга
+MultiPlayerCampaign.ServerRead: блок Store (все покупки/продажи) гейтится
+HasCampaignInteractionAvailable(Store) (близость к торговцу ИЛИ
+AllowRemoteCampaignInteractions), НО:
+  - SellSubItems / SellInventoryItems = AllowedToManageCampaign(соотв. перм)!
+  - На сервере друга (хост с пермами, ЖИВ В ИГРЕ) → AllowedToManageCampaign=false
+    → SellItems НЕ ВЫЗЫВАЕТСЯ ВООБЩЕ → SellById/SellFakeItems молча не работают!
+  - AnyOneAllowedToManageCampaign: ХОСТ В ЛОББИ (не InGame) НЕ БЛОКИРУЕТ!
+    Блокирует только ЖИВОЙ ПЕРМ-ХОЛДЕР В ИГРЕ после 60й секунды раунда.
+  = продажа/апгрейды/свапы у друга работают ТОЛЬКО: (а) он пермлесс,
+    (б) он не в раунде (лобби), (в) он мёртв/в ступоре (окно 586),
+    (г) он выдал юзеру перм SellInventoryItems вручную.
+  ЭТО ОБЪЯСНЯЕТ «чета не работает» магазинных модулей на чужом сервере.
+  Покупки (buy crate) — БЕЗ perm-гейта (только близость к торговцу + кламп
+  к стоку): покупать можно всем всегда.
+
+## [591] Upgrade purchase: клиентский level ВЫБРАСЫВАЕТСЯ (чисто)
+purchasedUpgrades: u16 count + {Identifier prefab, Identifier category,
+byte level} — level читается, но в TryPurchaseUpgrade foreach (_, prefab,
+category) НЕ ИСПОЛЬЗУЕТСЯ: сервер берёт свой GetUpgradeLevel. MaxLevel кламп,
+цена GetBuyPrice (своя), ресурсы TryTakeResources(персонаж клиента) проверяются
+на сервере. Никаких level-255. Чисто.
+
+## [591] Покупки store: клампы честные (подтверждено заново)
+buyCrate/purchasedItems: Quantity клампится к availableStock − alreadyPurchased,
+повторные покупки вычитаются, DeliveryImmediately-дедуп. Деньги: личный кошелёк
+(GetWallet). 452-путь (soldItems) уже в дайджесте; новый факт — сам SELL
+за перм-гейтом (см. выше).
+
+## [591] Console-канал (SERVER_COMMAND → ConsoleCommands): чисто
+DebugConsole.ServerRead (DebugConsole.cs:2780): rate limiter + двойной гейт
+(ConsoleCommands перм в ClientReadServerCommand И в ExecuteClientCommand) +
+PermittedConsoleCommands per-command (хост без лимита) + MathUtils.IsValid
+(NaN-курсор отброшен!) + catch вокруг execute. Единственный нюанс: команда
+не в списке перм → реджект; кастомный набор команд задаёт хост.
+
+## [591] SERVER_COMMAND → ManageCampaign роут: см. выше (store/upgrade канал),
+→ SelectMode/ManageMap/ManagePermissions/ConsoleCommands — все с перм-гейтами;
+ManagePermissions: цель != sender != OwnerConnection, ReadPermissions от пакета
+(волна с «ManagePermissions holder can...» уже в нотах).
