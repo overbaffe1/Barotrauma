@@ -20350,3 +20350,45 @@ Format: SERVER_SETTINGS Properties → VariableUInt32 count + uint32 id × count
 RemoveBan только если ещё и Unban-перм. Внутри: BannedPlayer.UniqueIdentifier —
 MONOTONIC counter (можно перебрать 1..N!). Если ты под баном с Ban+Unban
 пермами на альт-аккаунте — снеси себе бан перебором ID.
+
+== ВОЛНА 606 — МОЖНО ЛИ СНЯТЬ СЕБЕ БАН БЕЗ ПРАВ НЕ ЗАХОДЯ НА СЕРВЕР? ==
+
+## ОТВЕТ: ПАКЕТНО — НЕТ (тройная блокировка):
+1) Бан проверяется на КАЖДЫЙ входящий пакет ДО хендлеров:
+   LidgrenServerPeer:271 `IsBanned(conn.Endpoint) || IsBanned(AccountId) ||
+   Any(OtherMatchingIds)` → Disconnect. Забаненный не доходит ни до одного
+   ServerRead → не может отправить unban. Замкнутый круг.
+2) Сам unban (BanList.ServerAdminRead:341) требует ХАРД-ПЕРМОВ Ban (+Unban
+   для RemoveBan) — AnyOneAllowedToManageCampaign их НЕ покрывает
+   (это серверные пермы, не кампейн).
+3) Пакет SERVER_SETTINGS роутится только для connectedClients —
+   забаненный в списке не числится.
+
+## НО: ID ПРОСТРАНСТВО ПРЕДСКАЗУЕМО (для тех, у кого есть пермы)
+BanList.LastIdentifier — STATIC UInt32 = 0 при старте ПРОЦЕССА сервера.
+Не сериализуется! При загрузке XML каждый бан создаёт BannedPlayer через
+конструктор → LastIdentifier++. ИТОГО: после рестарта сервера все ID = 0..N-1
+(N = число банов). Sweep 1..N = 100% попадание. Sweep уже в модуле (×200 max).
+
+## КЛИЕНТ С ПЕРМОМ BAN ВИДИТ ВЕСЬ БАН-ЛИСТ
+ServerAdminWrite (BanList:284) шлёт клиенту с Ban-пермом: имена всех банов +
+UniqueIdentifier + время истечения + reason (адреса — только хосту).
+⇒ Альт с Ban-пермом подключается → получает список → находит свой ID →
+точечный unban. Связка рабочая, но нужен второй непабанский акк с пермами.
+
+## ЛЕГИТНЫЕ ПУТИ БЕЗ ПЕРМОВ (реальный мир):
+1) IP-бан → смена IP (VPN/моб.инет). IsBanned(Address) = false для нового.
+2) Steam/EOS ID-бан → новый аккаунт; на серверах с RequireAuthentication=false
+   аутентификации нет — бьёт только по IP.
+3) Временный бан → RemoveExpired() чистит истёкшие при каждом IsBanned.
+4) Свой сервер/панель хостинга → Data/bannedplayers.xml руками.
+5) Друг с пермами → Unban sweep (волна 605).
+6) Прикол: localhost нельзя забанить (BanPlayer refuse + IsBanned false) —
+   хост физически не может себя в бане увидеть.
+
+## P2P/EOS ПРИКОЛ (auto-ban authority у ОВНЕРА-КЛИЕНТА):
+На EOS/Steam P2P-серверах DoS-баны ставит КЛИЕНТСКИЙ процесс овнера
+(P2POwnerDoSProtection: 10с окно, packetCounts per endpoint, >3 кика = бан
+через DoSProtectionPacket → P2PServerPeer:235 BanPendingClient БЕЗ перм-чека —
+доверие по ownerEndpoint). Клиент-пир игнорит (OnExcessivePackets = do nothing).
+⇒ на своём P2P-сервере овнер-клиент = высшая бан-инстанция без всяких пермов.
