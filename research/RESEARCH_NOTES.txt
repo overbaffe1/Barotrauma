@@ -20058,3 +20058,22 @@ throw из ИГРОВОГО цикла (EventManager Update, 584) или из п
 GUI: список 11 методов (клик = способ+описание+условия), кнопка EXEC у 6 автоматизированных
 (2,3,4,5,6,7). Форматы пакетов сверен по исходникам. Справочник: 1 (через PropertyEditor),
 8-11 (ручные/перм).
+
+== ВОЛНА 595 — Crash Menu v2: EXEC в каждой строке + 3 новых метода ==
+
+## НОВЫЕ МЕТОДЫ (автоматизированы)
+1. [DOS] EntityState giant msgLength: eventCount=1, entityID=свой персонаж,
+   msgLength=WriteVariableUInt32(0x40000000) → сервер new byte[1ГБ] ДО проверки
+   буфера (MsgReader.ReadBytes, волна 27) → OOM/OutOfRange → батч-дроп + GC-давление.
+   Спам = фризы. Условие: в раунде.
+2. [DOS] SegmentTable corrupt: UPDATE_LOBBY + Int32 tablePointer=int.MaxValue
+   (SegmentTable.Read:267 tableLocation = pointerLocation + tablePointer →
+   отрицательное/за буфером → throw). 4 байта. Без условий.
+3. [DOS] REQUEST_BACKUP_INDICES: savePath=C:\Windows → сервер Directory.GetFiles
+   по произвольному пути (без прав/лимитов, 26) → IO-спам + ответ-метаданные тебе.
+
+## UX v2
+- EXEC-кнопка INLINE в строке (GUIButton слева, 0.13 ширины) — у всех
+  автоматизированных; не-автоматизированные помечены «(без кнопки)» и прочерком.
+- Группы-заголовки: УБИВАЮТ ПРОЦЕСС / DoS-ЛАГ / ОСОБЫЕ.
+- Клик по названию = описание в нижней панели.
