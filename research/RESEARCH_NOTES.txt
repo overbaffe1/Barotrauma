@@ -20154,3 +20154,27 @@ CoroutineHandle internal (CS0246), LINQ .Where (урок 557), OnToggle/IsEnable
 Клиент AddLabel → CreateClientEvent(CircuitBoxAddLabelEvent) → внутренняя
 очередь с internal ID (точно ожидаемый сервером) → сервер AddLabelInternal +
 CreateServerEvent broadcast. Тот же канал, что ванильный UI ЦБ.
+
+== ВОЛНА 599 — ПОЛЕВЫЕ РЕЗУЛЬТАТЫ юзера + Crash Menu v5 (избранное+заметки) ==
+
+## ПОДТВЕРЖДЕНО ЮЗЕРОМ (лаг при ×1000, реальные боевые DoS):
+✅ SegmentTable (4 байта) / ✅ SoldItems префаб / ✅ CircuitBox левый opcode /
+✅ Чат несуществующий ордер / ✅ CharacterInput count=255 / ✅ VOIP пустые буферы.
+НЕ РАБОТАЮТ: Backup Indices (C:\Windows — нет совпадений паттерна "*.base.save.bk*" →
+скан мгновенный) и EntityState/Inventory (окно ID ненадёжно — счётчик двигается).
+
+## ФИКС Backup Indices
+GetBackupPaths → GetFiles(path, $".{baseName}.save.bk*"); на КАЖДЫЙ матч
+GetIndexData делает ExtractGameSessionRootElementFromSaveFile = ПОЛНАЯ ДЕКОМПРЕССИЯ.
+Фикс: слать "Saves/Multiplayer/*" (+варианты): GetFileNameWithoutExtension("*")="*"
+→ паттерн ".*.save.bk*" матчит ВСЕ бэкапы всех сейвов → сервер декомпрессит их
+кучу на каждый пакет + метаданные уходят атакующему. Вот где CPU/IO.
+
+## Crash Menu v5 (UX как в CSHUB юзера)
+- ⭐ ИЗБРАННОЕ: кнопка в каждой строке, группа наверху, персист.
+- ✏ ЗАМЕТКИ: выбор метода → текстбокс внизу → «💾 Сохр.»; персист.
+- Файл CSHUB_crash_menu_notes.txt рядом с игрой (F/N строки, try/catch).
+- Группы по полевым данным: ✅ РАБОЧИЕ (6) → ☣ CIRCUIT BOX API (3) →
+  ⚠ ОСТАЛЬНЫЕ (DescriptionTag x2, EventManager, Backup FIX, NaN, ForceSave) →
+  🔧 ЭКСПЕРИМЕНТАЛЬНО (EntityState, Inventory, SelectMode, LoadCampaign).
+- «СКОЛЬКО РАЗ» осталось. 19 методов, все с EXEC.
