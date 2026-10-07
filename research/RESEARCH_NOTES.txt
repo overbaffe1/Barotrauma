@@ -20077,3 +20077,47 @@ GUI: список 11 методов (клик = способ+описание+у
   автоматизированных; не-автоматизированные помечены «(без кнопки)» и прочерком.
 - Группы-заголовки: УБИВАЮТ ПРОЦЕСС / DoS-ЛАГ / ОСОБЫЕ.
 - Клик по названию = описание в нижней панели.
+
+== ВОЛНА 597 — Вердикт по юзерским модулям (TaskPool/VoteFlood) + SaveCorrupter ==
+
+## ВЕРДИКТ TaskPoolExhaustionModule (юзерский)
+Факты верны: while(authResult is null) БЕЗ таймаута (SteamAuth:63), TaskPool MaxTasks=5000 →
+throw (TaskPool.cs:15,57). НО ЦЕПОЧКА НЕ РАБОТАЕТ:
+1) VerifyTicket: ticket.Data.Length < 8 → мгновенный None (нет таска);
+   BeginAuthSession: !SteamManager.IsInitialized → ServerNotConnectedToSteam;
+   пустой/кривой ticketData[8..] → InvalidTicket → МГНОВЕННЫЙ отказ.
+   Вечный while только если BeginAuthSession==OK и Steam НЕ ответит —
+   рандомные байты почти всегда InvalidTicket. Phase2 = фантазия.
+2) TaskPool throw = бросок в AddInternal → ProcessAuth → его ловит ВНЕШНИЙ
+   catch(Exception) LidgrenServerPeer.Update → НЕ КРАШ, а батч-дроп («краш
+   обработки ВСЕХ тасков» — неверно; таски живут дальше).
+3) КОМПИЛЯЦИЯ: OnToggle/IsEnabled отсутствуют в CSModuleBase (модули юзера
+   юзают OnClick/GetLabel) → CS0115/CS1061. System.Threading.Tasks ок.
+
+## ВЕРДИКТ P2PVoteFloodModule (юзерский)
+НЕ СКОМПИЛИТСЯ В CSHUB: WaitForSeconds internal (CS0246 — урок 568),
+CoroutineHandle internal (CS0246), LINQ .Where (урок 557), OnToggle/IsEnabled.
+СОДЕРЖАТЕЛЬНО:
+- TransferGhost «NRE в Finish» — ЛОЖЬ: fromWallet==null → Bank; toWallet?.Give null-safe.
+- KickGhost — безвредно (известно).
+- SearchBomb 900 символов → FirstOrDefault по сабам = микросекунды. Не DoS.
+- MultiVote 5 сегментов — да, 5 голосов/пакет, но UpdateVoteStatus под
+  dosProtection.Pause → не считается DoS.
+- ГЛАВНОЕ: любой flood упирается в DoSProtection.MaxPacketAmount (пакетов/мин)
+  → отправителя КИКНУТ/ЗАБАНЯТ по strikes. «SAFE не кикнет» — ложь.
+- SubVoteGhost пустое имя: единственный интересный (null sub в ActiveVote), но
+  соло вотчина мгновенно фейлится (total=0), на людном нужен кворум. Слабо.
+
+## ★ ГЛАВНАЯ ПРИЧИНА «НИ ОДИН СПОСОБ НЕ РАБОТАЕТ»
+ОДНА ошибка компиляции ЛЮБОГО файла в папке Modules → НЕ КОМПИЛИТСЯ ВЕСЬ CSHUB
+(урок 557: LuaCS компилит всю папку). Оба юзерских модуля содержат ошибки → все
+кнопки мертвы, включая исправленные. ПЕРВОЕ ДЕЙСТВИЕ: убрать чужие .cs из папки.
+
+## ★★ НОВЫЙ МОДУЛЬ research/mods/SaveCorrupterModule.cs (персистентная порча)
+1) NaN ВСЕ УЗЛЫ: MoveComponent с TargetIDs=ВСЕ Components (публичные CircuitBox.Components/
+   ICircuitBoxIdentifiable.ID — без reflection), MoveAmount=NaN, хирургический ID события.
+2) ЗАФИКСИРОВАТЬ СЕЙВ: SERVER_COMMAND+ManageRound(end=true, save=true, quit=false) —
+   на дружелюбном аутпосте сервер SaveGame (593) → NaN персистится.
+3) После рестарта: загрузка кампании = NaN в узлах цепи → глюки/краши.
+ГЕЙТЫ: NaN = CanClientAccess ЦБ; фиксация = ManageRound (соло/перм/окно 586).
+★★★ ТОЛЬКО СВОЯ ТЕСТ-КАМПАНИЯ — единственный класс багов, убивающий ПОСЛЕ рестарта.
