@@ -20178,3 +20178,42 @@ GetIndexData делает ExtractGameSessionRootElementFromSaveFile = ПОЛНА
   ⚠ ОСТАЛЬНЫЕ (DescriptionTag x2, EventManager, Backup FIX, NaN, ForceSave) →
   🔧 ЭКСПЕРИМЕНТАЛЬНО (EntityState, Inventory, SelectMode, LoadCampaign).
 - «СКОЛЬКО РАЗ» осталось. 19 методов, все с EXEC.
+
+== ВОЛНА 600 — ★★★ CLINIC OVERFLOW: печатный станок +2.1B mk (новый вектор!) ==
+
+## ОТКРЫТИЕ: MedicalClinic ADD_PENDING/HEAL — client-supplied Price → int overflow → ОТРИЦАТЕЛЬНАЯ цена → деньги ИЗ ВОЗДУХА
+Цепочка (все подтверждено по исходникам):
+1) MEDICAL пакет, NetworkHeader.ADD_PENDING (=4): NetCrewMember { int CharacterInfoID
+   (ЛЮБОЙ — сервер не проверяет существование), ImmutableArray<NetAffliction>
+   (ArrayMaxSize default = 65535!) }. NetAffliction: Identifier + Strength +
+   VitalityDecrease + Price — ВСЕ ПОЛЯ КЛИЕНТСКИЕ, Price хранится как есть
+   (MedicalClinic.cs:69).
+2) InsertPendingCrewMember: дедуп только по CharacterEquals (одинаковый ID) —
+   уникальные CharacterInfoID = копятся. КАПА СПИСКА НЕТ. Rate limit 20/5с
+   (Announce, без кика).
+3) HEAL_PENDING (=7) → HealAllPending: totalCost = GetTotalCost() =
+   PendingHeals.SelectMany(Afflictions).Aggregate(0, (cur, a) => cur + a.Price)
+   — INT-СУММА ushort-цен (MedicalClinic.cs:320).
+4) ≥32770 аффликций × 65535 → int.MaxValue переполнение → totalCost ≈ -2,147,450,881.
+5) TryPurchase(client, negative): price==0 нет → GetWallet(client).TryDeduct(neg):
+   CanAfford(neg) = Balance >= neg = TRUE → Deduct(neg) → Balance += 2,147,450,881.
+   = +2.1 МИЛЛИАРДА mk за один клик HEAL.
+6) Сами аффликции НЕ лечатся (фейковый CharacterInfoID → FindCharacterInfo null →
+   continue в цикле) — чистая денежная операция, ноль побочек в экипаже.
+ГЕЙТЫ: в раунде (кошелёк персонажа, иначе InvalidWallet throw), кампания.
+Rate limit 20/5с — 11-12 пакетов проходят.
+Это печатный станок #3 (455 vote-transfer, 452 sell-buyback, 600 clinic-overflow)
+и корень/развитие 453 (бесплатная клиника: Price=0 на своих аффликциях = heal за 0).
+
+## БОНУС-находки канала (мелкие)
+- REMOVE_PENDING: любой клиент удаляет ЗАПИСИ ДРУГИХ из общей очереди лечения
+  (гриф: друг queued раны — ты сносишь — его не лечат).
+- CLEAR_PENDING: полная очистка общей очереди кем угодно.
+- ADD_PENDING фейковые члены = bloat PendingHeals (без капа).
+
+## МОДУЛЬ: Crash Menu v5b — группа «💰 печатный станок»
+- CLINIC OVERFLOW: N пакетов (1..12) × 3000 аффликций × Price=65535, уникальные
+  CharacterInfoID 90000+p, identifier "zzz_clinic_overflow" (Prefab null →
+  ReduceAffliction skip). packet ~48KB (Lidgren fragmentation reliable).
+- HEAL: 1 пакет → +2.1B. Порядок: OVERFLOW (n=12) → HEAL.
+- Группа переименована в «💰/☣ CIRCUIT BOX + ПЕЧАТНЫЙ СТАНОК».

