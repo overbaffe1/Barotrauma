@@ -270,12 +270,21 @@ namespace CSHUB.Modules
         private static void AddGroupHeader(string text, Color color)
         {
             var row = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.055f), _list.Content.RectTransform), style: null);
+                new RectTransform(new Vector2(1f, 0.07f), _list.Content.RectTransform), style: null);
             row.Color = HeadColor;
             var txt = new GUITextBlock(new RectTransform(Vector2.One, row.RectTransform), text,
                 textAlignment: Alignment.CenterLeft);
             txt.TextColor = color;
             txt.CanBeFocused = false;
+            AddSpacer();
+        }
+
+        private static void AddSpacer()
+        {
+            var gap = new GUIFrame(
+                new RectTransform(new Vector2(1f, 0.014f), _list.Content.RectTransform), style: null);
+            gap.Color = new Color(15, 18, 26);
+            gap.CanBeFocused = false;
         }
 
         private static void AddMethods(Method[] methods)
@@ -284,10 +293,10 @@ namespace CSHUB.Modules
             {
                 Method mm = m;
                 var row = new GUIFrame(
-                    new RectTransform(new Vector2(1f, 0.065f), _list.Content.RectTransform), style: null);
+                    new RectTransform(new Vector2(1f, 0.085f), _list.Content.RectTransform), style: null);
                 row.Color = RowColor;
                 var layout = new GUILayoutGroup(
-                    new RectTransform(new Vector2(0.99f, 0.88f), row.RectTransform, Anchor.Center), isHorizontal: true);
+                    new RectTransform(new Vector2(0.99f, 1f), row.RectTransform, Anchor.Center), isHorizontal: true);
 
                 bool hasExec = mm.Exec != null;
                 if (hasExec)
@@ -315,6 +324,8 @@ namespace CSHUB.Modules
                     new RectTransform(new Vector2(0.87f, 1f), layout.RectTransform),
                     hasExec ? mm.Title : mm.Title + "   (без кнопки)");
                 nameBtn.OnClicked = (b, d) => { ShowDesc(mm); return true; };
+
+                AddSpacer();
             }
         }
 
