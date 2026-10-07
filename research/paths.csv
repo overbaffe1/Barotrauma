@@ -474,7 +474,7 @@ Barotrauma/BarotraumaServer/ServerSource/Map/Creatures/BallastFloraBehavior.cs,1
 Barotrauma/BarotraumaServer/ServerSource/Map/Hull.cs,268,done,268
 Barotrauma/BarotraumaServer/ServerSource/Map/Structure.cs,21,done,25
 Barotrauma/BarotraumaServer/ServerSource/Map/Submarine.cs,38,done,38
-Barotrauma/BarotraumaServer/ServerSource/Networking/BanList.cs,367,done,370
+Barotrauma/BarotraumaServer/ServerSource/Networking/BanList.cs,367,done,375
 Barotrauma/BarotraumaServer/ServerSource/Networking/ChatMessage.cs,262,done,262
 Barotrauma/BarotraumaServer/ServerSource/Networking/ChildServerRelay.cs,31,done,31
 Barotrauma/BarotraumaServer/ServerSource/Networking/Client.cs,362,done,362

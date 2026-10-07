@@ -20324,3 +20324,29 @@ added/removed mission types + TraitorDanger byte + string seed.
 - EXTRA CARGO ×10 типов (оружие/фулгур/опий) — спавн при каждом старте.
 - LEVEL SEED 666 (Misc|LevelSeed флаги = 6).
 Гейт-предупреждения во всех описаниях: перм ManageSettings у хоста = молча.
+
+== ВОЛНА 605 — ManagePermissions глубокий разбор + UNBAN SWEEP ==
+
+## ManagePermissions ветка (SERVER_COMMAND, GameServer:1960) — ОКОНЧАТЕЛЬНО:
+- Перми-проверка: вверху свитча (только у тебя должен быть перм ManagePermissions)
+- цель = byte SessionId, цель != sender != OwnerConnection
+- ReadPermissions (Client.cs:234): ReadRangedInteger(0,All) → SetPermissions —
+  сервер ставит ЛЮБЫЕ пермы цели (включая ManageSettings/ConsoleCommands)
+- РАЗРЕШЕНО целить в ЛЮБОГО не-хост клиента, включая САМОГО СЕБЯ нет —
+  но можно в друга! Два пермлесс игрока МОГУТ ВЫДАТЬ ДРУГ ДРУГУ ВСЕ ПЕРМЫ
+  (пока админа нет, AnyOneAllowed = true на все кампейн-гейты и без
+  ManagePermissions вообще ничего не нужно)
+- Формат: byte targetSessionId + ReadRangedInteger(perms) +
+  u16 commandCount + Identifier × count
+
+## ПАРТНЁРСКАЯ ЭСКАЛАЦИЯ (новый вектор, не отдельный пакет):
+2 permless друга на пермлесс-сервере: один даёт второму ManagePermissions,
+второй даёт первому ManageSettings + Ban + ConsoleCommands → ДВА АДМИНА.
+Не обход перма, а легит-эскалация через дыру «никто не админ».
+
+## UNBAN SWEEP (BanList.ServerAdminRead, BanList.cs:341):
+Гейт = HasPermission(Ban) — РЕАЛЬНЫЙ ПЕРМ (не AnyOneAllowed!).
+Format: SERVER_SETTINGS Properties → VariableUInt32 count + uint32 id × count.
+RemoveBan только если ещё и Unban-перм. Внутри: BannedPlayer.UniqueIdentifier —
+MONOTONIC counter (можно перебрать 1..N!). Если ты под баном с Ban+Unban
+пермами на альт-аккаунте — снеси себе бан перебором ID.
