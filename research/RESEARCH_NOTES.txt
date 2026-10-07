@@ -19966,3 +19966,57 @@ Prefab.SwappableItem != null + !HiddenInGame + AllowSwapping. Замены-по�
 SwappableItem.ConnectedItemsToSwap (tag→swapTo Identifier) или item.AvailableSwaps.
 Модуль: research/mods/ItemSwapModule.cs — список мировых свапаемых (до 80), клик
 заполняет ID + подсказку замены, ручной ввод ID/префаба, точный пакет.
+
+== ВОЛНА 593 — ClientReadServerCommand ПОЛНОСТЬЮ: мгновенный конец раунда в сандбоксе + переходы кампании в окне ==
+
+## ★★ [593] SANDBOX/MISSION: ЛЮБОЙ клиент = мгновенный EndGame БЕЗ голосования и пермов (подтверждено)
+ClientReadServerCommand (GameServer:1720) case ManageRound:
+  верхний перм-гейт ПРОПУЩЕН для ManageRound (deferred), внутри:
+  end=true → `if (mpCampaign == null || AllowedToManageCampaign(ManageRound))`
+  → mpCampaign==null (САНДБОКС/МИССИЯ) = TRUE БЕЗ ВСЯКИХ ПРОВЕРОК →
+  `if (GameStarted) { ...; EndGame(wasSaved: save); }` — save берётся из пакета
+  (у дружелюбного аутпоста сейв пройдёт, если save=true).
+  Ванильный UI клиентов шлёт EndRound ЧЕРЕЗ ГОЛОСОВАНИЕ (VoteType.EndRound,
+  CanVoteToEndRound) — этот ПАКЕТНЫЙ ПУТЬ голос не спрашивает ВООБЩЕ.
+  = на сандбокс/миссия-сервере любой клиент валит раунд всем. Раз в тик не
+  ограничено (только dosProtection общий счётчик) → посмертный реконнект-спам
+  = вечное «раунд кончился». В КАМПАЙНЕ гейт = окно 586 (AllowedToManageCampaign).
+
+## ★ [593] ManageRound end=false = ЕЩЁ ДВА действия:
+1) СТАРТ РАУНДА: `!GameStarted && !initiatedStartGame` → TryStartGame() —
+   БЕЗ пермов (ваниль-кнопка лобби, by design). Спамить бессмысленно (initiatedStartGame).
+2) ПЕРЕХОД УРОВНЯ КАМПАНИИ (GameStarted, гейт = AllowedToManageCampaign(ManageCampaign
+   || ManageMap) = ОКНО 586): GetAvailableTransition →
+   ReturnToPreviousEmptyLocation: SelectLocation(другой конец связи) + LoadNewLevel;
+   ProgressToNextEmptyLocation: **SetLocation(EndLocation текущего уровня) + LoadNewLevel**
+   = принудительная СДВИЖЕНИЕ КАРТЫ ВПЕРЁД. default: просто LoadNewLevel.
+   АРСЕНАЛ ОКНА 586: пропустить любой раунд (все телепортируются на конец уровня).
+3) end=false + GameOver/continueCampaign в лобби → LoadCampaign(СВОЙ DataPath)
+   — путь серверный (не клиентский) — чисто.
+
+## ★ [593] ERROR-пакет: хост = EndGame(false), обычный клиент = кик
+HandleClientError (GameServer:1053): корректно разобранный ERROR →
+  если c.Connection == OwnerConnection → **EndGame(wasSaved: false)** — хост может
+  мгновенно прибить раунд без сейва (kill-switch по дизайну);
+  НЕ хост → KickClient(c, errorStr) — сам-кик. КРИВАЯ ДАННЫЕ → тоже кик.
+  Лог: клиентские subNames капнуты MaxSubNameLengthInErrorMessages. Чисто.
+
+## [593] Kick/Ban/Unban — гейты корректные (сверка)
+- Kick: HasPermission(Kick) наверху; цель != sender != OwnerConnection; имя
+  OrdinalIgnoreCase; причина = строка клиента (попадает в кик-сообщение цели —
+ .social: «кик с поводом»).
+- Ban: duration = ReadDouble raw; NaN/<=0 → null = ПЕРМАНЕНТНЫЙ бан
+  (клиент с Ban-пермом, пославший NaN вместо секунд, банит НАВСЕГДА вместо
+  темп-бана — забавный побочный эффект); > 0 → TimeSpan.FromSeconds
+  (double.MaxValue клампится, не бросает). previousPlayers: бан ОФЛАЙН-игрока
+  по имени (сессии хранит сервер).
+- Unban: bool isPlayerName + строка (имя или endpoint через Endpoint.Parse —
+  валидация внутри). Чисто.
+- SelectSub: выбор сабы по MD5-хэшу из GetSubList() сервера — произвольный
+  путь не подсунуть. Clean.
+
+## [593] Нюанс гейтов наверху свитча
+BYPASS-список верхнего перм-чека: только ManageRound и ManageCampaign (оба с
+внутренними гейтами). ВСЕ ОСТАЛЬНЫЕ (Kick/Ban/Unban/SelectSub/SelectMode/
+ConsoleCommands/ManagePermissions/ManageMap-подобные) = жёсткий HasPermission(command).
+ManagePermissions: цель != sender != OwnerConnection (волна с «ManagePermissions holder»).
