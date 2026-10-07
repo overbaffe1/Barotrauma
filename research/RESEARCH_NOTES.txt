@@ -20580,3 +20580,77 @@ Client шлёт amountToFabricate через ReadRangedInteger(1,99) — до 99
 
 ## ✅ ИТОГ ДОБАВЛЕНО: 0 новых кнопок (всё с гейтами или утилита),
 но подокументированы механики для будущих трюков.
+
+== ВОЛНА 611 — COMBINE DEEP DIVE: вставка в чужие контейнеры, практический разбор ==
+
+## ПОЛНАЯ ЦЕПОЧКА (Item.cs:233 case Combine):
+Пакет: EventType=4 (ComponentState-формат), u16 combineTargetID.
+Сервер: гейты = CanInteractWith(этот) && CanInteractWith(target) && оба рядом.
+Затем Combine(target, character) → перебор ВСЕХ ItemComponent этого предмета.
+
+## ПУТЬ 1: ItemContainer.Combine (ItemContainer:837) — ПЕРЕНОС ПРЕДМЕТА
+Гейты: AllowDragAndDrop (дефолт TRUE в XML!) && slotRestrictions.MatchesItem
+&& user.CanAccessInventory(target.Inventory) && НЕ GeneticMaterial.
+CanAccessInventory(Inventory):
+  inventory.Owner is Character:
+    if owner == user → true (свой)
+    if owner.IsKnockedDownOrRagdolled || LockHands → true (СТУПОР/НАРУЧНИКИ!)
+    AllowBotsAndPets: (IsBot && same team) || IsFriendlyPet
+  inventory.Owner is Item:
+    CanInteractWith(item-container) — 250ю
+    container.HasRequiredItems(this) — часто пусто = true
+  иначе → true (фиксированные контейнеры: шкафы, полки, ящики!)
+TryPutItem → FindAllowedSlot → PutItem → item.ParentInventory = ЧУЖОЙ inventory.
+
+## ПРАКТИЧЕСКИЕ ПРИМЕРЫ (без прав, на любом сервере):
+1) ПОДКИНУТЬ ГРАНАТУ ДРУГУ В РЮКЗАК, ПОКА ОН СТУПОРЕ:
+   друг в ступоре (IsKnockedDownOrRagdolled=true) → его инвентарь открыт
+   всем → Combine(рюкзак_друга) → граната в его рюкзаке. Восстановление
+   после ступора = граната у него. НЕ ПАЛЕВНО.
+2) ПОДКИНУТЬ ЧУЖОМУ БОТУ: AllowBotsAndPets → бот той же команды принимает.
+3) ВОРОВСТВО С ЧУЖОГО ТРУПА: труп всегда открыт (AccessibleWhenAlive=false
+   + IsDead → можно) — Combine(контейнер_трупа) → ИЗВЛЕЧЬ? нет, Combine
+   только ВСТАВЛЯЕТ. Но tryPutItem свапает если слот занят? Нет, false.
+   Вставить свой хлам в труп = замести следы.
+4) ВСТАВИТЬ ПРЕДМЕТ В ШКАФ НА ЧУЖОЙ САБЕ: фиксированные контейнеры = Owner
+   не Character → CanAccessInventory = true если CanInteractWith(шкаф) =
+   250ю. Докупаешься на чужую станцию → шкафа рядом → спрятал предмет.
+5) ПОДКИНУТЬ ПУСТОЙ БАЛЛОН/ХЛАМ В КОНТЕЙНЕР ВРАГА (PvP): замусоривание
+   инвентаря, если нет сортировки — занять слоты.
+
+## ПУТЬ 2: ItemComponent.Combine (ItemComponent:547) — ПЕРЕКАЧКА CONDITION
+canBeCombined && same prefab && both >0% && оба <100%:
+  transferAmount = min(item.Condition, this.MaxCondition - this.Condition)
+  ПЕРЕЛИВАЕТ условие (топливо/кислород из чужого в свой).
+  Server НЕ проверяет CanClientAccess — только CanInteractWith обоих.
+  Практика: слей чужой кислородный баллон/бензин рядом → своё пополнилось,
+  чужое опустело. Гриф, но заметен.
+
+## ПУТЬ 3: НЕ-Контейнеры: false. Combine = только для Container/canBeCombined.
+Остальные ItemComponent → базовый return false.
+
+## НЕ РАБОТАЕТ / ОГРАНИЧЕНИЯ:
+- CharacterInventory живого НЕ-ступорящего игрока чужой команды → false
+  (IsInventoryAccessibleTo: OnlyIfIncapacitated=false для чужой команды)
+- GeneticMaterial — спец-логика, Combine запрещён для контейнеров
+- слот должен подходить slotRestrictions
+- оба предмета должны быть в 250ю (CanInteractWith)
+
+## ДРУГОЕ: TINKERING ЦИФРЫ (для талантов)
+Pump TinkeringSpeedIncrease = 4.0f (×5 скорость!)
+Fabricator/Deconstructor TinkeringSpeedIncrease = 2.5f (×3.5)
+Engine TinkeringForceIncrease = 1.5f (×2.5 force)
+Turret TinkeringPowerCostReduction = 0.2f (÷1.2 расход)
+Deconstructor TinkeringDamage = урон предмету при тинкер-разборе.
+Требуют AbilityFlags.CanTinker/CanTinkerFabricatorsAndDeconstructors —
+только через таланты ассистента/механика. На чужом сервере работает у тех,
+кто имеет таланты — юзер с talent-flood может.
+
+## CombineEventData — БОНУС: клиент после Combine создаёт событие
+#c.Character.CanInteractWith — оба могут. Ботам можно. Петы можно.
+
+## ПРИМЕР МОДУЛЯ (псевдокод): «GRANATE GIFT»
+onclick: если FocusedCharacter != null && IsKnockedDownOrRagdolled:
+  найти в моём инвентаре Throwable (гранату);
+  CombineEvent: EventType=4, u16 = targetID рюкзака друга →
+  сервер положит гранату ему в инвентарь. Он очнётся — бум.
