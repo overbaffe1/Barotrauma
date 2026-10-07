@@ -490,7 +490,7 @@ Barotrauma/BarotraumaServer/ServerSource/Networking/Primitives/Peers/Server/Lidg
 Barotrauma/BarotraumaServer/ServerSource/Networking/Primitives/Peers/Server/P2PServerPeer.cs,423,done,423
 Barotrauma/BarotraumaServer/ServerSource/Networking/Primitives/Peers/Server/ServerPeer.cs,412,done,412
 Barotrauma/BarotraumaServer/ServerSource/Networking/RespawnManager.cs,704,done,704
-Barotrauma/BarotraumaServer/ServerSource/Networking/ServerSettings.cs,637,done,637
+Barotrauma/BarotraumaServer/ServerSource/Networking/ServerSettings.cs,637,done,660
 Barotrauma/BarotraumaServer/ServerSource/Networking/Voip/VoipServer.cs,148,done,148
 Barotrauma/BarotraumaServer/ServerSource/Networking/Voip/VoipServerDecoder.cs,230,done,230
 Barotrauma/BarotraumaServer/ServerSource/Networking/Voting.cs,518,done,518

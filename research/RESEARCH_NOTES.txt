@@ -20290,3 +20290,37 @@ ReduceAfflictionOnAllLimbs(реальный id, Prefab.MaxStrength) = полно
 - «💊 FREE HEAL (Price=0)»: собирает GetAllAfflictions(), дедуп по Identifier,
   отправляет свои раны с Price=0 + HEAL. Малые пакеты, без оверфлоу.
 - SendClinicAddPending перегружен (price параметр).
+
+== ВОЛНА 604 — 🎁 ПЕРК-КАНАЛ открыт + EXTRA CARGO + LEVEL SEED ==
+
+## ГЕЙТ ПЕРКОВ (HasPermissionToChangePerks, ServerSettings.cs:133):
+перм ManageSettings ИЛИ (PvP: у твоей команды нет админа) ИЛИ
+**НИ У КОГО на сервере нет перма ManageSettings** — TRUE ДЛЯ ВСЕХ.
+Это РАЗВИТИЕ волны 571 (перми-сервера/ PvP): канал окончательно открыт.
+
+## SERVER_SETTINGS_PERKS формат (ReadPerks, :1436):
+VariableUInt32 count + uint32 UintIdentifier × count (Коалиция), потом
+то же для Сепаратистов. Сервер ЗАМЕНЯЕТ наборы целиком и вызывает
+SaveSettings + UpdateFlag(Properties) — перки применяются GameServer:2660
+(PerkCollection) при СЛЕДУЮЩЕМ старте: GiveTalentPointPerk (AddtionalTalentPoints
+всей команде), SpawnItemPerk (бесплатные предметы в трюм, ServerOnly-симуляция),
+UpgradeSubmarinePerk (+уровень апгрейдов), SubItemSwapPerk.
+ValidatedDisembarkPoints (7 очков дефолт) проверяется при СТАРТЕ —
+набор перков сам по себе НЕ гейтится очками, только лимит при старте!
+⇒ МОЖНО ставить любые перки до 7 суммарно; если перебор — старт фейлится
+(PerksExceedAllowance). MAX-стак = разумные 7 очков полезного.
+
+## SERVER_SETTINGS (свойства) гейт: ТОЛЬКО ManageSettings (жёсткий, :194).
+ExtraCargo (:1368): count + (Identifier, byte amount) — сервер спавнит
+CargoManager.DeliverItemsToSub при КАЖДОМ старте (GameServer:3167),
+лимиты 20 типов / 10 шт. LevelSeed (Misc|LevelSeed флаги = 6):
+added/removed mission types + TraitorDanger byte + string seed.
+
+## МОДУЛЬ: Crash Menu — новая группа «🎁 ПЕРКИ / EXTRA CARGO / СИД»:
+- ПЕРКИ MAX-стак: жадный поиск UintIdentifier по хинтам (talentpoint/spawn/
+  upgrade/sub/item/weapon/supply) через DisembarkPerkPrefab.Prefabs (публичный),
+  5 шт в обе команды. Слежу за 7 очками вручную (проверка при старте).
+- ПЕРКИ очистить (пустые наборы).
+- EXTRA CARGO ×10 типов (оружие/фулгур/опий) — спавн при каждом старте.
+- LEVEL SEED 666 (Misc|LevelSeed флаги = 6).
+Гейт-предупреждения во всех описаниях: перм ManageSettings у хоста = молча.

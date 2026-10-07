@@ -257,6 +257,49 @@ namespace CSHUB.Modules
             }
         };
 
+        private static readonly Method[] PerkMethods = new Method[]
+        {
+            new Method
+            {
+                Title = "🎁 ПЕРКИ: MAX стак (таланты+предметы)",
+                Desc =
+"НОВОЕ (604)! Перк-канал открывается САМ: если НИ У КОГО\n" +
+"на сервере нет перма ManageSettings — гейт TRUE для всех.\n" +
+"Ставит перки на СЛЕДУЮЩИЙ старт раунда: доп.очки талантов\n" +
+"всей команде (GiveTalentPointPerk) + бесплатные предметы\n" +
+"в трюм (SpawnItemPerk) + апгрейд сабы. Заполняет все 7 очков.\n\n" +
+"Потом кто угодно стартует раунд — перки применяются при спавне.",
+                Exec = ExecPerkMaxStack
+            },
+            new Method
+            {
+                Title = "🎁 ПЕРКИ: очистить",
+                Desc =
+"Обнуляет наборы перков обеих команд. Тот же гейт.\n" +
+"Полезно вернуть как было после экспериментов.",
+                Exec = ExecPerkClear
+            },
+            new Method
+            {
+                Title = "🎁 EXTRA CARGO: +10 типов бесплатно",
+                Desc =
+"SERVER_SETTINGS(Properties): сервер спавнит ExtraCargo В ТРЮМ\n" +
+"при КАЖДОМ старте раунда (GameServer:3167). Лимит 20 типов ×\n" +
+"10 шт. Гейт = ManageSettings ИЛИ никто не админ (кроме тебя).\n" +
+"Набор: штурм. винтовки, дробовики, фуллеритовые стержни.",
+                Exec = ExecExtraCargo
+            },
+            new Method
+            {
+                Title = "🎁 LEVEL SEED: сид уровня",
+                Desc =
+"SERVER_SETTINGS(Misc+LevelSeed): добавляет mission type и задаёт\n" +
+"КОНКРЕТНЫЙ сид следующего уровня (известные баг-сиды: двойные\n" +
+"пещеры, открытые руины, аномалии). Гейт как у перков.",
+                Exec = ExecLevelSeed
+            }
+        };
+
         private static readonly Method[] ExperimentalMethods = new Method[]
         {
             new Method
@@ -419,6 +462,8 @@ namespace CSHUB.Modules
                 AddMethods(CircuitMethods);
                 AddGroupHeader("⚠ ОСТАЛЬНЫЕ DoS / КРАШ ПРОЦЕССА", AccentColor);
                 AddMethods(OtherDosMethods);
+                AddGroupHeader("🎁 ПЕРКИ / EXTRA CARGO / СИД (гейт: никто не админ)", OkColor);
+                AddMethods(PerkMethods);
                 AddGroupHeader("🔧 ЭКСПЕРИМЕНТАЛЬНО / ПЕРМ / ОКНО", ExpColor);
                 AddMethods(ExperimentalMethods);
 
@@ -463,6 +508,7 @@ namespace CSHUB.Modules
             foreach (Method m in WorkingMethods) { yield return m; }
             foreach (Method m in CircuitMethods) { yield return m; }
             foreach (Method m in OtherDosMethods) { yield return m; }
+            foreach (Method m in PerkMethods) { yield return m; }
             foreach (Method m in ExperimentalMethods) { yield return m; }
         }
 
@@ -583,6 +629,8 @@ namespace CSHUB.Modules
             AddMethods(CircuitMethods);
             AddGroupHeader("⚠ ОСТАЛЬНЫЕ DoS / КРАШ ПРОЦЕССА", AccentColor);
             AddMethods(OtherDosMethods);
+            AddGroupHeader("🎁 ПЕРКИ / EXTRA CARGO / СИД (гейт: никто не админ)", OkColor);
+            AddMethods(PerkMethods);
             AddGroupHeader("🔧 ЭКСПЕРИМЕНТАЛЬНО / ПЕРМ / ОКНО", ExpColor);
             AddMethods(ExperimentalMethods);
         }
@@ -921,6 +969,130 @@ namespace CSHUB.Modules
 
             SendClinicHealPacket();
             return "FREE HEAL: " + list.Count + " ран с Price=0 — вылечен за 0 mk";
+        }
+
+        // ========================================================
+        //  🎁 ПЕРКИ (волна 604): SERVER_SETTINGS_PERKS
+        //  Гейт HasPermissionToChangePerks: перм ManageSettings, ИЛИ
+        //  в PvP — никто твоей команды не админ, ИЛИ вообще никто не админ.
+        //  Формат ReadPerks: VariableUInt32 count + uint32 id × count (x2 команд).
+        // ========================================================
+        private static uint? FindPerkId(string namePart)
+        {
+            try
+            {
+                foreach (DisembarkPerkPrefab p in DisembarkPerkPrefab.Prefabs)
+                {
+                    if (p == null) { continue; }
+                    // ищем по идентификатору (lowercase contains)
+                    if (p.Identifier.Value.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return p.UintIdentifier;
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static string WritePerkSets(List<uint> team1, List<uint> team2)
+        {
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS_PERKS);
+            msg.WriteVariableUInt32((uint)team1.Count);
+            foreach (uint id in team1) { msg.WriteUInt32(id); }
+            msg.WriteVariableUInt32((uint)team2.Count);
+            foreach (uint id in team2) { msg.WriteUInt32(id); }
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "перк-пакет отправлен (T1=" + team1.Count + ", T2=" + team2.Count + ")";
+        }
+
+        private static string ExecPerkMaxStack(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+
+            var t1 = new List<uint>();
+            var t2 = new List<uint>();
+            int filled = 0;
+            // жадно набиваем 7 очков известными полезными перками
+            foreach (string hint in new[] { "talentpoint", "spawn", "upgrade", "sub", "item", "weapon", "supply" })
+            {
+                uint? id = FindPerkId(hint);
+                if (id.HasValue && !t1.Contains(id.Value)) { t1.Add(id.Value); t2.Add(id.Value); filled++; }
+                if (filled >= 5) { break; }
+            }
+            // добиваем любыми найденными
+            if (filled < 5)
+            {
+                try
+                {
+                    foreach (DisembarkPerkPrefab p in DisembarkPerkPrefab.Prefabs)
+                    {
+                        if (p == null || t1.Contains(p.UintIdentifier)) { continue; }
+                        t1.Add(p.UintIdentifier); t2.Add(p.UintIdentifier);
+                        filled++;
+                        if (filled >= 5) { break; }
+                    }
+                }
+                catch { }
+            }
+            WritePerkSets(t1, t2);
+            return "MAX-стак перков: " + filled + " шт в обе команды (действует на след. старт). Гейт: никто не админ.";
+        }
+
+        private static string ExecPerkClear(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            return WritePerkSets(new List<uint>(), new List<uint>()) + " — перки очищены";
+        }
+
+        // ========================================================
+        //  🎁 EXTRA CARGO: SERVER_SETTINGS(Properties)
+        //  Формат: byte flags, VariableUInt32 count, per item: Identifier + byte amount,
+        //  byte monsterChanged+pad, BanList-хвост (пустой: 0 → false)
+        //  Упрощение: шлём только cargo-часть — сервер читает последовательно.
+        // ========================================================
+        private static string ExecExtraCargo(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+
+            string[] items =
+            {
+                "assaultrifle", "shotgun", "revolver", "harpoon", "smg",
+                "fulgurium", "thermobaric", "oxygen-tank", "welding-fuel", "opium"
+            };
+            var cargo = new List<(string id, byte amount)>();
+            foreach (string it in items) { cargo.Add((it, 10)); }
+
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS);
+            msg.WriteByte((byte)1);                       // NetFlags.Properties
+            msg.WriteVariableUInt32((uint)cargo.Count);
+            foreach (var (id, amount) in cargo)
+            {
+                msg.WriteIdentifier(id.ToIdentifier());
+                msg.WriteByte(amount);
+            }
+            msg.WriteUInt32(0);                           // net properties count = 0
+            msg.WriteBoolean(false); msg.WritePadBits();  // monster settings
+            msg.WriteVariableUInt32(0);                   // BanList: пусто
+
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "EXTRA CARGO: " + cargo.Count + " типов × 10 спавнится при каждом старте (гейт: никто не админ)";
+        }
+
+        private static string ExecLevelSeed(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            IWriteMessage msg = new WriteOnlyMessage();
+            msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS);
+            msg.WriteByte((byte)6);                       // NetFlags.Misc | NetFlags.LevelSeed (2|4)
+            msg.WriteIdentifier("monster".ToIdentifier()); // added mission type
+            msg.WriteIdentifier(Identifier.Empty);         // removed mission type
+            msg.WriteByte(1);                              // TraitorDanger +0
+            msg.WriteString("666");                        // LevelSeed = баг-сид
+            GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            return "LEVEL SEED = 666 задан (след. уровень с баг-сідом). Гейт: никто не админ.";
         }
 
         private static string ExecSegmentTable(int n)

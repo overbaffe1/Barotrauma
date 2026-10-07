@@ -63,6 +63,10 @@
     [
       1,
       637
+    ],
+    [
+      1368,
+      1390
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Events/EventManager.cs": [
