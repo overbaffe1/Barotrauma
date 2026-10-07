@@ -20121,3 +20121,36 @@ CoroutineHandle internal (CS0246), LINQ .Where (урок 557), OnToggle/IsEnable
 3) После рестарта: загрузка кампании = NaN в узлах цепи → глюки/краши.
 ГЕЙТЫ: NaN = CanClientAccess ЦБ; фиксация = ManageRound (соло/перм/окно 586).
 ★★★ ТОЛЬКО СВОЯ ТЕСТ-КАМПАНИЯ — единственный класс багов, убивающий ПОСЛЕ рестарта.
+
+== ВОЛНА 598 — Crash Menu v4: ДИАГНОЗ «0 реакции» + рабочий путь CircuitBox API ==
+
+## ДИАГНОЗ (почему v3 молчал)
+1) Сырые entity-пакеты: сервер SKIPает событие если ID != ожидаемый+1
+   (ServerEntityEventManager.Read: без лога, тихо). Геймплей постоянно
+   двигает счётчик — «зеркальный» ID из синка устаревал → всё скипалось.
+2) DoS на соло невидим физически (батч-дроп молчит, лагать некому).
+
+## ФИКСЫ v4
+1) РЕАЛЬНЫЙ счётчик: ClientEntityEventManager.ID (private UInt16, поле
+   публичного GameClient.EntityEventManager) через reflection → +1.
+2) ОКНО ID: один пакет = N событий подряд (start = real-8). Сервер: события
+   до совпадения скипает, после совпадения ОБРАБАТЫВАЕТ (цепочка firstEventID+i)
+   → до 40 исполнений payload с одного пакета при одном совпадении.
+3) ★ ГЛАВНОЕ — CircuitBox через ПРЯМОЙ КЛИЕНТСКИЙ API (эквивалент РАБОЧЕГО
+   Lua-скрипта юзера): AddLabel(Vector2) / RenameLabel(label,color,NetLimitedString,NetLimitedString) /
+   AddWire(a,b) — публичные методы клиент-партиала, внутри CreateClientEvent
+   (правильные ID гарантированы, сервер обрабатывает всегда).
+   CircuitBoxLabelNode перечисляется из public List Labels; Inputs/Outputs —
+   публичные ImmutableArray; NetLimitedString internal ctor string (internals
+   доступны LuaCs — v2 с internal NetCircuitBoxHeader уже компилилась).
+   Цель: Character.Controlled.SelectedItem (как в Lua) → GetComponent<CircuitBox>.
+4) ГЛОБАЛЬНЫЙ множитель «СКОЛЬКО РАЗ»: панель вверху окна, парсится перед
+   каждым EXEC (1..10000). DoS-пакеты шлются ×N; entity — пакуются в eventCount;
+   LabelFlood/AddWire — цикл с капом.
+5) DescriptionTag: сеттер И raw-ChangeProperty (RangedInteger 3 + Identifier
+   "DescriptionTag" + String) с окном — два независимых пути.
+
+## МЕХАНИКА CreateClientEvent (доказательство правильности пути)
+Клиент AddLabel → CreateClientEvent(CircuitBoxAddLabelEvent) → внутренняя
+очередь с internal ID (точно ожидаемый сервером) → сервер AddLabelInternal +
+CreateServerEvent broadcast. Тот же канал, что ванильный UI ЦБ.

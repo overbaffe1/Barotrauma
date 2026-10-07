@@ -1215,7 +1215,7 @@ Barotrauma/BarotraumaShared/SharedSource/Utils/MTRandom.cs,149,done,149
 Barotrauma/BarotraumaShared/SharedSource/Utils/Md5Hash.cs,174,done,174
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs,17,done,17
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs,42,done,42
-Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetLimitedString.cs,22,done,22
+Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetLimitedString.cs,22,done,30
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs,6,done,6
 Barotrauma/BarotraumaShared/SharedSource/Utils/Rand.cs,138,done,138
 Barotrauma/BarotraumaShared/SharedSource/Utils/ReadOnlyListExtensions.cs,26,done,26
