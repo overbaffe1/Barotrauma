@@ -123,16 +123,16 @@ namespace CSHUB.Modules
         {
             new Method
             {
-                Title = "💰 CLINIC OVERFLOW — печатный станок (+2.1B)",
+                Title = "💰 CLINIC OVERFLOW — 1 ПАКЕТ (+2.1B)",
                 Desc =
-"НОВОЕ (600)! GetTotalCost суммирует КЛИЕНТСКИЙ Price (ushort)\n" +
-"в int: ~32770 аффликций × 65535 → ПЕРЕПОЛНЕНИЕ В МИНУС →\n" +
-"HEAL делает TryDeduct(-2.1B) = +2.1 МИЛЛИАРДА mk тебе.\n\n" +
-"EXEC: шлёт N пакетов ADD_PENDING ×3000 аффликций (Price=65535,\n" +
-"несуществующий identifier, фейковый CharacterInfoID — лечение\n" +
-"ничего не лечит, только считает цену). НУЖНО ≥11 ПАКЕТОВ,\n" +
-"потом жми «HEAL — получить деньги».\n" +
-"Условие: в раунде, кампания. Rate limit 20/5с — ок.",
+"НОВОЕ (600/601)! ОДИН пакет = ОДИН NetCrewMember с 33000\n" +
+"аффликций × Price=65535 → GetTotalCost(int) переполняется\n" +
+"сразу → totalCost ≈ -2.13B.\n\n" +
+"ПАКЕТ ~400KB — Lidgren сам фрагментирует (норм). Rate limit\n" +
+"съедает 1 из 20. «N раз» = доп. пакетов (после HEAL очередь\n" +
+"чистится — следующий цикл = снова OVERFLOW+HEAL).\n\n" +
+"ПОРЯДОК: OVERFLOW ×1 → HEAL → баланс += ~2.1B.\n" +
+"Если гигантский пакет потерялся — жми OVERFLOW ещё раз.",
                 Exec = ExecClinicOverflow
             },
             new Method
@@ -711,8 +711,10 @@ namespace CSHUB.Modules
             if (!InRound()) { return "нужно быть в раунде (кошелёк персонажа)"; }
             if (GameMain.GameSession?.Campaign == null) { return "нужна кампания"; }
 
+            // ОДИН пакет самодостаточен: 33000 × 65535 = 2,162,655,000 →
+            // int-wrap → totalCost = -2,132,312,296 (порог оверфлоу 32770).
             int packets = Math.Min(Math.Max(n, 1), 12);
-            int perPacket = 3000;
+            int perPacket = 33000;
             for (int p = 0; p < packets; p++)
             {
                 var afflictions = new MedicalClinic.NetAffliction[perPacket];
@@ -737,9 +739,8 @@ namespace CSHUB.Modules
                 ((INetSerializableStruct)member).Write(msg);
                 GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
             }
-            long total = (long)packets * perPacket * 65535;
-            return "ADD_PENDING ×" + packets + " (" + (packets * perPacket) +
-                   " аффликций, сумма " + total + " → int overflow при ≥32770). Теперь жми HEAL!";
+            return "ADD_PENDING ×" + packets + " (по " + perPacket +
+                   " аффликций в ОДНОМ NetCrewMember — каждый пакет сам даёт ≈ -2.13B). Теперь жми HEAL!";
         }
 
         private static string ExecClinicHeal(int n)

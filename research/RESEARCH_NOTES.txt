@@ -20217,3 +20217,18 @@ Rate limit 20/5с — 11-12 пакетов проходят.
   ReduceAffliction skip). packet ~48KB (Lidgren fragmentation reliable).
 - HEAL: 1 пакет → +2.1B. Порядок: OVERFLOW (n=12) → HEAL.
 - Группа переименована в «💰/☣ CIRCUIT BOX + ПЕЧАТНЫЙ СТАНОК».
+
+== ВОЛНА 601 — CLINIC OVERFLOW: ОДИН пакет (полтверждение юзера: 11 хватило) ==
+
+## ЮЗЕР-КОНФИРМ: Overflow+HEAL РАБОТАЕТ (хватило 11 пакетов × 3000).
+## Оптимизация: ОДИН пакет самодостаточен.
+Математика: порог оверфлоу = 32770 × 65535 = 2,147,581,950 > int.MaxValue →
+-2,147,385,346. ArrayMaxSize default = 65535 аффликций на ОДНОГО NetCrewMember.
+⇒ 1 пакет = 1 NetCrewMember × 33000 аффликций × Price 65535:
+   сумма 2,162,655,000 → int-wrap → totalCost = -2,132,312,296 (~+2.13B).
+Размер пакета: ~33000 × 12 байт (Identifier u32 + Strength 16b + VitalityDecrease
+i32 + Price 16b) ≈ 400KB — Lidgren фрагментирует сам, DoSProtection считает
+ПАКЕТЫ (=1), rate limit 1 из 20. Если гигантский пакет теряется (редко) —
+фоллбек: старые 11 лёгких пакетов или повторить гигант.
+После HEAL очередь чистится → цикл = OVERFLOW+HEAL заново (n = число циклов).
+Побочка сервера: PendingHeals хранит 33000 структур (~1-2MB) до heal.
