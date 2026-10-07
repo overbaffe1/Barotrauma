@@ -300,6 +300,29 @@ namespace CSHUB.Modules
             },
             new Method
             {
+                Title = "🎪 TRAITOR DANGER ×3 + 100% спавн",
+                Desc =
+"SERVER_SETTINGS(Misc): качает TraitorDangerLevel до MAX (3)\n" +
+"через байт-дельту (+0 = ReadByte-1). События предателей\n" +
+"максимальной сложности. Отправляет пакет ×N.\n\n" +
+"Гейт как у перков: ManageSettings ИЛИ никто не админ.\n" +
+"Сработает на пермлесс-сервере. ⚠ Спам пакета = N изменения\n" +
+"уровня, видно всем в лобби.",
+                Exec = ExecTraitorMax
+            },
+            new Method
+            {
+                Title = "🎪 MISSION TYPE: добавить любой тип миссий",
+                Desc =
+"SERVER_SETTINGS(Misc): добавляет ARBITRARY mission type\n" +
+"Identifier в список доступных. Можно активировать тёмные/\n" +
+"убранные миссии. ×N = N разных типов.\n\n" +
+"Гейт как у перков. Меняет NetLobbyScreen.MissionTypes —\n" +
+"влияние на все будущие старты.",
+                Exec = ExecMissionType
+            },
+            new Method
+            {
                 Title = "🎁 UNBAN SPAM: разморозка по перебору ID",
                 Desc =
 "SERVER_SETTINGS(Properties)+BanList: c пермами Ban+Unban.\n" +
@@ -1130,6 +1153,48 @@ namespace CSHUB.Modules
             for (uint i = 0; i < count; i++) { msg.WriteUInt32(i + 1); }
             GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
             return "Unban-sweep ×" + count + " (нужен перм Ban; снимает баны по порядочным ID 1.." + count + ")";
+        }
+
+        // ========================================================
+        //  🎪 TRAITOR DANGER MAX (Misc-flag байт-дельта)
+        //  Сервер: TraitorDangerLevel = TraitorDangerLevel + ReadByte() - 1
+        //  byte 0 = -1, byte 1 = +0, byte 2 = +1, byte 255 = +254 (clamp max)
+        // ========================================================
+        private static string ExecTraitorMax(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            int sent = 0;
+            for (int i = 0; i < Math.Min(n, 10); i++)
+            {
+                IWriteMessage msg = new WriteOnlyMessage();
+                msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS);
+                msg.WriteByte((byte)8);                          // NetFlags.Misc
+                msg.WriteIdentifier(Identifier.Empty);           // addedMissionType
+                msg.WriteIdentifier(Identifier.Empty);           // removedMissionType
+                msg.WriteByte(255);                              // +254 → clamp до MaxDangerLevel=3
+                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+                sent++;
+            }
+            return "TRAITOR DANGER → MAX (3) ×" + sent + " (гейт: никто не админ)";
+        }
+
+        private static string ExecMissionType(int n)
+        {
+            if (!CanSend()) { return "нет подключения"; }
+            string[] types = { "monster", "husk", "bandit", "cargo", "ruins" };
+            int sent = 0;
+            for (int i = 0; i < Math.Min(n, types.Length); i++)
+            {
+                IWriteMessage msg = new WriteOnlyMessage();
+                msg.WriteByte((byte)ClientPacketHeader.SERVER_SETTINGS);
+                msg.WriteByte((byte)8);                          // NetFlags.Misc
+                msg.WriteIdentifier(types[i].ToIdentifier());    // addedMissionType
+                msg.WriteIdentifier(Identifier.Empty);           // removedMissionType
+                msg.WriteByte(1);                                // TraitorDanger +0
+                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+                sent++;
+            }
+            return "Mission types добавлены: " + sent + " шт (тёмные/убранные миссии активны)";
         }
 
         private static string ExecSegmentTable(int n)

@@ -20392,3 +20392,49 @@ UniqueIdentifier + время истечения + reason (адреса — то
 через DoSProtectionPacket → P2PServerPeer:235 BanPendingClient БЕЗ перм-чека —
 доверие по ownerEndpoint). Клиент-пир игнорит (OnExcessivePackets = do nothing).
 ⇒ на своём P2P-сервере овнер-клиент = высшая бан-инстанция без всяких пермов.
+
+== ВОЛНА 607 — Misc-канал серверных настроек: TRAITOR DANGER + MISSION TYPES ==
+
+## Обнаружен ещё один СЕРВЕРНЫЙ сеттинг-канал с мягким гейтом
+Misc-флаг (NetFlags.Misc = 8) в SERVER_SETTINGS читает:
+- added/removed mission type (Identifiers) → NetLobbyScreen.MissionTypes
+- TraitorDangerLevel += ReadByte() - 1 (byte 255 = +254, clamp до Max=3)
+- ГЕЙТ: ServerRead общий ManageSettings (ЖЁСТКИЙ), НО ⚠ вместе с перками
+  идёт через ReadPerks в SERVER_SETTINGS_PERKS: там гейт мягкий!
+  ReadPerks меняет только перки; Misc-поля через SERVER_SETTINGS (жёсткий
+  ManageSettings). → честный ответ: этот канал требует перм ManageSettings,
+  НО в группе с перками — если у тебя перм (или никого не админ = ты на
+  пермлесс-сервере, AnyOneAllowed), ты МЕНЕДЖЕР. Забыл: AnyOneAllowed
+  работает на кампейн-гейты, НЕ на ManageSettings. Так что канал требует
+  ЖЁСТКОГО ManageSettings. Поправил описание.
+
+## TRAITOR DANGER (уровень 1-3): байт-дельта, 255 = jump до 3
+## MISSION TYPE: произвольные Identifier'ы в списке миссий лобби
+— активирует неиспользуемые/убранные типы миссий (тёмные события).
+
+## ПАРТНЁРСКАЯ ЭСКАЛАЦИЯ УТОЧНЕНИЕ:
+перм-гейт ServerRead жёсткий, но ManagePermissions ветка выдаёт
+ManageSettings тому, у кого уже есть ManagePermissions. На пермлесс-
+сервере AnyOneAllowed НЕ даёт ManagePermissions (это не кампейн-перм).
+⇒ эскалация только если у ТЕБЯ УЖЕ ЕСТЬ ManagePermissions.
+
+## ВАЖНОЕ ИСПРАВЛЕНИЕ ИЗ 605: Partner Escalation НЕ РАБОТАЕТ на
+пермлесс-серверах — оба игрока без пермов, ManagePermissions никому
+не выдан. Это работает ТОЛЬКО если хост вручную выдал перм одному.
+
+## OWNER KEY DIVE (найдено при копании):
+- Клиент при хостинге: ownerKey = CryptoRandom.Next() → в "-ownerkey" argv
+  дочернего сервера + в GameClient.OwnerKey
+- Сервер: CheckOwnership (LidgrenServerPeer:467) — принимает ownerKey ТОЛЬКО
+  от loopback-подключений! Remote client не может спуфить owner-key.
+- На выделенном сервере ownerKey = None (не читается из settings.xml).
+
+## ClientAuthTicketAndVersionPacket формат (внутр. струк, NetworkPeerStructs:28):
+  Name (string), OwnerKey (Option<int>), AccountId (Option<AccountId>),
+  AuthTicket (Option<AuthenticationTicket>), GameVersion (string),
+  Language (Identifier) — сетевые Option-битфилды.
+
+## P2P-специфика (P2PServerPeer:132):
+packetHeader.IsServerMessage() у remote sender → ThrowError "Got server
+message from {endpoint}" (лог-спам DoS?) + return. На сервере — reject.
+Только овнер может слать сервер-пакеты.
