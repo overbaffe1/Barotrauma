@@ -20709,3 +20709,58 @@ CircuitBox MoveComponent MoveAmount = raw Vector2 без клампов.
 
 ## NEW BUTTONS (не добавляю т.к. отдельные модули уже есть в PropertyEditor):
 Кнопки нет — тинкер-данные идут в netProperties уже (NET PROPERTIES).
+
+== ВОЛНА 613 — LABEL.* ЛОКАЛИЗАЦИЯ + MaxOutputLength Networking Issue ==
+
+## ОТВЕТ НА ВОПРОС ЮЗЕРА (label.onlinelabel)
+`label.<что-то>` = локализационный тег Barotrauma i18n.
+Разрабы пишут В СИГНАЛ/В ЛАБЕЛ тег вместо прямого текста → клиент
+вызывает TextManager.Get("label.onlinelabel") при отрисовке → показывает
+текст НА ЯЗЫКЕ ИГРОКА (русский видит "Онлайн", англ "Online").
+TagLString (TagLString.cs) → ищет в TextPacks (Content/Texts/*.xml).
+Если тега нет → fallback показывает саму строку "label.onlinelabel".
+⇒ ЭТО НЕ ЭКСПЛОЙТ, это i18n-механика. Чтоб сломать — ничего.
+
+## ГДЕ РАБОТАЕТ TextManager.Get на клиенте:
+- CircuitBoxLabelNode: TextManager.Get(text.Value).Fallback(text.Value)
+  → ANY label на CircuitBox превращается в локализованный текст
+- CustomInterface кнопки: TextManager.Get(signal).Fallback(signal)
+  → сигнал выводится как текст кнопки (можно локализовать)
+- Terminal: частично (LineStartSymbol + TextManager.Get(input))
+- Connection tooltip: TextManager.GetWithVariable(textTag, "[signal]", ...)
+  ⇒ CanInteractWith клик по любому проводу показывает локализованный тултип
+
+## ЧТО МОЖНО ПОКАЗАТЬ ЧЕРЕЗ LABEL.<XXX>:
+- любые теги из Content/Texts/English/EnglishVanilla.xml (10000+ строк)
+- локализованные названия предметов, монстров, диагнозов, аффликций
+- названия серверных событий, миссий, перков
+- тексты для диалогов NPC
+⇒ НЕ чит, но на чужом терминале можно показывать ОФИЦИАЛЬНЫЕ
+игровые тексты (интерфейс подделать можно). Смешно, но не баг.
+
+## РЕАЛЬНЫЙ HINT ОТ РАЗРАБОВ (поиск exploitable):
+Разрабы пишут В КОДЕ ОПИСАНИЕ MaxOutputLength:
+"Warning: Large values can lead to large memory usage or networking issues."
+MaxOutputLength = [Editable] InGameEditable на SignalCheck/Equals/Boolean/
+Concat/MotionSensor/RegExFind/StringComponent. Дефолт 200.
+⇒ ЛЮБОЙ клиент с CanClientAccess может выставить MaxOutputLength в
+INT.MAX → строить цепочки Concat → каждая итерация.Append больше строк
+→ server-side memory leak через обычный интерфейс.
+⇒ НО: это валидно только если у тебя уже CanClientAccess, что на чужом
+сервере = твой предмет или рядом 250ю.
+
+## ЧТО ТАКОЕ SIGNAL:
+Signal = struct { string value, int stepsTaken, Character sender,
+Item source, float power, float strength, double CreationTime }.
+value — обычный string, никаких спец-полей, никаких бинарных данных.
+Полиморфизма нет — на любое поле можно послать произвольную строку.
+
+## RegExFindComponent — ЗАЩИЩЁН (сначала думал можно ReDoS):
+timeout = 50ms, MaxTimeOutsInARow = 3, потом self-deactivate →
+выдаёт "TIMEOUT". RegexMatchTimeoutException специально перехвачен.
+⇒ ReDoS через сигнал НЕ работает.
+
+## ЧТО РЕАЛЬНО МОЖЕТ СЛОМАТЬ:
+- Label/Concat/SignalCheck с MaxOutputLength=INT.MAX + сеть памяти
+- Уже известные: NET PROPERTIES (perm), OVERFLOW CLINIC (в раунде),
+  FABRICATOR recipeHash throw (CanAccess), EVENTMANAGER option (диалог)
