@@ -396,7 +396,7 @@ Barotrauma/BarotraumaServer/ServerSource/Camera.cs,204,done,204
 Barotrauma/BarotraumaServer/ServerSource/Characters/Character.cs,101,done,101
 Barotrauma/BarotraumaServer/ServerSource/Characters/CharacterInfo.cs,107,done,107
 Barotrauma/BarotraumaServer/ServerSource/Characters/CharacterNetworking.cs,832,done,832
-Barotrauma/BarotraumaServer/ServerSource/Characters/Health/HealingCooldownServer.cs,51,done,51
+Barotrauma/BarotraumaServer/ServerSource/Characters/Health/HealingCooldownServer.cs,51,done,52
 Barotrauma/BarotraumaServer/ServerSource/Characters/Limb.cs,70,done,70
 Barotrauma/BarotraumaServer/ServerSource/CircuitBox/CircuitBoxConnection.cs,16,done,16
 Barotrauma/BarotraumaServer/ServerSource/DebugConsole.cs,2840,done,2865

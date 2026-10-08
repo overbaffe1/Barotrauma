@@ -20764,3 +20764,60 @@ timeout = 50ms, MaxTimeOutsInARow = 3, потом self-deactivate →
 - Label/Concat/SignalCheck с MaxOutputLength=INT.MAX + сеть памяти
 - Уже известные: NET PROPERTIES (perm), OVERFLOW CLINIC (в раунде),
   FABRICATOR recipeHash throw (CanAccess), EVENTMANAGER option (диалог)
+
+== ВОЛНА 614 — EventType 6-12 мертвы + HealingCooldown + Quality + Wire nodes ==
+
+## КРИТИЧЕСКОЕ ОТКРЫТИЕ: EventTypes 5-12 СЕРВЕР ИГНОРИРУЕТ ПОЛНОСТЬЮ
+Item.ServerEventRead switch (Item.cs:194-244) обрабатывает ТОЛЬКО:
+  ComponentState(0), InventoryState(1), Treatment(2), ChangeProperty(3), Combine(4)
+EventTypes Status(5), AssignCampaignInteraction(6), ApplyStatusEffect(7),
+Upgrade(8), ItemStat(9), DroppedStack(10), SetHighlight(11), SwapItem(12) —
+НЕ В SWITCH → НЕ ОБРАБАТЫВАЮТСЯ СЕРВЕРОМ (silent drop).
+⇒ ВСЕ обновления статов/качества/подсветки идут ТОЛЬКО server→client.
+⇒ НЕВОЗМОЖНО: подделать качество, статы, выделение, свап предметов через пакеты.
+Значит Client-специфичные обработки (UpgradeEventData, ItemStatEventData, etc.)
+в ItemEventData.cs — server WOULD read via different path if needed.
+
+## HEALING COOLDOWN — правильно сделано (не обойти):
+HealingCooldownServer.cs: static Dictionary<Client, DateTimeOffset>,
+CooldownDuration = 0.4f секунды. IsOnCooldown ДО ApplyTreatment,
+SetCooldown СРАЗУ после первой обработки. RemoveExpired удаляет истёкшие.
+⇒ ЛЕЧЕНИЕ rate-limited 2.5 хода/с на клиента. Пропустить нельзя —
+IsOnCooldown проверяется ДО CanInteractWith(targetCharacter) и до
+CharacterHealth manipulation.
+
+## TREATMENT — применяет эффекты:
+  ic.ApplyStatusEffects(conditionalActionType, 1.0f, character, targetLimb, useTarget: character, user: user);
+  ic.ApplyStatusEffects(ActionType.OnUse, 1.0f, ...);
+  + CheckTalents(AbilityEffectType.OnApplyTreatment)
+  + ic.DeleteOnUse → Spawner.AddItemToRemoveQueue
+Гейты:
+  CanInteractWith(this) — 250ю
+  HealingCooldown.IsOnCooldown(c) — 0.4s
+  FindEntityByID → is Character targetCharacter
+  targetCharacter != c.Character && SelectedCharacter != targetCharacter → break
+  ⇒ Лечить можно ТОЛЬКО того, кто СЕЙЧАС Selected (ты на него навёл и открыл
+  health окно). Странно, но правильно.
+
+## QUALITY: кламп на клиенте 0-3 (MaxQuality=3)
+  WriteRangedInteger(Quality, 0, MaxQuality) — сервер пишет.
+  Client ReadRangedInteger(0, MaxQuality) — клиент читает.
+  Client НЕ может послать Quality серверу (EventType.ItemStat не обрабатывается).
+  ⇒ Качество полностью сервер-контролируемое. Нет эксплойта.
+
+## WIRE NODES: лимиты из ванили
+  const int MaxNodeCount = 255, MaxNodesPerNetworkEvent = 30.
+  Client: ReadRangedInteger(0, Math.Ceiling(255/30)) + ReadRangedInteger(0, 30)
+  Server: nodeCount = ReadByte (0..255 — совпадает), nodes.Add/RemoveRange.
+  ПАМЯТЬ: List<Vector2> nodes — 255 нод × 8 байт = 2KB на провод.
+  Не критично но много проводов × 255 нод = рендер-лаг на клиентах.
+
+## ИТОГ ДНЯ: никаких новых эксплойтов. Всё важное уже клампнуто,
+верифицировано, или использует сервер-сайд только поле.
+
+## НЕРАЗОБРАННЫЕ СИСТЕМЫ (остались):
+- Pets (PetBehavior, LoadPets)
+- Respawn shuttle (RespawnManager round-based, WaitForNextRoundRespawn)
+- BallastFlora (ISerializableEntity but no ServerEventRead → server-only)
+- KarmaManager детально (все 32 netProperties)
+- OrderChatMessage deep-dive (AllowInFriendlySubs, TargetCharactersInOtherSubs)
