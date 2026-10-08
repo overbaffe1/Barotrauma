@@ -21132,3 +21132,95 @@ if (GetUnlockedTalentsInTree().Contains(id)) return true;
 может быть добавлен БЕЗОГРАНИЧНО через refundtalents StatusEffect в XML.
 Спам/мод-контент может дать бесконечные refunds. На ванильном сервере нет
 refund-эффектов, но моды могут.
+
+== ВОЛНА 620 — ОТВЕТЫ ЮЗЕРУ: 617 норм, Clinic CharacterInfoID без перебора, Endocrine Booster ==
+
+## ВОЛНА 617 — норм тема (была прервана, доделываю):
+**Character.ServerEventRead (19 EventTypes — сервер обрабатывает 5):**
+- 0 InventoryState → Inventory.ServerEventRead (перми через CanAccessInventory)
+- 2 Status → Kill() если IsIncapacitated (САМОУБИЙСТВО — клиент может)
+- 3 Treatment → CPR анимация (c.Character != this гейт — только своё)
+- 11 UpdateTalents → GiveTalent ×N (CanManageTalents — свой или ManageBotTalents)
+- 18 ConfirmTalentRefund → RefundTalents (свой only)
+Остальные 14: Control, SetAttackTarget, ExecuteAttack, AssignCampaignInteraction,
+ObjectiveManagerState, TeamChange, AddToCrew, ★UpdateExperience, ★UpdateSkills,
+★UpdateMoney, ★UpdatePermanentStats, RemoveFromCrew, LatchOntoTarget,
+UpdateTalentRefundPoints — ИГНОРИРУЮТСЯ СЕРВЕРОМ.
+UpdateExperience/Money/Skills/PermanentStats — все только через server-side
+вызовы (KarmaManager, ConsoleCommand, MissionReward). Клиентский пакет ничего
+не делает. Правильно реализовано разработчиками.
+
+## ⚡ Repairable ServerEventRead: ТИНКЕР НЕДОСТУПЕН ПО СЕТИ
+FixActions: None=0, Repair=1, Sabotage=2, Tinker=3.
+ServerEventRead: `ReadRangedInteger(0, 2)` — range ТОЛЬКО 0-2!
+⇒ Tinker (3) физически не может быть прочитан из пакета.
+⇒ Tinker доступен ТОЛЬКО когда Repairable.Update вызывает StartRepairing
+напрямую (не по сети). Правильно реализовано.
+RepairBoost: QTESuccess → item.Condition += DoS*3. Требует CurrentFixer!=null
+(то есть уже Repair был запущен). Клиент может апгрейдить Condition до max
+спамом пакета. CanClientAccess = свой/рядом 250ю.
+
+## ⚡ PARTNER ESCALATION через UpdateTalents
+Каждый GiveTalent → активирует CharacterAbilityGroup → ApplyOnRoundStart →
+- CharacterAbilityModifyStatToSkill: даёт статы с множителем (без клампа)
+- CharacterAbilityGiveStat: даёт статы напрямую
+- GiveTalentInfo в StatusEffect: даёт талант
+⇒ Talent Flood = не только таланты, но и СТЕКИ статов от каждого таланта.
+Каскад: 1 талант → активирует эффект → даёт ещё стат → активирует другой
+эффект → ... Бесконечная рекурсия если мод-контент скомпонован неправильно.
+
+## 🩹 MEDICAL CLINIC — CharacterInfoID без перебора:
+CharacterInfo.idCounter — **static ushort, начинается с 1** (не 90000!).
+CharacterInfo.cs:323: `private static ushort idCounter = 1;`
+CharacterInfo.cs:759: `ID = idCounter; idCounter++;`
+⇒ ID = порядковый номер в кампании, идёт с 1 и растёт.
+⇒ **Нет перебора** — просто по порядку 1,2,3,4...
+⇒ Твоя цена лечения скорее всего 1-3 (первые члены экипажа).
+Можно перебрать через ADD_PENDING с ID=1 и посмотреть что ответит сервер
+в ServerSend (если ID существует, сервер ответит). Прямой путь: локально
+изучай CharacterInfo через Reflect на своём клиенте (перс. ID твой).
+
+## 🎯 Endocrine Booster — БЕСПЛАТНЫЕ ТАЛАНТЫ (вопрос юзера)
+Таланты вне дерева хранятся в `UnlockedTalents` но фильтруются через
+`GetUnlockedTalentsInTree()`:
+  → возвращает только таланты, чей ID входит в JobTalentTrees[job].TalentIsInTree
+  ⇒ таланты вне дерева (Endocrine Booster, GiveTalentInfo StatusEffect)
+    НЕ считаются в бюджете GetTotalTalentPoints()!
+
+КАК ДАТЬ СЕБЕ Endocrine-таланты (без пермов!):
+1) Через мед. айтем: LoadOut item с StatusEffect `<giveTalent ... talentidentifiers="..."/>`
+2) Через сюжетный NPC/бой: любые StatusEffect при уроне
+3) Через `ApplyTreatment` — предмет с UseInHealthInterface=true и GiveTalentInfo
+   в StatusEffect OnUse → лечишь друга → ему даётся талант вне дерева
+4) **КРИТИЧНО**: `TalentTree.IsViableTalentForCharacter` просто return false если
+   не в дереве. Но GiveTalent() вызывается напрямую в GiveTalentInfo коде →
+   работает ВСЕГДА для вне-дерева талантов.
+⇒ БЕЗ ограничений по очкам! Даю себе ЛЮБЫЕ таланты (даже чужих классов)
+через MedicalClinic или GiveTalentInfo XML.
+Клиент → MEDICAL пакет ADD_PENDING с пейлоадом → сервер применяет.
+
+## МОДУЛЬ (не писал, но готов): MedicalClinic Endocrine Exploit
+- ADD_PENDING с CharacterInfoID = свой ID + NetAffliction любое
+- StatusEffect OnUse содержал GiveTalentInfo с чужими классами талантами
+- Можно добавить себе таланты CAPTAIN даже играя ассистентом
+
+## ПРОВЕРКА: Talents Unlock вне дерева работают?
+Дa, код CharacterAbilityGiveTalent.cs вызывает `GiveTalent(TalentPrefab)` напрямую,
+проверок на Job нет. TalentPrefab из пакета.
+
+## ApplyTreatment и "отмена лечения":
+ApplyTreatment вызывает:
+  ic.ApplyStatusEffects(conditionalActionType, 1.0f, character, targetLimb, useTarget: character, user: user);
+conditionalActionType = OnSuccess ИЛИ OnFailure (50/50 от DegreeOfSuccess(user)).
+Зависит от скиллов! Если skill=0 → DegreeOfSuccess=0 → OnFailure.
+Аффликции типа "surgicalwound" накладываются через StatusEffect OnFailure.
+⇒ МОЖНО НАВРЕДИТЬ врачу с низким скиллом — аффликция сама наложится.
+Потом клиника может вылечить это. Обратной операции нет (кроме REMOVE_PENDING).
+
+## КАК УЗНАТЬ ЧУЖОЙ CharacterInfoID (реальный ответ юзеру):
+1) REQUEST_PENDING → сервер пришлёт NetCollection<NetCrewMember> со всеми
+   CharacterInfoID в списке (если есть pending heals)
+2) ADD_PENDING с ID от 1 до 100 → сервер отвечает с NetCollection — если
+   добавлен в очередь, ID существует. Binary search = быстро находит.
+3) Мой тест 90000 был примером — реально ID идут с 1 и растут по мере
+   найма/смерти/нового экипажа.
