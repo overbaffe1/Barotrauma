@@ -20654,3 +20654,58 @@ onclick: если FocusedCharacter != null && IsKnockedDownOrRagdolled:
   найти в моём инвентаре Throwable (гранату);
   CombineEvent: EventType=4, u16 = targetID рюкзака друга →
   сервер положит гранату ему в инвентарь. Он очнётся — бум.
+
+== ВОЛНА 612 — ПОЛНЫЙ СПИСОК ComponentState-гейтов по хендлерам ==
+
+## ГОТОВАЯ ТАБЛИЦА ItemComponent.ServerEventRead (22 шт) с реальными гейтами:
+1. ButtonTerminal: CanClientAccess + signalIndex range → SendSignal (кнопки терминала)
+2. CircuitBox: builder-gate (IsLocked + CanClientAccess + required items)
+3. ConnectionPanel: !Locked && !TemporarilyLocked && AllowRewiring + CanClientAccess + wire access
+4. CustomInterface: (DrawHudWhenEquipped && owner==c) || CanClientAccess —
+   ⚠ предметы в ЧУЖОМ инвентаре с DrawHudWhenEquipped = только владелец может юзать
+5. Deconstructor: CanClientAccess → SetActive (лут от разборки генерит сервер)
+6. DockingPort: AllowedToManageCampaign(ManageMap) на вопрос аутпоста
+7. Engine: CanClientAccess, force = ReadRangedInteger(-10,10)*10 (кламп ±100)
+8. Fabricator: CanClientAccess; recipeHash из netProperties НЕ проверяется
+   → fabricationRecipes[hash] THROW при неизвестном хеше (DoS)
+9. Holdable: CanClientAccess + Attachable + !attached + IsValid(simPosition) +
+   MaxAttachDistance*1.5 → SetTransform+AttachToWall. ⚠ Vector2 от клиента (raw)
+   но кламп длины offset = MaxAttachDistance*1.5 (безопасно)
+10. Hull: серверный water/fire edit (высшие права — уже покрыто 450)
+11. Inventory: CanAccessInventory для каждого слота (450 fix)
+12. Item: EventType-свитч (Treatment/ChangeProperty/Combine и др.)
+13. PowerContainer: CanClientAccess, charge ratio ReadRangedInteger(0,10)/10
+14. PowerDistributor: CanClientAccess, ratio ReadRangedInteger(0,SupplyRatioSteps)
+15. Pump: CanClientAccess, flowPercentage ReadRangedInteger(-10,10)*10,
+    pumpSpeedLockTimer (anti-spam) — КЛАМП ВСЁ
+16. Reactor: CanClientAccess, все поля ReadRangedSingle с клампами,
+    temperatureBoost gated by AllowTemperatureBoost (bool boolguard)
+17. Repairable: CanClientAccess + HasRequiredItems + c.Character != null;
+    FixActions.Sabotage требует IsTraitor (server-side check!)
+18. Sonar: CanClientAccess; isActive/zoom/directional/MineralScanner все
+    ReadRangedSingle/Boolean с клампами. MineralScanner состояние можно
+    выставить, но HasMineralScanner (сам флаг) локальный
+19. Steering: CanClientAccess, autoPilot, Velocity read as-is,
+    newPosToMaintain raw float ×2. ⚠ Может дать лаг кем-то через RemotePilot
+20. Terminal: CanClientAccess + !Readonly + MaxMessageLength substring;
+    ShowOnDisplay + SendSignal. Текст на чужом терминале!
+21. WifiComponent: CanClientAccess, range/channel ReadRangedInteger с клампами
+22. Wire: CanClientAccess, nodeCount + позиции. НИКАКОЙ валидации числа нод!
+    → nodes.Add(lastNodePos) в цикле (x=nodeCount, up to 255).
+
+## ⚡ НОВОЕ: ПЕРЕДВИЖЕНИЕ ЭЛЕМЕНТОВ CircuitBox (MoveComponent)
+CircuitBoxOpcode.MoveComponent: CircuitBoxMoveComponentEvent { ImmutableArray<ushort>
+TargetIDs, ImmutableArray<CircuitBoxInputOutputNode.Type> IOs, ImmutableArray<ushort>
+LabelIDs, Vector2 MoveAmount }. ServerEventRead (CircuitBox.cs:118):
+  CircuitBoxMoveComponentEvent data = Read; if (!CanClientAccess) break;
+  MoveNodesInternal(...); CreateServerEvent(data);
+MoveAmount НИКАК не клампится, НЕ проверяется на NaN/Inf.
+Соединяется с известным NaN-inject exploit (волна 523).
+
+## ВЫВОД: большинство компонентов клампятся через ReadRangedInteger/Single.
+Продвинутые: Repairable (только IsTraitor может саботировать!),
+CustomInterface (только владелец может юзать лёгкие кнопки в чужом рюкзаке),
+CircuitBox MoveComponent MoveAmount = raw Vector2 без клампов.
+
+## NEW BUTTONS (не добавляю т.к. отдельные модули уже есть в PropertyEditor):
+Кнопки нет — тинкер-данные идут в netProperties уже (NET PROPERTIES).
