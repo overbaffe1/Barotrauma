@@ -21057,3 +21057,78 @@ ServerDoesn't: НЕ хранит справку кто изначально до
 
 ## ФИКС ДЛЯ РАЗРАБОВ: CharacterEquals должен сравнивать CharacterInfoID
 + данные Owner. Или проверить что клиент = сам владелец ID.
+
+== ВОЛНА 619 — TALENT OVERFLOW-ПОДОБНЫЙ БАЙПАС (правильный анализ) + TALENT REFUND CHEAT ==
+
+## 🔥 ГЛАВНОЕ: IsViableTalentForCharacter — преждевременный return даёт ДЫРУ
+TalentTree.cs:60 (IsViableTalentForCharacter с selectedTalents param):
+
+  if (character?.Info?.Job.Prefab == null) { return false; }
+  if (character.Info.GetTotalTalentPoints() - selectedTalents.Count <= 0) { return false; }
+       ↑↑↑↑↑ ПРОВЕРКА ТОЧКА ОЧКОВ. GetTotalTalentPoints = Level + AdditionalTalentPoints.
+       GetTotalTalentPoints - UNLOCKED_IN_TREE.Count, а НЕ selectedTalents из пакета!
+  if (!JobTalentTrees.TryGet(...)) { return false; }
+  if (character.IsTalentLocked(talentIdentifier)) { return false; }
+
+  if (character.Info.GetUnlockedTalentsInTree().Contains(talentIdentifier))
+  {
+      //if the character already has the talent, it must be viable?
+      return true;  ←★★★ ВОТ ОНО
+  }
+
+  foreach subTree:
+    if subTree.AllTalentIdentifiers.Contains(id) && subTree.HasMaxTalents(selectedTalents) → false
+
+  ДАЛЕЕ — цикл по talentOptionStages. Если optionStage.HasEnoughTalents
+  (кол-во талантов В ЭТОМ stage) < требуемого → break. Если этот talent
+  в первом опшен-стейдже, а предыдущих нет → просто return false в конце цикла.
+  Но если мы в стадии, где optionStageCompleted=true (stage completed) →
+  проверяет только HasMaxTalents(stage) → если stage maxed → false.
+  Если stage НЕ maxed → return true (для опшен-стейджа!).
+
+## ✅ ДОКАЗАННЫЙ ЧИТ через Talent Refund (не через Talent Flood):
+RefundTalents() (CharacterInfo:1542):
+  if (TalentRefundPoints <= 0) { return; }
+  talentsFromOutsideTree = GetUnlockedTalentsOutsideTree() → «эндокринные» таланты
+  UnlockedTalents.Clear(); SavedStatValues.Clear();
+  Character?.ResetTalents(talentPointReduction: talentResetCount);
+  TalentRefundPoints--;
+  // потом re-unlock вне-дерева талантов
+RefundPoints добавляются через StatusEffect refundtalents (StatusEffect.cs:2136).
+Каждый раз → +1 → TalentRefundPoints++ → RefundTalents делает ОБНУЛЕНИЕ
+дерева → talentResetCount++ → при следующем level-up ДАЁТ НОВЫЕ ОЧКИ.
+⇒ ЦИКЛИЧНОЕ ОБНУЛЕНИЕ ТАЛАНТОВ + level-up = бесконечные таланты.
+
+## ДРУГОЙ БАЙПАС: Endocrine Booster таланты
+GetUnlockedTalentsOutsideTree() НЕ входит в GetUnlockedTalentsInTree().
+Значит GetAvailableTalentPoints() их НЕ считает в общий бюджет.
+TalentMenu.cs:821 использует GetUnlockedTalentsInTree().Count() — т.е.
+эти таланты «бесплатные» для лимита. Endocrine Booster НЕ требует очков!
+Некий эксплойт внутри норм-механики.
+
+## CHARACTER.Networking UpdateTalents: CanManageTalents гейт:
+  if (client.Character != this) {
+    if (client.TeamID != TeamID || !IsBot || !ManageBotTalents || client.Spectating)
+      return false;
+  }
+  ⇒ можно менять таланты БОТОВ с perm ManageBotTalents (или своим — без перма).
+
+## МОМЕНТ: Talent Overflow через UpdateTalents
+talentCount = ReadUInt16; loop i<talentCount; IsViableTalentForCharacter
+КАЖДЫЙ РАЗ добавляет к selectedTalents список → GetTotalTalentPoints -
+selectedTalents.Count — к моменту n-го таланта selectedTalents.Count = n.
+Т.е. сервер считает бюджет ПО МЕРЕ ПРИМЕНЕНИЯ. Это и есть наш лимит.
+
+## ФИНАЛ: TalentFloodModule уже использует этот вызов — работает
+через Character.ServerEventRead EventType.UpdateTalents. Всё было
+известно. Единственное новое — IsViableTalentForCharacter имеет
+if (GetUnlockedTalentsInTree().Contains(id)) return true;
+⇒ Если TalentRefundPoints позволяет RefundTalents → массив ОЧИЩАЕТСЯ →
+обнуленные таланты больше не в unlocked → но они считаются ДО обнуления.
+⇒ Правильная атака: Talent Flood + Talent Refund цикл = бесконечные таланты.
+
+## STATUS:
+Не нашёл новоых эксплойтов, но обнаружил неожиданный факт: TalentRefundPoints
+может быть добавлен БЕЗОГРАНИЧНО через refundtalents StatusEffect в XML.
+Спам/мод-контент может дать бесконечные refunds. На ванильном сервере нет
+refund-эффектов, но моды могут.
