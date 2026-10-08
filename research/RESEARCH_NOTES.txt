@@ -20937,3 +20937,76 @@ IsHusk(attacker) != IsHusk(target) → isEnemy=true → карма растёт.
 - EXTRA CARGO (perm ManageSettings)
 - KARMA OFF (perm)
 - CAMPAIGN_SETTINGS (перм или окно 586)
+
+== ВОЛНА 617 — Wi-Fi сигнал инъекция + LightComponent перекраска + SignalCheck set_output ==
+
+## 🎯 НОВОЕ #1: Terminal → WifiComponent = СИГНАЛЬНАЯ ИНЪЕКЦИЯ НА ЧУЖУЮ САБУ
+Цепочка: Terminal.ServerEventRead → item.SendSignal(newOutputValue, "signal_out")
+Гейт: CanClientAccess(терминал) + !Readonly.
+Если терминал подключён к WifiComponent (channel 0, LinkToChat=true) —
+арбитражная строка идёт на ВСЕ WifiComponents в радиусе!
+
+WifiComponent.CanReceive (WifiComponent.cs:162):
+  sender.TeamID != TeamID && !AllowCrossTeamCommunication → false
+  ⚠ TeamID = [Serialize] из XML, в ваниле на чужой сабе часто None (0x00)
+  CharacterTeamType.None (0) может принимать от любого TeamID!
+  
+  CharTeamType: None=0, Team1=1, Team2=2, FriendlyNPC=3, None=4(назначается)
+  Но WifiComponent.TeamID — [Serialize] из XML. В ванильных сабах TeamID
+  обычно = None (не настроен). Проверка: sender.TeamID != TeamID.
+  Если target.TeamID = None → принимает от ЛЮБОГО отправителя!
+
+  КЛЮЧЕВОЕ: signalOutConnection.IsConnectedToSomething() — если WifiComponent
+  на чужой сабе подключён к системам (реактор, турели, двери) — сигнал идёт
+  НАПРЯМУЮ в эти системы. Можно ДЕРГАТЬ ВРАЖЕСКИЕ МЕХАНИЗМЫ через Wifi!
+
+ЧТО МОЖНО СДЕЛАТЬ:
+- signal_out → arithmetic component → set_targetforce турели → ПЕРЕНАЦЕЛИТЬ ТУРЕЛИ
+- signal_out → relay component → set_state → ОТКРЫТЬ ДВЕРИ
+- signal_out → alarm buzzer → ПАНИКА НА САБЕ
+- signal_out → route/terminal → ПОДДЕЛЬНЫЕ СООБЩЕНИЯ ЭКИПАЖУ
+  (все видят «Обнаружен турель-патруль» или «Реактор плавится»)
+  
+УСЛОВИЯ: 
+1) Ты в 250ю от терминала на чужой сабе (CanClientAccess)
+2) Терминал не ReadOnly
+3) Терминал подключён к WifiComponent с AllowCrossTeam=TRUE (или TeamID=None)
+4) WifiComponent.Range > 0 (дефолт 20000)
+
+## 🎨 НОВОЕ #2: LightComponent set_color — ПЕРЕКРАСКА СВЕТА НА ЧУЖОЙ САБЕ
+LightComponent.ReceiveSignal case "set_color":
+  LightColor = XMLExtensions.ParseColor(signal.value, false);
+Гейт: signal через обычную цепь (нет CanClientAccess — просто соединение проводом!)
+ParseColor парсит "R,G,B,A" float → может быть ЛЮБОЙ цвет.
+Range = до 4096 (Editable MinValue=0 MaxValue=2048, кламп 4096)
+TargetSightRange = Range × 5 → дальность обнаружения светом. 
+
+если подключён к wifi через свет компонент:
+  set_color → красный свет → паника
+  set_state → мигание света = дезориентация
+  Range на 4096 → ослепляющий свет на всю карту
+
+## 🎯 НОВОЕ #3: SignalCheck set_output — подделка данных цепи
+SignalCheck.ReceiveSignal case "set_output":
+  Output = signal.value;  // НЕТ CanClientAccess, НЕТ клампов, НЕТ лимитов!
+Если ты посылaешь сигнал на "set_output" соединение SignalCheck → меняешь
+Output для ВСЕЙ ЦЕПИ. Все, кто слушает signal_out этого SignalCheck,
+получат ТВОИ данные.
+
+Аналогично для RegExFindComponent, EqualsComponent, BooleanOperator,
+GreaterComponent — все имеют "set_output" без CanClientAccess!
+
+⇒ На чужой сабе (или на своей) можно ПОДМЕНИТЬ вывод ЛЮБОГО
+  сигнального компонента. Если цепь обрабатывает данные от сонара
+  → подделай данные сонара. Если управляет турелью → перенаправь.
+
+## КАК ИСПОЛЬЗОВАТЬ (модуль):
+1) Открой ConnectionPanel на чужой сабе (CanClientAccess, 250ю)
+2) Прими сигнал от своей WifiComponent (channel 0)
+3) Отправь "set_output" на Terminal/SignalCheck/RegEx → получи arbitrary signal
+
+## ИЛИ ЕЩЁ ПРОЩЕ:
+WireComponent (провод) — просто вставь провод из своего wifi в чужую цепь.
+WiringTool → ConnectionPanel → соединение signal_out → wifi signal_in.
+После этого твой wifi может слать ЛЮБЫЕ сигналы на ВСЮ цепь чужой сабы.
+Работает на любом сервере, не требует прав.
