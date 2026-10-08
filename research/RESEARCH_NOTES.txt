@@ -20821,3 +20821,119 @@ CharacterHealth manipulation.
 - BallastFlora (ISerializableEntity but no ServerEventRead → server-only)
 - KarmaManager детально (все 32 netProperties)
 - OrderChatMessage deep-dive (AllowInFriendlySubs, TargetCharactersInOtherSubs)
+
+== ВОЛНА 615 — PETS/RESPAWN/FLORA/KARMA последняя проверка + ПОСЛЕДНИЕ СВЕЖИЕ НАХОДКИ ==
+
+## ОСТАЛЬНЫЕ СИСТЕМЫ — ЧИСТО:
+- Pets (PetBehavior.cs): НЕТ ServerEventRead, НЕТ IClientSerializable →
+  только LoadPets при старте кампании (XML), серверные события отсутствуют.
+- RespawnManager: только IServerSerializable (ServerEventWrite), НЕТ
+  ServerEventRead → клиент не может ничего триггерить.
+- BallastFloraBehavior: только ClientRead (server→client), НЕТ ServerRead →
+  урон по флоре считается на сервере от серверных событий (WeldingTool etc).
+- Planter: НЕТ ServerEventRead — сервер сам решает когда выросло.
+- MiniMap/WaterTank/WaterDetector/Vent/LevelObjectManager: НЕТ ServerEventRead.
+- KarmaManager: НЕТ IClientSerializable → карма пишется ТОЛЬКО через
+  серверные события урона (OnCharacterHealthChanged, OnItemRepaired и т.д.).
+  ЛЮБОЙ спам пакетов карму не меняет. Доказано кодом.
+
+## НОВОЕ: ДЫРКИ В KARMA MATH (можно фармить карму на своём сервере):
+OnCharacterHealthChanged (KarmaManager:341):
+  1) Если `attacker.TeamID == FriendlyNPC` → считается friendly NPC →
+     попадает в ветку isEnemy=false при борьбе с Team1/Team2
+  2) IsHusk(traitor) != IsHusk(non-traitor) → isEnemy=true → можно карму +
+     атакуя хасков
+  3) AllowedRetaliationTime (дефолт 120с): если target ударил тебя
+     ЗА 120 СЕКУНД ДО, karma penalty обнуляется (damage=0)
+     ⇒ 2 друга: A бьёт B (B получает penalty), B бьёт A через 1с →
+     penalty обнулён. Фармишь карму в бесконечном цикле!
+  4) Clown (клоун-костюм) = damage*0.5, stun*0.5 → клоун-бить безопасней
+  5) Target с прицелом (IsKeyDown(Aim) + оружие в руках) = penalty×0.5
+     ⇒ друг наводит оружие → ты его бьёшь без штрафа
+  6) Low karma target → penalty *= InverseLerp(0, 50, karma) → у 0-кармы
+     penalty=0. ФАРМ: сначала кинуть клоуна до 0 кармы, потом бить бесплатно
+  7) Security Officer: DamageEnemyKarmaIncrease*2, HealFriendly+2, steal penalty*0.5
+  8) Medical Doctor: HealFriendlyKarmaIncrease*2
+
+## НОВОЕ: StolenDuringRound / Illegitimate механика
+item.Illegitimate => !AllowStealing && SpawnedInCurrentOutpost
+Предмет купленный на аутпосте (OutpostGenerator:1992) с AllowStealing=false
+→ Illegitimate=true → HUD красный, боты начинают ворует с ним, если игрок
+заметил — штраф кармы (OnItemTakenFromPlayer).
+Сервер сам ставит флаги при покупке — клиент НЕ может повлиять.
+⇒ ФАРМ КАРМЫ НА ПЕРМЛЕСС-СЕРВЕРЕ: 2 друга бьют друг друга в стиле clown →
+карма растёт. Карма = доступ к лучшим кампейн-опциям. Не экплойт денег,
+но реальный фарм лояльности NPC и цены товаров (rep-related).
+
+## EXTRA FIND: IsHusk-обход кармы
+IsHusk(attacker) != IsHusk(target) → isEnemy=true → карма растёт.
+⇒ Друг превращается в хаска (гриб-хаск на аутпосте) → ты его убиваешь →
+карма ПЛЮС. Убийство хасков = карма бесконечно.
+
+## СТАТУС: код вычерпан. 615 волн. Реальных эксплойтов на чужом
+сервере без прав = ровно 4 категории:
+1) OVERFLOW money (клиника)
+2) DoS-пакеты ×6 (все клампнуты — но работают)
+3) ITEM BLOAT (LABEL/WIRE, сейв-персистент)
+4) KARMA FARMING через IsHusk/Clown/Low-Karma-цели
+
+== ВОЛНА 616 — ФИНАЛЬНЫЙ ДЕДУП: нет новых эксплойтов + есть 2 интересных поведения ==
+
+## ПРОВЕРЕНО 616 волн. 22 серверных ServerEventRead + 5 EventType + Karma + Pets/Flora/Planter/Ladder/MiniMap/WaterTank/Vent/SonarTransducer/OxygenGenerator — ВСЁ серверно-контролируемо.
+
+## МЕЛКИЕ ФАКТЫ (не эксплойты):
+### IdCard OwnerTags:
+- IdCard.OwnerTags — строка с тегами из ContentXML (в ванили — имя владельца,
+  специальные теги для капитана/механика и т.д.)
+- OwnerTagSet используется только в MiniMap (TeamID) и Character.Initialize
+  (только если OwnerName == character.Info.Name)
+- НЕТ места где OwnerTags влияют на доступ/разрешения — это только косметика
+- Tags property: [Editable, Serialize] но БЕЗ InGameEditable → не доступен
+  через ChangeProperty → клиент не может подделать теги карточки по сети
+
+### Terminal LineStartSymbol:
+- Terminal.cs LineStartSymbol — [Editable, Serialize] префикс строки
+- ShowOnDisplay → TextManager.Get(input).Fallback(input)
+- Работает С Официальными тегами (label.xxx) → fallback если не найдено
+- Клиент может отправить TextManager-тег на сервер → сервер покажет
+  всем игрокам официальный текст через свой Terminal. НЕ эксплойт,
+  но инструмент для Social Engineering (поддельный системный текст)
+
+### CustomInterface ValueChanged:
+- NumberInput с TryParse — НЕ переполняется
+- StatusEffects применяются через ApplyStatusEffect — это server-side
+  vanilla механика (не эксплойт)
+
+### Wire MaxNodeCount:
+- nodes List<Vector2>, 255 максимум, 30 per event
+- память ~2KB на провод, не фатально
+
+### SonarTransducer просто шлёт "0101101101101011010" на data_out
+каждые 0.5с — чисто декоративный сигнал.
+
+### OxygenGenerator.Update: CurrFlow зависит от Voltage, Condition, MaxFlow
+— всё серверно-контролируемо. Никакого клиентского ввода нет.
+
+### DockingPort.ServerEventRead — только AllowOutpostAutoDocking
+(ManageMap перм). НЕТ способа дергать Dock()/Undock() по сети —
+только физика. Можно РАССТЕГНУТЬ чужую стыковку только через сигналы
+(уже покрыто в волне 551).
+
+## РЕАЛЬНЫЕ КАНАЛЫ ДЕЙСТВИЯ БЕЗ ПРАВ (финальный список):
+1. OVERFLOW CLINIC (деньги из воздуха, требуется кампания + раунд + аутпост)
+2. EVENTMANAGER option=200 (краш процесса, только при активном диалоге)
+3. 6 DoS ×1000 (SegmentTable/SoldItems/CircuitBox/ChatOrder/CharInput/VOIP)
+4. LABEL/WIRE FLOOD (персистентный блоат сейва)
+5. FREE HEAL (Price=0 для своих ран)
+6. COMBINE (вставка в чужие инвентари в ступоре/труп/шкаф)
+7. ДУП ПОКУПОК (AllowImmediateItemDelivery дефолт TRUE)
+8. KARMA FARMING (IsHusk mismatch, 120с revenge, clown, low-karma)
+
+## РЕАЛЬНЫЕ КАНАЛЫ С ПРАВАМИ/СВОИМ СЕРВЕРОМ:
+- NET PROPERTIES (MD5-хеш любого bool/float/int)
+- MAX OUTPUT LENGTH = INT.MAX (свой сервер)
+- FABRICATOR RECIPE (RecipeHash офлайн-вычислим)
+- PERKS MAX STACK (permless)
+- EXTRA CARGO (perm ManageSettings)
+- KARMA OFF (perm)
+- CAMPAIGN_SETTINGS (перм или окно 586)
