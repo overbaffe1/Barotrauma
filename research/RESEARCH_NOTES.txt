@@ -21888,3 +21888,59 @@ On/Off тумблер: клик = toggle. ON запускает корутину
 3. Твоя корутина шлёт CANCEL каждый 0.1с → сервер отменяет старт
 4. Голоса сброшены → игроки голосуют заново → ты снова блокируешь
 5. Хочешь разрешить старт → клик → OFF
+
+== ВОЛНА 630 — ПОЧЕМУ CANCEL НЕ СРАБОТАЛ (полный разбор для юзера) ==
+
+## УСЛОВИЕ: `isRoundStartWarningActive == true`
+Это единственное условие. Ставится ТОЛЬКО здесь:
+
+  TryStartGame() → 
+    if (applyPerks && CheckIfAnyPerksAreIncompatible(...))  ← ★ ключ
+      → WarnAndDelayStartGame(...) → isRoundStartWarningActive = true
+    ELSE → InitiateStartGame → isRoundStartWarningActive = false (мгновенный старт)
+
+## ЧТО ТАКОЕ applyPerks:
+  ShouldApplyDisembarkPoints(preset) = Sandbox || Mission || PvP
+  ⇒ ТОЛЬКО эти 3 режима дают applyPerks = true!
+  ⇒ CAMPAIGN = false → CheckIfAnyPerksAreIncompatible НЕ вызывается →
+    → WarnAndDelay НЕ запускается → isRoundStartWarningActive НИКОГДА false
+  ⇒ В КАМПАНИИ CANCEL_STARTGAME БЕСПОЛЕЗЕН!!! ← ЭТО И ЕСТЬ ОТВЕТ
+
+## ЧТО ТАКОЕ CheckIfAnyPerksAreIncompatible:
+  Выбирает перки = GameSession.GetPerks() = ServerSettings.SelectedCoalitionPerks
+  + SelectedSeparatistsPerks. Эти перки выбираются В ЛОББИ хостом (или всеми
+  на permless). Если перки = 0 (пусто) → hasIncompatiblePerks = false →
+  WarnAndDelay НЕ запускается.
+
+  Даже если перки ЕСТЬ, они должны быть НЕСОВМЕСТИМЫ с сабой:
+  perk.PerkBehaviors.Any(p => !p.CanApply(team1Sub))
+  ⇒ Если все перки совместимы с сабой → hasIncompatiblePerks = false →
+  WarnAndDelay НЕ запускается.
+
+## ИТОГ: CANCEL_STARTGAME работает ТОЛЬКО если:
+1. Режим = Sandbox / Mission / PvP (НЕ Campaign!)
+2. Хост или кто-то выбрал перки в лобби (Disembark Perks)
+3. Перки несовместимы с выбранной сабой (CanApply = false)
+
+## ТВОЙ СЛУЧАЙ:
+Кампания + возможно перков нет или они совместимы → applyPerks=false →
+Warning НЕ показывается → старт мгновенный → CANCEL ничего не делает.
+
+## ГДЕ РАБОТАЕТ 100%:
+- Sandbox (дефолт с перками)
+- Mission с перками в лобби
+- PvP с перками
+- Любой режим + перки из DisembarkPerks + несовместимые с сабой
+
+## КАК ПРОВЕРИТЬ:
+1. Создай сервер Sandbox (не кампанию)
+2. В лобби нажми на перки (Disembark Perks UI)
+3. Выбери перки (к примеру +talents для всех)
+4. Выбери маленькую сабу где перки не подходят
+5. Нажми Start → должно появиться WARNING с таймером 15 сек
+6. В этот момент CANCEL сработает!
+
+ПЕРКИ НЕ ПОЯВЛЯЮТСЯ В КАМПАНИИ ПО УМОЛЧАНИЮ:
+  ShouldApplyDisembarkPoints(Campaign) = FALSE
+  ⇒ в кампании перки НЕ показываются, НЕ выбираются, НЕ влияют.
+  ⇒ CANCEL_STARTGAME бесполезен в кампании. Только Mission/Sandbox/PvP.
