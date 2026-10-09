@@ -21582,3 +21582,57 @@ Range через сигнал — НЕ работает. Убираю из сп�
   - set_color — RGB свет через WiFi (работает)
   - set_state / toggle — вкл/выкл мигание (работает)
   - Range 4096 карта- blindness — НЕ работает по сети
+
+== ВОЛНА 626 — TROLL PACK: подпись/label/цвет CircuitBox + Wire DropConnectedWires + Door tick ==
+
+## 🎨 CircuitBox RenameLabel/AddLabel — ГРАФФИТИ НА ЧУЖОЙ САБЕ (без прав!)
+CircuitBox.ServerEventRead case CircuitBoxOpcode.RenameLabel:
+  data = Read<CircuitBoxRenameLabelEvent>  // {ushort LabelId, Color, NetLimitedString NewHeader, NetLimitedString NewBody}
+  if (!CanAccessAndUnlocked(c)) break;
+  RenameLabelInternal(...);
+  CreateServerEvent(data);  // ← рассылается ВСЕМ клиентам
+NetLimitedString.MaxLength = 255 (кламп в конструкторе).
+⇒ Если есть CircuitBox на ЧУЖОЙ сабе (или ты в 250ю от их ЦБ) и
+   CanAccessAndUnlocked (IsLocked=false) — ты МОЖЕШЬ писать любые тексты
+   в цветных label'ах на чужом ЦБ, видимых ВСЕМ игрокам.
+⇒ AddLabel аналогично: ID генерится автоматом, позиция Vector2 — любая.
+   Можно ЗАБИТЬ ЦЕЛЫЙ ЦЕНТРАЛЬНЫЙ КОМПЬЮТЕР ЧУЖОЙ САБЫ надписями
+   "LOL", "GET REKT", "PWNED" в ярких цветах. 255 символов каждая.
+
+## ⚡ CircuitBox AddWire — СЛУЧАЙНО СОЕДИНИТЬ ПРОВОДАМИ
+case CircuitBoxOpcode.AddWire: подключает провода между ЦБ-узлами.
+Ты можешь СОЗДАТЬ закороченную цепь на чужой сабе → перегрузка питания.
+
+## ⚡ CircuitBox RemoveWire — УДАЛИТЬ ВСЕ ПРОВОДА
+case RemoveWire: data.TargetIDs — можно послать массив ВСЕХ ID проводов →
+УДАЛЯТСЯ ВСЕ СОЕДИНЕНИЯ. Реактор не получает питание, турели не работают.
+NetLimitedString/NetCrewMember ID известны, если ты в 250ю.
+
+## ⚡ DropConnectedWires — ОБРЫВ ВСЕХ ПРОВОДОВ ОДНИМ DROP'OM
+Pickable.DropConnectedWires(character):
+  foreach connectionPanel:
+    DisconnectedWires.Clear()
+    foreach wire in connection.Connections:
+      w.Item.Drop(character)  // ВСЕ провода вываливаются на пол
+⇒ Если у тебя в руках PowerContainer / Junction Box / любой контейнер
+   с ConnectionPanel — Drop этого предмета ОБРЫВАЕТ ВСЕ ПРОВОДА
+   подключённые к нему. Reaktor → Engine → Sensors = всё отрубается.
+
+## ⚡ Door.ReceiveSignal — toggle/set_state через провода
+Door.ReceiveSignal:
+  case "toggle": toggleCooldownTimer, SetState(!wasOpen)
+  case "set_state": SetState(signalOpen)
+ГЕЙТ: IsStuck/IsJammed/IgnoreSignals блокируют.
+⇒ Через WiFi-инъекцию (волна 617) можно СПАМИТЬ toggle → двери ОТКРЫВАЮТСЯ
+   и ЗАКРЫВАЮТСЯ бесконечно (toggleCooldownTimer=1с) → чужой экипаж не может
+   ходить по сабе. Закрыть двери → экипаж заперт в отсеке.
+
+## 📋 ИТОГ ПРИКОЛЬНЫХ ТРОЛЛИНГ-ПАКЕТОВ:
+1) CircuitBox RenameLabel/AddLabel — граффити на чужом ЦБ (255 симв, любой цвет)
+2) CircuitBox AddWire — замкнуть чужую цепь (перегрузка)
+3) CircuitBox RemoveWire — удалить все провода (реактор/турели мертвы)
+4) Door toggle спам — двери хаотично открываются/закрываются
+5) LightComponent set_color/set_state — RGB-дискотека, красный свет
+6) ItemLabel set_text — "GET REKT" на экранах
+7) Terminal signal_out — произвольные сигналы через WiFi
+8) DropConnectedWires — обрыв всех проводов одним Drop'ом
