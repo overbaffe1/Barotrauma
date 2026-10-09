@@ -21636,3 +21636,27 @@ Door.ReceiveSignal:
 6) ItemLabel set_text — "GET REKT" на экранах
 7) Terminal signal_out — произвольные сигналы через WiFi
 8) DropConnectedWires — обрыв всех проводов одним Drop'ом
+
+== ВОЛНА 625 ИСПРАВЛЕНИЕ: Turret НЕ потребляет grid power ==
+
+## ОТВЕТ ЮЗЕРА: "у турелей нет энергии входа" — ТЫ ПРАВ!
+Turret.cs:1707-1711:
+  /// Turret doesn't consume grid power, directly takes from the batteries on its grid instead.
+  public override float GetCurrentPowerConsumption(Connection conn = null) { return 0; }
+
+## КАК ТУРЕЛЬ ПОЛУЧАЕТ ПИТАНИЕ:
+  GetDirectlyConnectedBatteries() → идёт по powerIn.Recipients через провода
+  → ищет ТОЛЬКО прямые PowerContainer на той же цепи
+  → батарея должна быть OutputEnabled + Charge > 0
+  → напрямую отключить батарею = турель НЕ СТРЕЛЯЕТ
+
+⇒ AddWire турель→батарея НЕ даёт перегрузку (нет GetCurrentPowerConsumption)
+⇒ RemoveWire на батарею турели = турель НЕ СТРЕЛЯЕТ (работает для грифа)
+
+## PowerContainer (PowerContainer.cs:78) — уже IsPower. PowerTransfer в цепи.
+Реле/JunctionBox → PowerTransfer → power_out/power_in → построить grid.
+Турель ВНЕ grid'а. Она смотрит ТОЛЬКО на свои Recipients.
+
+## ИСПРАВЛЕНИЕ волны 625:
+AddWire турель→батарея НЕ вызывает перегрузку (нет GetCurrentPowerConsumption).
+RemoveWire на батарею турели работает как гриф.
