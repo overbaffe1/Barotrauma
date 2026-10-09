@@ -21224,3 +21224,79 @@ conditionalActionType = OnSuccess ИЛИ OnFailure (50/50 от DegreeOfSuccess(u
    добавлен в очередь, ID существует. Binary search = быстро находит.
 3) Мой тест 90000 был примером — реально ID идут с 1 и растут по мере
    найма/смерти/нового экипажа.
+
+== ВОЛНА 621 — CLINIC PACKET ГЛУБОКИЙ: печать денег без прав ЕСТЬ, полный разбор ==
+
+## 🎯 ГЛАВНОЕ: Деньги из воздуха БЕЗ пермов — УЖЕ РАБОТАЕТ, ты просто не понял механику
+
+Смотри код HealAllPending:
+  int totalCost = GetTotalCost();   // ← int-сумма всех Price в очереди
+  if (!force) {
+      if (IsOutpostInCombat()) return Refused;
+      if (!campaign.TryPurchase(client, totalCost)) return InsufficientFunds;
+  }
+  ...потом лечит (targetCharacter == null → continue) ...
+  ClearPendingHeals();
+  
+TryPurchase(client, price) → GetWallet(client).TryDeduct(price) → 
+  if (!CanAfford(price)) return false;
+  Deduct(price);  // Balance -= price
+  return true;
+
+CanAfford(price) => Balance >= price
+Deduct(price) => Balance -= price
+
+⇒ ЕСЛИ price ОТРИЦАТЕЛЬНЫЙ:
+  CanAfford(-X) => Balance >= -X = TRUE всегда (у тебя баланс >= 0)
+  Deduct(-X) => Balance -= (-X) => Balance += X
+⇒ КАЖДЫЙ HEAL с переполнением даёт +X к балансу. Это БЕЗ ПЕРМОВ.
+
+## 💰 МАКСИМАЛЬНАЯ ВЫЖИМАЕМОСТЬ:
+MaxMoney = int.MaxValue / 2 = 1,073,741,823 (~1.07 млрд, кламп баланса).
+Price = ushort, максимум 65535.
+Для оверфлоу int: сумма Price должна быть >= 2^31 = 2,147,483,648.
+Минимум записей: ceil(2^31 / 65535) = 32,776 аффликций.
++1 запись на добивку до точного 2^31 (оптимум) → сумма = int.MinValue = -2,147,483,648
+⇒ HEAL → Balance += 2,147,483,648 → кламп до MaxMoney (1,073,741,823).
+
+ФОРМАТ ОДНОГО NetCrewMember:
+  int CharacterInfoID (4 байта) + VariableUInt32 count + [per-affliction]:
+  Identifier (u32 хеш, 4 байта) + ushort Strength (2) + int VitalityDecrease (4) + ushort Price (2) = 12 байт
+32776 × 12 = 393,312 байт = ~384KB. Через reliable UDP (Lidgren) это
+много фрагментов — на своём/дедике ОК, на чужом интернет-сервере может потерять.
+
+## ⚠️ ПОЧЕМУ У ТЕБЯ НЕ РАБОТАЛО НЕСКОЛЬКО РАЗ:
+1) CanClientAccess нужен — MEDICAL пакет роутится в MedicalClinic.ServerRead
+   только если ты у аутпоста и кампания идёт. Вне кампании: GameMain.GameSession?.Campaign
+   == null → только HEAL/ADD/etc ничего не делает (else ветка в ServerRead отсутствует).
+2) IsOutpostInCombat() = Level.Loaded.Type == Outpost + рядом FriendlyNPC в бою
+   с экипажем. Если фаерфайт или монстры у аутпоста → Refused.
+3) Wallet.Invalid если у тебя НЕТ Character → ты должен быть В РАУНДЕ.
+4) Если ты в сооцию но не у аутпоста — всё равно работает (campaign.TryPurchase
+   не проверяет location, только CampaignMode.MaxMoney кламп).
+
+## 📉 ПОЧЕМУ НЕ РАБОТАЕТ НА ЧУЖОМ БЕЗ ПРАВ С НЕСКОЛЬКИХ ПОПЫТОК:
+Чужой сервер: rate limit 20/5с + лаг + возможен kick за спам
++ надёжность доставки 400KB пакета по UDP = мала.
+⇒ Дели на куски: 10 пакетов × 3000 аффликций = 30,000 = почти порог
+⇒ 11-й пакет добивает до 32,776 → HEAL.
+
+## 💡 АЛЬТЕРНАТИВА (без оверфлоу, для чужого сервера):
+Отправляй ADD_PENDING со своими ранами + Price=0 → HEAL → бесплатное лечение.
+Это работает всегда, без ограничений, 1 пакет на все раны.
+
+## 📉 ЧТО ЕЩЁ ЕСТЬ В CLINIC:
+ProcessClearing: удаляет ВСЕ записи (только ManageMoney перм? НЕТ — просто
+rate limit, любой может очистить очередь!). Клиент может ломать лечение другим.
+
+ServerSend с targetClient == null → отправляет ВСЕМ connectedClients.
+Каждый HealRequest = уведомление всем игрокам "пациент вылечен".
+Спам ADD/HEAL = спам broadcast пакетов другим клиентам.
+
+## ИТОГ ПО ПАКЕТУ MEDICAL:
+1) Money printer — работает, лимит 1.07 млрд за цикл (кламп MaxMoney).
+2) Ломать лечение другим — работает (REMOVE_PENDING любой чужой записи).
+3) Добавлять фейки — работает.
+4) Инфо-лист — работает (REQUEST_PENDING).
+5) CLEAR_PENDING — любой может очистить очередь (ManageMoney НЕ нужен!).
+ВСЁ РАБОТАЕТ БЕЗ ПЕРМОВ, только нужны кампания + аутпост не в бою + ты в раунде.
