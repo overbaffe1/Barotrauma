@@ -22328,3 +22328,65 @@ GetVisibleHulls РЕПОРТЁРА (ты) → AddTargets → DoForEachBot: Repor
 CharacterList + дистанция), пресеты: FollowMe, Exile (wait @1e9), DismissAll,
 SteerTheirSub, Charge0, GetItem(id), DeconstructItem(id), IgnoreItem(id),
 Priority 255 чекбокс. Формат пакета — см. выше.
+
+== ВОЛНА 636 — НАТРАВИТЬ БОТА НА КОНКРЕТНОГО ИГРОКА ==
+
+## ПРЯМОГО ОРДЕРА «АТАКУЙ ПЕРСОНАЖА X» НЕТ — но есть 2 рабочих пути:
+
+## ПУТЬ 1: ордер fightintruders / assaultenemy (свой экипаж)
+- CreateObjective: "fightintruders" → AIObjectiveFightIntruders;
+  "assaultenemy" → то же + TargetCharactersInOtherSubs=true (снимает требование
+  «цель в МОЕЙ сабе», остаётся IsConnectedTo саб).
+- КЛЮЧЕВОЕ (AIObjectiveLoop.FindTargets:198-206): если объектив — ОРДЕР
+  (objectiveManager.IsOrder), бот находит цели БЕЗ ReportedTargets —
+  перебирает CharacterList и IsValidTarget. «Магическое знание».
+- ObjectiveConstructor → AIObjectiveCombat(бот, ЖЕРТВА, CombatMode.Offensive) —
+  таргет-комбат на КОНКРЕТНОГО персонажа, по одному на каждого валидного.
+- IsValidTarget(target, character, targetCharsInOtherSubs):
+  жив, не Removed, не в Detectable, не без сознания (или есть реген), target != bot,
+  target.Submarine != null, bot.Submarine != null, target.CurrentHull != null,
+  !IsFriendly(bot, target), bot.Submarine.IsConnectedTo(target.Submarine),
+  [только НЕ-assault: target.Submarine.TeamID == bot sub TeamID || bot.OriginalTeamID
+  == target.Submarine.TeamID], нет флага IgnoredByEnemyAI, не в наручниках.
+  Character.IgnoredByAI (Item.cs:1116 — OrderedToBeIgnored && IsOnPlayerTeam) — это
+  для ПРЕДМЕТОВ, на персонажей ignorethis не действует (Character НЕ IIgnorable!).
+- Приоритет (GetTargetPriority): ордер → 100; !IsOnPlayerTeam (NPC-охрана) → 100;
+  IsSecurity → 100; обычный экипаж без секьюрити → 100, с секьюрити → 0 (уступают).
+
+## ПУТЬ 2: фейк-репорт reportintruders (точечный, БЕЗ ордера)
+- ChatMessage.cs:110: IsReport → HumanAIController.ReportProblem(Я, order).
+- ReportProblem: по ВСЕМ GetVisibleHulls РЕПОРТЁРА (нужен LOS к хуллу жертвы
+  или стоять в нём) → RefreshTargets: reportintruders → for enemy in CharacterList
+  где enemy.CurrentHull == hull → AddTargets<AIObjectiveFightIntruders, Character>.
+- AddTargets → DoForEachBot → IsBotInTheCrew(Я, бот): TeamID == МОЙ TeamID —
+  только СВОИ боты (CheckReportRange: range inf/по хуллам). ФИЛЬТР ПО ХУЛЛУ =
+  точечность: жертва одна в хулле → репорт добавит ТОЛЬКО её.
+- Автономный FightIntruders (не ордер) требует ReportedTargets (FindTargets) →
+  жертва отрепорчена → боты атакуют. Один пакет — весь экипаж вешается.
+- Репорты идут с similarityMultiplier 0.25 — спам-фильтр в 4 раза мягче.
+
+## КОГО НАЗНАЧИТЬ ЦЕЛЬЮ НЕЛЬЗЯ (хард-гейты IsFriendly, HumanAIController.cs:2391):
+- ТИММЕЙТ: sameTeam → friendly → IsValidTarget=false. НЕ ОБХОДИТСЯ.
+- Исключения экзотика: жертва-ХАСК (other.IsHusk → return me.IsDisguisedAsHusk →
+  бот не disguised → НЕ friendly → атакуют СВОИ же, +SpeciesName не совпадает);
+  оба IsPrisoner → friendly; оба IsHostileEscortee → friendly.
+- IsOnFriendlyTeam: Team1/Team2 дружат FriendlyNPC; None (бандиты) дружат
+  FriendlyNPC (пока не атакованы). Team1 vs Team2 → враждебны.
+- ЧУЖИЕ боты: репорт не проникает (IsBotInTheCrew по TeamID). Их охрана сама
+  атакует любого валидного (priority 100), направить на конкретного извне нельзя.
+  Если враг у них один — атакуют его же, но это их выбор.
+
+## БОНУСЫ:
+- CombatMode.Arrest: если цель IsEscorted → бот АРЕСТОВЫВАЕТ (наручники), не убивает.
+- FriendlyNPC-охрана vs Team1 во враждебной фракции: holdFireCondition — НЕ стреляют
+  пока жертва в airlock-модуле аванпоста, если сама не получила урон. Сначала
+  предупреждение («leaveoutpostwarning»), потом бойня.
+- Character не IIgnorable (ISpatialEntity.cs:123: только Item/Gap/Structure section)
+  → «спрятать» игрока от ботов ignorethis НЕЛЬЗЯ.
+- GetVisibleHulls — LOS-проверка репортёра; стоя в хулле с жертвой = виден.
+
+## ДЛЯ МОДУЛЯ (OrderSpammer v9 «НАТРАВИТЬ»):
+1. REPORTINTRUDERS стоя рядом с жертвой (LOS) ×1-3 → свои боты на неё
+2. Или crew-ордер FIGHTINTRUDERS (жертва на борту) / ASSAULTENEMY (соседняя саба)
+3. Приоритет 255 в пакете = одержимость (635)
+4. Тиммейта — никак (хаск-экзотика не считается)
