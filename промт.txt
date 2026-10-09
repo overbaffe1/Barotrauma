@@ -389,6 +389,34 @@
 - **TalentOverspend.cs — v8, ФЛАГМАН** (1142 строки): рабочий, подтверждён юзером.
 - **TalentBudgetSelfTest.cs** — тест для репо, не для CSHUB.
 
+- [635] ОРДЕРА (полный сетевой разбор, ChatMessage.ServerRead type=Order):
+  Гейты сервера: спам-фильтр ×0.25 (мягче чата в 4 раза), в игре, impediment<100,
+  не мёртв. БОЛЬШЕ НИЧЕГО: SetOrder идёт ЛЮБОМУ Character по ushort ID — проверка
+  команды/экипажа ОТСУТСТВУЕТ. Единственный гейт — CanHearCharacter: SpeakRange
+  2000 (20м) или общее радио (МЕЖКОМАНДНОЕ радио НЕ работает — CanReceive TeamID).
+  Вражеский бот подчиняется МОЛЧА (реплики только IsOnPlayerTeam).
+  КАЖДЫЙ ордер броадкастится всем (иконка+чат) — не скрытно.
+  Меню CreateObjective (работает на чужих): follow (бот-хвост), wait (координаты
+  НЕ валидируются → wait @x=1e9 = изгнание бота в космос, AllowGoingOutside=true),
+  steer (чужой бот за штурвалом, PosToMaintain=их сабы), setchargepct (бот гасит
+  их батареи), pumpwater, getitem (MustBeSpecificItem, таскание предметов),
+  cleanupitems, dismiss (снять приказы их капитана), assaultenemy (только
+  состыкованные, IsFriendly режет своих), fixleaks/repairsystems/rescue (бот-саппорт
+  чужой сабы), escapehandcuffs, default=OperateItem любого компонента.
+  Приоритет byte 0-255 БЕЗ клампа → InverseLerp overflow → priority ~1200 (норма 1-70)
+  = одержимость (бот бросает сон/еду/чинку).
+  ★ deconstructthis РАЗГАДКА: это TargetAllCharacters-ордер → CrewManager.AddOrder →
+  СТАТИЧЕСКИЙ Item.DeconstructItems.Add — БЕЗ проверки чьего предмета и БЕЗ CanHear!
+  Пометить реактор чужой сабы → их боты разбирают СВОЁ. dontdeconstructthis снимает.
+  OrderSpammer НЕ РАБОТАЛ потому что слал deconstructthis с targetCharacter →
+  путь SetOrder → CreateObjective case отсутствует → default → TargetItemComponent
+  null → return null → ThrowError в лог, ноль действий. Шлёть с targetChar=0 (all).
+  ★ ignorethis/unignorethis: IIgnorable.OrderedToBeIgnored на ЛЮБОЙ предмет/стену
+  чужой сабы (IgnoreByAI = OrderedToBeIgnored && IsOnPlayerTeam → их боты игнорят).
+  Репорты (reportfire/breach/brokendevices/intruders/requestfirstaid) → ReportedTargets
+  ВСЕМ ботам, но FightIntruders.IsValidTarget режет IsFriendly — натравить своих на
+  чужих НЕЛЬЗЯ. Формат пакета OrderChatMessage.ReadOrder в notes 635.
+
 ## ЧТО ДАЛЬШЕ (кандидаты волны 246+)
 - Кампания/ло́би/UI закрыты целиком. Остались: офлайн-редакторы (SubEditorScreen 6903,
   CharacterEditorScreen 5573 — нетворкинга почти нет), GUIComponent.cs 1522, Limb.cs
