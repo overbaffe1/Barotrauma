@@ -22191,3 +22191,51 @@ OscillatorComponent.cs:46: frequency = MathHelper.Clamp(value, 0.0f, 240.0f);
 | OscillatorComponent| set_frequency | Clamp пропускает NaN | глушение |
 | LightComponent     | set_color     | НЕТ  | визуал RGB (625) |
 | ItemLabel          | set_text      | НЕТ  | граффити (625) |
+
+== ВОЛНА 634 — ЧТО ДЕЛАТЬ С 633: рабочие билды ==
+
+## ПРОВЕРЕНО В 634 (перед ответом юзеру):
+- MemoryComponent.Update(): item.SendSignal(Value, "signal_out") КАЖДЫЙ ТИК,
+  БЕЗ входных сигналов (строка ~52). Память = готовый 60/с вещатель. IsActive=true в ctor.
+- OscillatorComponent: Pulse mode "periodically sends out a signal of 1" @Frequency (0-240);
+  Sine шлёт sin значения.
+- СОХРАНЯЕМОСТЬ (кто живёт в сейве сабы):
+  DelayComponent.Delay: IsPropertySaveable.Yes → "NaN" прописывается в XML сабы
+    при сохранении → ПОРЧА ПЕРЕЖИВАЕТ РАУНДЫ (до ручного set_delay).
+  ModuloComponent.Modulus: IsPropertySaveable.No → сброс раунда.
+  WifiComponent.Range: No → сброс раунда.
+  TriggerComponent.Force: атрибута Serialize НЕТ → сброс раунда.
+  Engine.Force: без Serialize → сброс раунда.
+  OscillatorComponent.Frequency: InGameEditable+Serialize (по умолчанию Yes) → NaN частота тоже
+    может сохраниться при сохранении сабы.
+- chatMsgCooldown = MinChatMessageInterval после чат-трансляции → чат не спамится 60/с,
+  инъекции в цепи не лимитированы.
+
+## БИЛД 1 «РАДИОСТАНЦИЯ СУДНОГО ДНЯ» (сборка на СВОЕЙ сабе, бьёт всю карту):
+  Terminal → Wifi.set_range; послать "Infinity" (или "NaN") ОДИН раз.
+  Memory ×N (Value=payload) → Wifi.signal_in; канал 0, TeamID None (дефолты).
+  N=1 → 60 payload/с; N=4 → 240/с (несколько проводов в одну коннекцию — можно).
+  Payload-меню: "set_turbineoutput 0"/"set_fissionrate 0" (реактор в ноль против ботов),
+  "NaN" (двигатели если wifi кормит set_force), "set_state 1" (двери), "set_delay NaN",
+  "set_frequency NaN" (глушить их осцилляторы), set_color/set_text (визуал).
+  Гейт доставки прежний (627): только цепи за signal_out wifi ЦЕЛИ.
+
+## БИЛД 2 «КАТАПУЛЬТА» (TriggerComponent set_force):
+  Нужен предмет с триггером и открытым входом set_force. Контента в форке НЕТ —
+  юзеру: findstr /m /s "set_force" "...\steamapps\common\Barotrauma\Content\Items\*.xml".
+  "999999999" → F=1e9 на ~100кг → сотни км/с за тик → вынос за уровень.
+  "NaN" → коллайдер перестаёт симулироваться.
+  Анти-борд: свой триггер у шлюза с большим Force = физическое анти-борд поле.
+  Гвард Force<0.01f не спасает (NaN<x=false → ApplyForce выполняется).
+
+## БИЛД 3 «ВЕЧНАЯ ПОРЧА» (DelayComponent, ЕДИНСТВЕННЫЙ из пачки в сейве):
+  set_delay="NaN" → Delay=NaN → сохранение сабы пишет Delay="NaN" в XML →
+  каждый следующий раунд: флаш очереди + таймер -2.1млрд тиков (414 суток) +
+  буфер 2 с молчаливым дропом. Чинится только подачей валидного set_delay.
+  = SaveCorrupter 594 через сигнальную шину, прицельно по таймерам.
+
+## РАЗРУШИТЕЛЬНОСТЬ (сводка):
+  1. Радиостанция = CPU-bomb 631 + логический флуд по ВСЕМ сабам карты (3 компоненты)
+  2. NaN двигатель = физика сабы сломана до рестарта раунда
+  3. Катапульта = экипаж в космос одним числом
+  4. Delay NaN в сейве = необратимая без ручного ремонта порча автоматики
