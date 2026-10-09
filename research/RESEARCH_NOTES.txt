@@ -21660,3 +21660,204 @@ Turret.cs:1707-1711:
 ## ИСПРАВЛЕНИЕ волны 625:
 AddWire турель→батарея НЕ вызывает перегрузку (нет GetCurrentPowerConsumption).
 RemoveWire на батарею турели работает как гриф.
+
+== ВОЛНА 627 — ПОЛНЫЙ ТАБЛИЧНЫЙ АУДИТ ВСЕХ 24 ClientPacketHeader ==
+
+┌─ 1. PING_RESPONSE ────────────────────────────────────────────
+  Формат: byte len + byte[len] echo.
+  Гейт: len == lastPingData.Length && bytes match (64 bytes от сервера).
+  Эксплойт: НЕТ. Неправильный echo → return (ничего не происходит).
+  Ping спам = обновление connectedClient.Ping (полезно для lag indicator).
+
+┌─ 2. RESPONSE_STARTGAME ───────────────────────────────────────
+  Формат: bool readyToStart + bool AFK + [UpdateCharacterInfo payload]
+  Гейт: connectedClient != null
+  UpdateCharacterInfo вызывается → rate limit 5/10с → перм = ManageSettings
+  Эксплойт: ReadyToStart=true + AFK=true = ReadyCheck байпас? НЕТ — AFK
+  отдельное поле, не влияет на старт.
+
+┌─ 3. RESPONSE_CANCEL_STARTGAME ────────────────────────────────
+  Формат: нет тела (просто header).
+  Гейт: isRoundStartWarningActive
+  Эффект: ВСЕМ клиентам CANCEL_STARTGAME → отмена старта раунда.
+  Эксплойт: ЛЮБОЙ клиент может ОТМЕНИТЬ старт раунда пока warning активен.
+  × спам = держим сервер в "не стартует" состоянии. ПЕРМ НЕ НУЖЕН!
+
+┌─ 4. REQUEST_STARTGAMEFINALIZE ────────────────────────────────
+  Формат: нет тела.
+  Гейт: GameStarted
+  Эффект: SendRoundStartFinalize(connectedClient) — finalise spawn.
+  Эксплойт: спам = спам SendRoundStartFinalize. Minor bandwidth.
+
+┌─ 5. UPDATE_LOBBY ─────────────────────────────────────────────
+  Сегменты: SyncIds, ChatMessage, Vote.
+  Все уже разобраны (волны 585, 617, 622). Vote = 11 типов, гейты полные.
+
+┌─ 6. UPDATE_INGAME ────────────────────────────────────────────
+  Гейт: GameStarted
+  Сегменты: SyncIds, ChatMessage, CharacterInput, EntityState, Vote, SpectatingPos.
+  Все разобраны. EntityState = 22 компонентов ServerEventRead.
+
+┌─ 7. CAMPAIGN_SETUP_INFO ──────────────────────────────────────
+  isNew=true: saveName + seed + subName + subHash + CampaignSettings
+  isNew=false: savePath + isBackup + backupIndex
+  Гейт: AllowedToManageCampaign(ManageRound) — мягкий!
+  НОВОЕ: isNew=false, savePath = ARBITRARY string от клиента →
+  MultiPlayerCampaign.LoadCampaign(dataPath) → SaveUtil.TryLoadSave
+  = можно ПОПРОБОВАТЬ загрузить произвольный путь (до аутпоста, в лобби).
+  Не RCE, но info disclosure (существует ли файл / размер / краш).
+
+┌─ 8. VOICE ────────────────────────────────────────────────────
+  Формат: byte senderSessionId + VoipQueue.Read
+  Гейт: VoiceChatEnabled && !Muted && SessionId match
+  VoipQueue.Read: ReadUInt16 (LatestBufferID) + bool ForceLocal + pad +
+  8× (byte length + bytes) — если bufferLengths[i] = 255 → 8×255 = 2040 bytes
+  net read на пакет. Спам = bandwidth. Opus decode может кинуть exception.
+  ★ НЕ оверфлоу: buffers[i] уже аллоцирован, ReadBytes ограничен byte.
+  ЭКСПОЛОЙТ: bandwidth amplification (8 буферов на пакет = 2KB эхо всем).
+
+┌─ 9. SERVER_SETTINGS ──────────────────────────────────────────
+  Гейт: ManageSettings (ЖЁСТКИЙ, AnyOneAllowed НЕ работает!)
+  Все уже покрыто (NET PROPERTIES волна 608).
+
+┌─ 10. SERVER_SETTINGS_PERKS ───────────────────────────────────
+  Гейт: ManageSettings или permless (мягкий!)
+  Формат: VariableUInt32 count + UintIdentifier × N (coalition/separatists)
+  Разобрано в 604 (PERKS MAX STACK).
+
+┌─ 11. SERVER_COMMAND ──────────────────────────────────────────
+  Разобрано в 593. Kick/Ban/Unban/ManageRound/ManageCampaign/SelectMode/etc.
+  SANDBOX EndGame без гейта = самый мощный безправный трюк.
+
+┌─ 12. ENDROUND_SELF ───────────────────────────────────────────
+  Формат: нет тела.
+  Эффект: connectedClient.InGame = false + ResetSync
+  Эксплойт: self-only, выход из раунда. Безопасно.
+
+┌─ 13. CREW ────────────────────────────────────────────────────
+  Разобрано в 622-623. updatePending, validateHires, rename, fire.
+
+┌─ 14. TRANSFER_MONEY ──────────────────────────────────────────
+  Разобрано в 585. NetWalletTransfer.
+
+┌─ 15. REWARD_DISTRIBUTION ─────────────────────────────────────
+  Гейт: AllowedToManageWallets (жёсткий ManageMoney)
+  Кламп 0-100 в атрибуте.
+
+┌─ 16. RESET_REWARD_DISTRIBUTION ───────────────────────────────
+  Гейт: AllowedToManageWallets (жёсткий)
+  Эффект: сброс зарплаты всех на дефолт.
+
+┌─ 17. MEDICAL ─────────────────────────────────────────────────
+  Разобрано в 600-621 (OVERFLOW + GRIEFING).
+
+┌─ 18. CIRCUITBOX ──────────────────────────────────────────────
+  Разобрано в 604/610. 14 CircuitBoxOpcode.
+
+┌─ 19. READY_CHECK ─────────────────────────────────────────────
+  Формат: byte ReadyCheckState + [byte ReadyStatus если Update]
+  Гейт: Start = нет (только readyCheck == null), Update = readyCheck != null
+  Эффект: ANY CLIENT может вызвать Start → popup на ВСЕХ + broadcast.
+  Лимит 30с. Спам = popup-флуд на экипаж. Не kickable автоматически.
+  ОБНОВЛЕНИЕ: client.SessionId проверяется в Clients dict — только участники
+  могут отвечать. НО START может вызвать любой без ограничений!
+
+┌─ 20. READY_TO_SPAWN ──────────────────────────────────────────
+  Формат: bool spectateOnly + bool waitForRespawn
+  Гейт: нет
+  Эффект: self-only (SpectateOnly/WaitForNextRoundRespawn).
+  Спам не влияет на других.
+
+┌─ 21. TAKEOVERBOT ─────────────────────────────────────────────
+  Формат: ushort botId
+  Гейты: RespawnMode.Permadeath + PermanentlyDead + IsBot
+  Разобрано в 623. Живые игроки не могут быть захвачены.
+
+┌─ 22. TOGGLE_RESERVE_BENCH ────────────────────────────────────
+  Гейт: AllowedToManageCampaign(ManageHires) — мягкий!
+  Формат: ushort botId + bool pendingHire
+  Эффект: ToggleReserveBenchStatus — перемещает бота между bench и активным
+  Эксплойт: на permless-сервере можно двигать ботов туда-сюда.
+
+┌─ 23. FILE_REQUEST ────────────────────────────────────────────
+  Гейт: AllowFileTransfers
+  Типы: Submarine (по имени+MD5), CampaignSave (текущий сейв), Mod (по хешу)
+  Эксплойт: CampaignSave = скачать СОХРАНЕНИЕ чужой кампании = прочитать
+  всё содержимое. Перм-чек НЕТ (только AllowFileTransfers серверный)!
+  На сервере с AllowFileTransfers=true любой клиент может скачать сейв.
+
+┌─ 24. ERROR ───────────────────────────────────────────────────
+  Формат: byte ClientNetError + данные
+  MISSING_EVENT: u16 expectedID + u16 receivedID
+  MISSING_ENTITY: u16 eventID + u16 entityID + byte subCount + [string]×5
+  Гейт: нет, но malformed → kick
+  Эксплойт: не найдено. Инфо только в server log.
+
+┌─ 25. REQUEST_BACKUP_INDICES ──────────────────────────────────
+  Формат: string savePath
+  Гейт: НЕТ!
+  Эффект: SaveUtil.GetIndexData(savePath) — читает файловую систему!
+  Разобрано в 625 (гриф из волны 618).
+
+═══════════════════════════════════════════════════════════════
+ИТОГО ПО ГЕЙТАМ:
+  ЖЁСТКИЙ перм: SERVER_SETTINGS, REWARD_DISTRIBUTION, RESET_REWARD
+  Мягкий (окно 586): CREW, TAKEOVERBOT, TOGGLE_RESERVE_BENCH,
+                     CAMPAIGN_SETUP_INFO, TOGGLE_RESERVE
+  Без перма (только близость/серверный флаг): остальное
+  Серверный флаг: FILE_REQUEST (AllowFileTransfers), VOICE (VoiceChatEnabled)
+
+== ВОЛНА 628 — RESPONSE_CANCEL_STARTGAME: детальный разбор (ответ на вопрос юзера) ==
+
+## ⚡ ОТВЕТ: "в лобби жмут старт → я жму кнопку → старт не происходит?"
+
+ДА, РАБОТАЕТ ИМЕННО ТАК. Но только В ОДНОМ СЛУЧАЕ — когда есть WARN.
+
+### Как работает старт раунда:
+1. Кто-то жмёт Start в лобби → хост/AnyOneAllowed вызывает TryStartGame()
+2. TryStartGame вызывает:
+   - InitiateStartGame → стартует раунд СРАЗУ (isRoundStartWarningActive = false)
+   - WarnAndDelayStartGame → ПОКАЗЫВАЕТ WARNING 15 сек (isRoundStartWarningActive = true)
+3. WarnAndDelayStartGame запускается ТОЛЬКО если:
+   applyPerks && CheckIfAnyPerksAreIncompatible(...) — то есть если у команд
+   есть НЕСОВМЕСТИМЫЕ ПЕРКИ с выбранной сабой.
+   ⇒ БЕЗ несовместимых перков — старт раунда идёт БЕЗ WARNING = СРАЗУ.
+   ⇒ CANCEL пакет НЕ ДЕЛАЕТ НИЧЕГО (isRoundStartWarningActive == false).
+
+### КОГДА WARNING появляется:
+- В CAMPAIGN при наличии перков (AlmostAlways)
+- При StartWhenClientsReadyRatio >= порог → TryStartGame()
+  → CheckIfAnyPerksAreIncompatible → да → WarnAndDelayStartGame 15с
+
+### ЧТО ДЕЛАЕТ CANCEL пакет (когда isRoundStartWarningActive == true):
+1. Server → ВСЕМ клиентам CANCEL_STARTGAME → лобби закрывает warning UI
+2. AbortStartGameIfWarningActive():
+   - isRoundStartWarningActive = false
+   - AutoRestartTimer = max(AutoRestartInterval, 5)
+   - ОБНУЛЯЕТ ГОЛОСА StartRound у ВСЕХ клиентов (SetVote(false))
+   - StopCoroutines(WarnAndDelayStartGame) → ОСТАНАВЛИВАЕТ 15-сек таймер
+⇒ РАУНД НЕ СТАРТУЕТ! Через 15с таймер кончается но корутина мертва.
+⇒ Нужно снова голосовать/стартовать.
+
+### ГОЛОСОВАНИЕ СТАРТА (StartWhenClientsReadyRatio):
+Update loop (GameServer:630): если доля готовых >= Ratio → TryStartGame()
+⇒ ТРОЛЛЬ ЦИКЛ:
+  1. Игроки голосуют StartRound → Ratio достигнут → TryStartGame
+  2. TryStartGame → WarnAndDelay (15с warning)
+  3. ТЫ шлёшь RESPONSE_CANCEL_STARTGAME → AbortStartGame → голоса сброшены
+  4. Игроки снова голосуют → снова 15с → снова CANCEL → ∞
+⇒ БЕСКОНЕЧНОЕ «предотвращение старта» пока ты активен.
+
+### ЛИМИТЫ:
+- Работает только если WarningAndDelay активен (perks/sabotage валидация)
+- В SANDBOX/MISSION без перков → старт СРАЗУ → CANCEL не работает
+- Rate limit: DO S-пакет Protection. Медленный спам = работает бесконечно.
+- Хост тоже может нажать START ещё раз → TryStartGame → initiatedStartGame=true
+  → CANCEL уже не сработает (isRoundStartWarningActive = false при InitiateStartGame)
+
+### ТАЙМИНГ АТАКИ:
+Warning 15с → тебе нужно отправить CANCEL в первые 15с. После — InitiateStartGame
+уже вызвался и isRoundStartWarningActive = false.
+⇒ Одного пакета достаточно в первые 15с.
+
+## ФОРМАТ ПАКЕТА: ОДИН БАЙТ header! Больше НИЧЕГО не нужно.
