@@ -21994,3 +21994,200 @@ float division по стандарту IEEE754 → Infinity, NOT exception
 2. Пошли set_frequency = 240 на oscillator
 3. Пошли set_exponent = -1 на exponentiation в цепи
 4. Наслаждайся NaN пожаром на чужой сабе
+
+== ВОЛНА 632 — ПОЛНАЯ КАРТА ГЕЙТОВIsValid ДЛЯ КАЖДОГО КОМПОНЕНТА ==
+
+## ЧТО ПРОВЕРЯЕТСЯ IsValid (NaN/Infinity отсеется) — ЗАЩИЩЁНО:
+- Reactor: set_fissionrate/set_turbineoutput (4 проверки IsValid) ✓ ЗАЩИЩЕНО
+- Pump: flowPercentage (IsValid) ✓ ЗАЩИЩЕНО
+- Steering: TargetVelocity setter (IsValid на Vector2) ✓ ЗАЩИЩЕНО
+- Holdable: attach position (IsValid на simPosition) ✓ ЗАЩИЩЕНО
+- Turret: position_in (MathUtils.IsValid(newRotation)) ✓ ЗАЩИЩЕНО
+- ArithmeticComponent: output проверяется ✓ ЧАСТИЧНО
+- Camera/Character/Ragdoll: IsValid на velocity ✓
+
+## ЧТО НЕ ПРОВЕРЯЕТСЯ IsValid — NaN/Infinity ПРОЙДЁТ:
+- Engine: set_force → MathHelper.Clamp(NaN, -100, 100) = NaN!
+  MathHelper.Clamp НЕ отбрасывает NaN, он его пропускает!
+  → targetForce = NaN → Force = NaN → двигатели сломаны (force=NaN → physics broken)
+- LightComponent: Range setter → MathHelper.Clamp → NaN проходит
+- MemoryComponent: Value = string → ParseVector2/float может вернуть NaN
+- ConcatComponent: строки любые, не numeric
+- SignalCheckComponent: Output = любая строка (не numeric)
+- ItemLabel: Text = любая строка, TextColor = ParseColor (может вернуть NaN в RGBA)
+- All Signal components с string Value: НЕТ IsValid, любые данные проходят
+
+## ИТОГ: КАКИЕ СИСТЕМЫ МОЖНО СЛОМАТЬ NaN:
+1. Engine Force = NaN → двигатель не работает (force=NaN → физика сломана)
+   НО: parseFloat("NaN") через NumberStyles.Float возвращает NaN! → NaN проходит
+   MathHelper.Clamp(NaN, -100, 100) = NaN → Force = NaN → currForce = NaN →
+   ApplyForce(NaN) → физический движок получает NaN force → тело СЛОМАНО
+
+2. Pump flowPercentage = NaN → currFlow = NaN → вода не двигается
+   ⚠ Pump ЕСТЬ IsValid! NaN блокируется.
+
+3. Turret rotation = NaN → MathUtils.IsValid проверка → return. Блокируется.
+
+4. Steering: TargetVelocity setter имеет IsValid → NaN блокируется.
+
+5. LightComponent Range: MathHelper.Clamp(NaN) = NaN → но это только в редакторе
+
+## ПОЛНАЯ КАРТА: что принимает NaN → ломает:
+- ENGINE set_force = "NaN" → float.TryParse("NaN", NumberStyles.Float) 
+  → возвращает NaN! (float.TryParse ДА, парсит "NaN" строку как NaN)
+  → MathHelper.Clamp(NaN, -100, 100) = NaN (Clamp НЕ блокирует NaN!)
+  → Force = NaN → physics force = NaN → SABOTAGE
+
+## КАК ПРАВИЛЬНО ИНЪЕКТИРОВАТЬ NaN:
+ExponentiationComponent:
+  set_exponent = "-1"
+  signal_in = "0"
+  → Math.Pow(0, -1) = Infinity → signal.value = "Infinity" → signal_out
+
+Потом Infinity → Engine set_force:
+  float.TryParse("Infinity", NumberStyles.Float) → Infinity
+  MathHelper.Clamp(Infinity, -100, 100) = 100 (клампInfinity работает)
+  ⇒ Infinity клампится до 100. Хм, это не NaN.
+
+ПОВТОРНАЯ инъекция:
+  signal_in = "-1" (отрицательное)
+  Math.Pow(-1, -1) = -1 → signal.value = "-1" →  ok не NaN
+  Math.Pow(0, -1) = Infinity → "Infinity"
+  Math.Pow(-1, 0.5) = NaN (sqrt от отрицательного!)
+  ⇒ NaN → float.TryParse("NaN", NumberStyles.Float) = NaN!
+  ⇒ MathHelper.Clamp(NaN, -100, 100) = NaN!! ← БАГ .NET
+  ⇒ Force = NaN → ApplyForce(NaN) → Farseer physics NaN → ТЕЛО СЛОМАНО
+
+## ПОДТВЕРЖДЕНИЕ: float.TryParse ПАРСИТ NaN:
+  float.TryParse("NaN", NumberStyles.Float, InvariantCulture, out result)
+  → возвращает true, result = float.NaN!
+  Строка "NaN" валидна для NumberStyles.Float в .NET
+  ⇒ NaN строка → ParseFloat → NaN float → Clamp(NaN) = NaN → ПРОХОДИТ
+
+## ПРАКТИЧЕСКАЯ АТАКА (модуль):
+1. WiringTool подключись к чужому двигателю
+2. Exponentiation → set_exponent = "0.5" → signal_in = "-1"
+3. Math.Pow(-1, 0.5) = NaN → "NaN" строка в цепи
+4. NaN → Engine set_force → Force = NaN → ДВИГАТЕЛЬ НЕ РАБОТАЕТ
+5. Физика сломана пока Force = NaN (пока не перезапустить уровень)
+
+## КАК ЕЩЁ МОЖНО:
+- signal_in = "NaN" напрямую (Terminal → signal_out → set_force)
+- Terminal на чужой сабе (250ю) → пиши "NaN" → пойдёт на всё что подключено
+- MemoryComponent Value = "NaN" → постоянно шлёт NaN → все системы ломаются
+
+== ВОЛНА 633 — ЧТО КРОМЕ ДВИГАТЕЛЯ: полный обход всех set_* сигнальных входов ==
+
+Юзер: «а кроме двигателя? я то уже знаю». Прошёлся по ВСЕМ case "set_*" во всех
+компонентах (grep дал 26 уникальных входов) и сверил каждый с гейтами.
+
+## ГРЕП-КАРТА: все set_* сигнальные входы в игре (26 шт):
+set_output(5), set_state(4), set_text(2), set_text_color(2), set_active(2),
+set_turbineoutput, set_targetsignal, set_rate, set_range, set_outputtype,
+set_modulus, set_light, set_frequency, set_forcefluctuationstrength,
+set_forcefluctuationinterval, set_forcefluctuationfrequency, set_forcefluctuation,
+set_force, set_fissionrate, set_exponent, set_distancebasedforce, set_delay,
+set_color, set_channel.
+Плюс БАЗОВЫЙ ItemComponent.ReceiveSignal: "toggle"/"set_active"/"set_state" —
+IsActive = signal.value != "0" — есть У КАЖДОГО компонента (вкл/выкл чего угодно).
+
+## ★★ НАХОДКА #1: TriggerComponent set_force — ВТОРОЙ ФИЗИЧЕСКИЙ NaN (632 пропустил!)
+TriggerComponent.cs:524-526:
+  case "set_force":
+      if (!FloatTryParse(signal, out float force)) { break; }   // NumberStyles.Any!
+      Force = force;                                             // автосвойство {get;set;} — НЕТ клампа, НЕТ IsValid
+- NumberStyles.Any → "NaN"/"Infinity" парсятся.
+- Force — auto-property, клампа ноль.
+- ГВАРД ОБХОДИТСЯ: Update(): `if (Force < 0.01f && DirectionalForce.LengthSquared() < 0.0001f) continue;`
+  → NaN < 0.01 = false → ветка НЕ срабатывает → ApplyForce() ВЫПОЛНЯЕТСЯ с NaN!
+- Куда бьёт сила (TriggerComponent.cs:445-459):
+  ApplyForce(c.AnimController.Collider)          — КОЛЛАЙДЕР ПЕРСОНАЖА
+  ApplyForce(limb.body, multiplier: ...)         — по лимбам
+  ApplyForce(s.SubBody.Body)                     — ФИЗТЕЛО ПОДЛОДКИ
+  ApplyForce(i.body)                             — предметы в радиусе
+- Force = 999999999 (конечное!) = КАТАПУЛЬТА: персонаж вошедший в радиус триггера
+  улетает с силой миллиард ньютон. Force = "NaN" = физика коллайдера сломана
+  (как Engine, но бьёт по ЛЮДЯМ и СУБАМ, не по сабе через двигатель).
+- БОНУС: ForceFluctuationStrength: Math.Clamp(NaN,0,1)=NaN проходит;
+  ForceFluctuationFrequency: Math.Max(NaN,0.01)=NaN (Math.Max с NaN возвращает NaN!)
+  → CurrentForceFluctuation = NaN → ВЕСЬ force *= NaN даже при нормальном Force.
+- Гейт: нужен доступ к проводам этого предмета (панель/CircuitBox) + чтобы триггер
+  был активен (кто-то в радиусе). У каких предметов есть вход set_force — смотреть
+  в режиме проводов (мины, глубинные бомбы, снаряды с триггером).
+
+## ★ НАХОДКА #2: Wifi set_range — Infinity ТОЖЕ проходит (448 знал только NaN)
+WifiComponent.cs:352-357: case "set_range": float.TryParse(NumberStyles.Float) → Range = newRange;
+Setter (строка 38-47): range = Math.Max(value, 0.0f);
+- Math.Max(NaN, 0) = NaN (IEEE: Math.Max с NaN возвращает NaN) — знал 448.
+- Math.Max(+Infinity, 0) = +Infinity — ТОЖЕ бесконечный радиус, без всякого NaN!
+- CanReceive/CanTransmit: `DistanceSquared > sender.range * sender.range` —
+  Inf² = Inf → не фильтрует; NaN² = NaN → сравнение false → не фильтрует. Оба пути = ∞.
+- УТОЧНЕНИЕ (новое): сила сигнала при доставке считается по range ПОЛУЧАТЕЛЯ:
+  sentSignalStrength = signal.strength * Clamp(1 - dist/receiver.range, 0, 1)
+  (WifiComponent.cs:250-252, wifiComp = ПРИЁМНИК). Range отправителя решает только
+  КТО УСЛЫШИТ, затухание — по range слушателя.
+- СЛЕДСТВИЕ для чат-трансляции (LinkToChat): сигнал доставлен, но
+  `if (sentSignalStrength <= 1.0f) chatMsg = ApplyDistanceEffect(chatMsg, 1-strength)`
+  → далёкие приёмники (dist > их range) слышат текст ЗАШУМЛЁННЫМ ("......").
+  Для инъекций в цепи (турели/реактор/двери) затухание ИГНОРИРУЕТСЯ —
+  value доходит нетронутым на ЛЮБОМ расстоянии.
+- Signal.strength — float, дефолт 1.0 (Signal.cs:16,22). NaN-strength сделать нельзя:
+  Clamp аргумент 1-dist/range никогда не NaN при конечном range приёмника.
+- ИТОГ: Терминал(свой) → wifi set_range="Infinity" → тот же wifi signal_in →
+  ТРАНСЛЯЦИЯ НА ВСЕ САБЫ КАРТЫ (канал+TeamID гейты прежние: канал дефолт 0,
+  TeamID None у приёмника принимает всех). Апгрейд волны 627 — больше не нужно
+  быть в 20000 (200 м) от цели, сетка работает через всю карту.
+
+## ★ НАХОДКА #3: ModuloComponent — NaN-фонтан ОДНОЙ компонентой (проще Exponentiation)
+ModuloComponent.cs:28-32:
+  case "set_modulus": case "modulus":
+      float.TryParse(signal.value, ..., out float newModulus);  // результат НЕ проверяется!
+      Modulus = newModulus;                                      // Modulus {get;set;} без клампа
+- Отправить "abc" → TryParse=false → newModulus=0 → modulus=0
+- signal_in: signal.value = (value % modulus).ToString("G") → x % 0 = NaN (float!)
+- ЛИБО отправить "NaN" напрямую в set_modulus.
+- Каждая цифра на signal_in → NaN строка наружу по signal_out → каскад по цепи
+  (те же последствия что Exponentiation из 631, но сетап: 1 компонента + 1-2 провода).
+
+## ★ НАХОДКА #4: DelayComponent set_delay NaN — флаш очереди + чёрная дыра
+DelayComponent.cs:126-137:
+  case "set_delay": float.TryParse(NumberStyles.Any) → newDelay = MathHelper.Clamp(newDelay, 0, 60);
+- Clamp(NaN, 0, 60) = NaN → проходит кламп!
+- Дальше: `if (signalQueue.Count > 0 && newDelay != Delay) { prevQueuedSignal=null; signalQueue.Clear(); }`
+  → NaN != что угодно = TRUE → ОЧЕРЕДЬ ОТЛОЖЕННЫХ СИГНАЛОВ ФЛЕШИТСЯ (всё что ждало отправки — в мусор)
+- Delay = NaN → delayTicks = (int)(NaN / Timing.Step) → на x64 = int.MinValue
+  → SendTimer стартует с -2147483648, декрементируется → дойдёт до 0 через 2^31 тиков
+  ≈ 414 суток → сигналы в delay ПОСЛЕ поломки НЕ ОТПРАВЛЯЮТСЯ НИКОГДА (в раунде).
+- signalQueueSize = Math.Max(delayTicks,1)*2 = 2 → буфер на 2 сигнала, остальное капает мимо.
+- Восстановимо: послать set_delay="1" (валидное != NaN → чистит очередь, Delay=1).
+- Практика: Terminal → set_delay="NaN" = «заглушить любую задержку» + сломать
+  тайминг-логику чужой автоматики (двери-таймеры, воздухо-автоматы).
+
+## ★ НАХОДКА #5: Oscillator set_frequency NaN — тихая глушушка
+OscillatorComponent.cs:46: frequency = MathHelper.Clamp(value, 0.0f, 240.0f);
+- Clamp(NaN, 0, 240) = NaN → frequency = NaN
+- Update: интервал = 1/frequency = NaN → timer >= NaN = false → ОСЦИЛЛЯТОР МОЛЧИТ ВСЕГДА.
+- Не анти-чит, наоборот: глушилка чужого осциллятора (спамера 240Гц) одним сигналом.
+  (Или само-защита: свой осциллятор-флудер можно глушить так же.)
+
+## ЗАЩИЩЕНО (добавлено в карту после проверки):
+- PowerContainer set_rate (375-384): IsValid(tempSpeed) + Clamp(0,1) → NaN блокируется ✓
+- PowerDistributor (97): !IsValid → return ✓
+- Wifi set_channel (52-56): Clamp(0, 10000) — int NaN нет, кламп есть ✓
+- TriggerComponent set_distancebasedforce / set_forcefluctuation: bool.TryParse — NaN не булев ✓
+- Turret set_light (2038-2047): bool, только свет турели (визуал) ✓
+- ItemComponent базовый set_active/set_state/toggle (540-546): bool ✓
+  (но = дистанционное ВКЛ/ВЫКЛ любого компонента при наличии провода!)
+
+## ИТОГОВОЕ МОЮ: полный список дырявых float-приёмников после 633:
+| Компонент          | Вход          | Гейт | Ломает |
+| Engine             | set_force     | НЕТ  | физика сабы (NaN) |
+| TriggerComponent   | set_force     | НЕТ  | коллайдеры персонажей/саб (NaN/катапульта) |
+| TriggerComponent   | set_forcefluctuationfrequency | Math.Max(NaN)=NaN | весь force в NaN |
+| WifiComponent      | set_range     | Math.Max | ∞ радиус эфира (NaN/Infinity) |
+| ModuloComponent    | set_modulus   | НЕТ (TryParse непроверяемый) | NaN-фонтан |
+| ExponentiationComponent | set_exponent | НЕТ | NaN/Inf фонтан (631) |
+| DelayComponent     | set_delay     | Clamp пропускает NaN | флаш+глухота автоматики |
+| OscillatorComponent| set_frequency | Clamp пропускает NaN | глушение |
+| LightComponent     | set_color     | НЕТ  | визуал RGB (625) |
+| ItemLabel          | set_text      | НЕТ  | граффити (625) |

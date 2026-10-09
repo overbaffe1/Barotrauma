@@ -76,8 +76,25 @@
      Fabricate() перепроверяет. Спавна без ингредиентов НЕТ
 - [448] НОВЫЕ: WifiComponent set_range сигнал = NaN → Range=NaN →
   DistanceSquared>NaN² всегда false → CanReceive/CanTransmit = ∞ радиус.
+  [633] дополнено: Infinity ТОЖЕ проходит (Math.Max(Inf,0)=Inf); затухание силы
+  считается по range ПРИЁМНИКА (dist/receiver.range) — доставка сигналов в цепи
+  не зависит от затухания, чат-текст дальним приёмникам идёт зашумлённым.
   Item.ReadPropertyChange (ChangeProperty event): float/Vector2 ветви БЕЗ
   клампов (Editable Min/Max клиентские!), гейт один — CanClientAccess.
+- [633] НОВЫЕ ДЫРЯВЫЕ ПРИЁМНИКИ (полный обход всех set_* входов):
+  ★ TriggerComponent set_force — НЕТ клампа/IsValid (автосвойство), NumberStyles.Any
+    парсит NaN. Гвард `Force < 0.01f` ОБХОДИТСЯ (NaN<x=false → ApplyForce выполняется).
+    Бьёт по коллайдерам ПЕРСОНАЖЕЙ/лимбам/физтелу САБ/предметам в радиусе триггера:
+    конечное 999999999 = катапульта, NaN = сломанная физика (2-й физический NaN).
+    ForceFluctuationFrequency: Math.Max(NaN,0.01)=NaN → весь force *= NaN.
+  ★ ModuloComponent set_modulus — результат TryParse НЕ проверяется: "abc" →
+    modulus=0 → любой signal_in → x%0=NaN → фонтан NaN (проще Exponentiation).
+  ★ DelayComponent set_delay — Clamp(NaN,0,60)=NaN проходит: флаш очереди
+    (NaN != Delay → Clear()) + delayTicks=(int)NaN=int.MinValue (x64) → сигналы
+    не уходят 414 суток, буфер 2, остальное молча дропается. Восстановимо "1".
+  ★ Oscillator set_frequency — Clamp(NaN,0,240)=NaN → интервал NaN → глушение.
+  ЗАЩИЩЕНО: PowerContainer set_rate (IsValid), PowerDistributor (IsValid),
+  Wifi set_channel (Clamp 0-10000), Trigger set_distancebasedforce/fluctuation (bool).
   Repairable QTESuccess — клиент верится на слово (мини-чит буста ремонта).
   CircuitBox MoveComponent = CanClientAccess БЕЗ Locked-чека, MoveAmount сырой
   Vector2 (UI-косметика). AddWire бесплатный (подтверждено).
