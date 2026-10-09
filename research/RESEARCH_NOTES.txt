@@ -21542,3 +21542,43 @@ Concat цепочка может вырасти до n*200 где n = кол-в�
 5) Terminal + label.* теги = подделка официальных системных сообщений
 6) RemovePending спам = врач не может лечить экипаж (социальная паника)
 7) Traitor Vote на бота = "SkylEiotic: Я думаю это Медик[БОТ]" в Radio
+
+== ВОЛНА 626 — ИСПРАВЛЕНИЕ: LightComponent Range НЕ доступен по сети ==
+
+## ОШИБКА в волне 625: Range Нельзя менять по сети или через провода!
+
+Range атрибуты:
+  [Serialize(100.0f, IsPropertySaveable.Yes, ...), Editable(MinValueFloat=0, MaxValueFloat=2048)]
+  → это просто [Editable] — только для редактора сабы
+  → НЕ [InGameEditable] → НЕ доступен через ChangeProperty сеть-пакет
+  → НЕ обрабатывается в ReceiveSignal (нет case "set_range")
+
+Range setter клампит 0..4096. MaxSightRange = Range*5 → max 20480.
+
+## ЧТО РЕАЛЬНО доступно в LightComponent:
+
+### Через ReceiveSignal (провода, WiFi, Terminal):
+  - "toggle" → IsOn invert (если !IgnoreContinuousToggle и не спам)
+  - "set_state" → IsOn = value != "0"
+  - "set_color" → LightColor = ParseColor(arbitrary)  ← единственный InGameEditable
+
+### Через ChangeProperty (InGameEditable поля, есть только LightColor):
+  - LightColor = любой RGB (все 3 InGameEditable на 169 line)
+
+## НЕ работает:
+  - Range (нет сигнала, не InGameEditable) — только в редакторе сабы
+  - Flicker, FlickerSpeed (только [Editable], нет ReceiveSignal case)
+  - PulseFrequency, PulseAmount (только [Editable])
+  - Rotation (только [Editable])
+  - LightBrightness (нет InGameEditable)
+
+## MaxSightRange = Range * 5 = 100 * 5 = 500 (дефолт)
+   Если Range = 2048 (max в редакторе) → SightRange = 10240
+   Это ТОЛЬКО через редактор сабы. Не через пакеты.
+
+## ИСПРАВЛЕНИЕ для волны 625:
+Range через сигнал — НЕ работает. Убираю из списка.
+Что остаётся:
+  - set_color — RGB свет через WiFi (работает)
+  - set_state / toggle — вкл/выкл мигание (работает)
+  - Range 4096 карта- blindness — НЕ работает по сети
