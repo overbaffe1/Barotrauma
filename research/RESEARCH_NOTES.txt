@@ -21466,3 +21466,79 @@ SetVote(voteType, client) → voteList содержит каждого клие�
 
 ## Итог: голосования работают честно. Гейтжк только server settings.
 LevelSeed — требует ManageSettings, не обходимо.
+
+== ВОЛНА 625 — 🎪 ПРИКОЛЬНЫЕ ПАКЕТЫ: визуальный и звуковой троллинг ==
+
+## ⚡ ЛАЙТ-ТРОЛЛИНГ: LightComponent через провода
+LightComponent.ReceiveSignal (нет CanClientAccess, просто соединение проводом):
+- "toggle" → вкл/выкл свет (спам = мигание)
+- "set_state" → IsOn = value != "0" → меняет состояние
+- "set_color" → LightColor = ParseColor(arbitrary) → ЛЮБОЙ цвет света!
+- [Editable] Range (0-2048) — InGameEditable но читается только с сервера
+  (через ChangeProperty — т.е. нужен CanClientAccess)
+- [Editable] Flicker (0-1) — может мерцать
+
+ЧТО ДАЁТ: если ты на чужой сабе и 250ю от их проводов → можно:
+1) Спамить set_state на свет → мигание всех лампочек = эпилептический припадок
+2) set_color = RGB 255,0,0 на все лампы → КРАСНЫЙ ТРЕВОЖНЫЙ СВЕТ
+3) Range 4096 → ослепляющий свет на всю карту (Range*5 = MaxSightRange 20480)
+4) set_color + set_state спам = RGB-дискотека на чужом корабле
+
+ГЕЙТ: надо достучаться до LightComponent → через Wi-Fi-инъекцию (волна 617)
+или через физически подсоединённый провод (WiringTool на чужой сабе).
+
+## ⚡ CPR FORCED ANIMATION (CharacterNetworking:287)
+Character.ServerEventRead case Treatment:
+  bool doingCPR = ReadBoolean();
+  AnimController.Anim = doingCPR ? CPR : None;
+Гейт: c.Character != this (только своё тело!)
+⇒ Можно поставить себе CPR-анимацию бесконечно. Визуально выглядит
+   как ты делаешь компрессию грудной клетки ВОЗДУХУ. Смешно смотреть.
+⇒ На ЧУЖОГО персонажа НЕ работает (c.Character != this блокирует).
+
+## ⚡ SELF-KILL через Status (CharacterNetworking:301)
+Character.ServerEventRead case Status:
+  if (IsIncapacitated) → Kill(causeOfDeath)
+⇒ Если ты в incap (в ступоре/без сознания) → один пакет убивает тебя!
+  (в т.ч. суицид когда тебя тащат). Может быть полезно когда захватили.
+
+## ⚡ ItemLabel — Text и TextColor через провода (БЕЗ CanClientAccess!)
+ItemLabel.ReceiveSignal:
+  "set_text" → Text = signal.value (ЛЮБАЯ строка!)
+  "set_text_color" → TextColor = ParseColor(arbitrary)
+НЕТ CanClientAccess, НЕТ limit на длину Text!
+⇒ Если на чужой сабе есть item label, подключённый к проводам, ты можешь
+   ЗАМЕНИТЬ ТЕКСТ НА ЭКРАНЕ (аргб любой) — визуальный троллинг.
+   Это ДОПОЛНИТЕЛЬНО к Terminal который использует TextManager.
+
+## ⚡ ForceSay через ConversationAction (EventManager:83)
+Если активен событийный диалог и выбран option с ForceSay=true:
+  sender.Character.ForceSay(
+      option.ForceSayText.IsNullOrEmpty() ? TextManager.Get(option.Text)...,
+      option.ForceSayInRadio, option.ForceSayRemoveQuotes);
+⇒ Ты говоришь ЛЮБОЙ текст диалога в radio. Это требует что опция с
+  ForceSay=true была в диалоге. На ванильных событиях мало.
+⇒ Через мод-контент — любые фразы. На чужом серве без модов — только
+  стандартные фразы диалогов.
+
+## ⚡ ChatMessage.MaxLength = 200:
+Все сигнальные компоненты (Terminal/SignalCheck/MotionSensor/RegEx/Equals/
+Concat/Boolean) имеют MaxOutputLength=200 дефолт.
+Concat цепочка может вырасти до n*200 где n = кол-во компонентов.
+Не крашер, но полосит сеть при 1000+ компонентов.
+
+## 📉 МЕЛОЧИ:
+- SonarTransducer шлёт "0101101101101011010" на data_out каждые 0.5с —
+  декоративный сигнал, никто его не использует.
+- ColorComponent: парсит RGB компоненты из отдельных сигналов signal_r/g/b —
+  не критично но для генерации цвета из цепи.
+- RegEx timeout 50ms × 3 = self-deactivate. ReDoS не работает.
+
+## 📋 ПРИКОЛЬНЫЕ ПАКЕТНЫЕ ПРИКОЛЫ (без прав):
+1) WiFi + LightComponent = RGB-дискотека на чужой сабе
+2) WiFi + ItemLabel = менять текст/цвет label на чужой сабе
+3) CPR спам себе = смешная анимация для скриншотов
+4) Status пакет = суицид (полезно когда тащат в плен)
+5) Terminal + label.* теги = подделка официальных системных сообщений
+6) RemovePending спам = врач не может лечить экипаж (социальная паника)
+7) Traitor Vote на бота = "SkylEiotic: Я думаю это Медик[БОТ]" в Radio
