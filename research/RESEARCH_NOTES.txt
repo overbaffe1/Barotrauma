@@ -21944,3 +21944,53 @@ Warning НЕ показывается → старт мгновенный → CA
   ShouldApplyDisembarkPoints(Campaign) = FALSE
   ⇒ в кампании перки НЕ показываются, НЕ выбираются, НЕ влияют.
   ⇒ CANCEL_STARTGAME бесполезен в кампании. Только Mission/Sandbox/PvP.
+
+== ВОЛНА 631 — ⚡ СИГНАЛЬНАЯ ИНЪЕКЦИЯ: Oscillator 240Hz Flood + Exponentiation NaN/Inf ==
+
+## 🔥 НОВОЕ #1: OscillatorComponent — 240 сигналов/сек = CPU бомба
+OscillatorComponent.ReceiveSignal case "set_frequency":
+  Frequency = newFrequency;  // setter клампит 0..240
+Но 240 Hz в Pulse mode = **240 сигналов каждую секунду** = 4 сигнала каждый кадр!
+Каждый сигнал проходит через ВСЮ цепь подключённых компонентов.
+
+ПАКЕТ: WiringTool → соединяешь oscillator signal_out → любой компонент на
+чужой сабе → ставишь frequency = 240 → КАЖДЫЙ КАДР генерит 4 сигнала →
+эти сигналы проходят через N компонентов → N × 4 операций сервера каждый кадр.
+
+При 100+ компонентов в цепи: 400+ вызовов ReceiveSignal каждый кадр.
+Это НЕ network bandwidth — это SERVER CPU. Можно замедлить сервер до неиграбельности.
+
+## 🔥 НОВОЕ #2: ExponentiationComponent — NaN/Infinity инъекция в цепь
+ExponentiationComponent.ReceiveSignal:
+  case "set_exponent": exponent = float.Parse(signal.value)  // БЕЗ КЛАМПА!
+  case "signal_in": signal.value = MathUtils.Pow(value, Exponent).ToString("G")
+
+MathUtils.Pow = (float)Math.Pow(f, p) — стандартный Math.Pow:
+  Math.Pow(0, -1) = Infinity
+  Math.Pow(-1, 0.5) = NaN
+  Math.Pow(1e10, 1000) = Infinity
+
+signal.value = "NaN" / "Infinity" / "-Infinity" → идёт на signal_out →
+ЛЮБОЙ компонент в цепи делает float.TryParse("NaN") → float.NaN →
+NaN распространяется по ВСЕЙ цепи (NaN + X = NaN, NaN * X = NaN).
+
+## ⚡ ПРАКТИЧЕСКОЕ ПРИМЕНЕНИЕ НА ЧУЖОЙ САБЕ:
+1. WiringTool → подключись к чужой цепи в 250ю
+2. Поставь OscillatorComponent (или используй их собственный)
+3. set_frequency = 240 → 4 сигнала/кадр
+4. Соедини oscillator → Exponentiation → set_exponent = -1
+5. signal_in = 0 → Infinity → идёт в всю цепь
+6. Infinity попадает в ArithmeticComponent → power calculations →
+   Infinity уходит в SetPower → Shorts → Fire/EXPLOSION
+
+## ⚡ УЖЕ ИЗВЕСТНОЕ НО ДРУГИМИ СЛОВАМИ:
+ArithmeticComponent: Add/Subtract/Multiply/Divide — Divide на 0 = Infinity/NaN
+DivideComponent.ReceiveSignal case "signal_in2" = 0 → DivideByZero
+float division по стандарту IEEE754 → Infinity, NOT exception
+⇒ NaN/Infinity каскад через цепь без исключений = тихий слом всех систем
+
+## МОДУЛЬ (готовый концепт):
+1. В WiringTool подсоедини oscillator.signal_out → enemy arithmetic.signal_in
+2. Пошли set_frequency = 240 на oscillator
+3. Пошли set_exponent = -1 на exponentiation в цепи
+4. Наслаждайся NaN пожаром на чужой сабе
