@@ -15212,5 +15212,17 @@
       238,
       270
     ]
+  ],
+  "Barotrauma/Barotrauma/BarotraumaServer/ServerSource/Networking/Voting.cs": [
+    [
+      242,
+      385
+    ]
+  ],
+  "Barotrauma/Barotrauma/BarotraumaServer/ServerSource/Screens/NetLobbyScreen.cs": [
+    [
+      150,
+      165
+    ]
   ]
 }

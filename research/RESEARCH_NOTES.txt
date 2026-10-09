@@ -21370,3 +21370,99 @@ else if (characterInfo == null && renamedIdentifier == sender.CharacterInfo?.ID)
   Работает только во время запуска раунда.
 
 ## ФИНАЛ: весь ClientPacketHeader разобран, реальных эксплойтов больше нет.
+
+== ВОЛНА 623 — CREW updatePending: ПОДСТАВЬ СЕБЯ ИЛИ ХОСТА ОТВЕТЫ ==
+
+## ТВОЙ ВОПРОС: "а если подставить себя что будет? а если хоста?"
+
+## ОТВЕТ НА ПЕРВЫЙ: подставить СЕБЯ в updatePending — можно!
+В MultiPlayerCampaign.cs:1392:
+  CharacterInfo match = location.GetHireableCharacters().FirstOrDefault(info => info.ID == identifier);
+⇒ ID должен совпадать с ОДНИМ из AvailableCharacters у текущей локации.
+⇒ В AvailableCharacters — только СГЕНЕРИРОВАННЫЕ кандидаты найма (HireManager:41-64).
+⇒ СВОЙ CharacterInfo ID туда НЕ попадает (ты не «кандидат найма»).
+⇒ Подставить свой ID → match == null → DebugConsole.ThrowError → continue.
+
+## НО: если ты → fireCharacter=TRUE с firedIdentifier = ОДИН ИЗ CREW:
+  CrewManager.GetCharacterInfos(includeReserveBench: true).FirstOrDefault(info => info.ID == firedIdentifier)
+  → если это БОТ → CrewManager.FireCharacter(firedCharacter);
+  → если это ИГРОК (не бот) → `firedCharacter.Character?.IsBot ?? true` — false →
+    DebugConsole.ThrowError("Tried to fire an invalid character")
+  ⇒ УВОЛИТЬ ЖИВОГО ИГРОКА НЕЛЬЗЯ. Только БОТОВ.
+  Гейт: AllowedToManageCampaign(ManageHires) — мягкий гейт (окно 586).
+
+## ОТВЕТ НА ВТОРОЙ: подставить ХОСТА в updatePending — нельзя по той же причине.
+Host имеет свой CharacterInfo, но его ID НЕ в AvailableCharacters.
+⇒ match == null → continue.
+
+## ЧТО МОЖНО СДЕЛАТЬ через CREW (реальный итог):
+1) updatePending=true + свой список ID (из AvailableCharacters)
+   → ЗАМЕНИТЬ ПЕНДИНГОВ КАНДИДАТОВ НА ТО, ЧТО ХОЧЕШЬ.
+   Если потом validateHires=true + ты у crew-NPC в 250ю:
+   → TryHireCharacter НАЙМЁТ ВСЕХ — деньги списываются с ОТПРАВИТЕЛЯ (тебя).
+2) Это ЛЕГАЛЬНЫЙ массовый найм. Стоимость = HireManager.GetSalaryFor(characterInfo)
+   + NewCharacterCost если buyingNewCharacter=true (не из пакета).
+3) Ты НЕ можешь подставить ЧУЖИХ ИГРОКОВ в список найма — их ID там нет.
+4) Ты НЕ можешь уволить живых игроков — только ботов.
+
+## TryTakeOverBot (Client.cs:300) — И ТОЛЬКО ПЕРМАДЕС:
+  RespawnMode.Permadeath обязателен, CharacterInfo.PermanentlyDead = true,
+  botCharacter.IsBot = true. Обойти нельзя (все проверки серверные).
+  После take-over botCharacter.Info.RenamingEnabled = true.
+
+## НОВОЕ: RenamingEnabled never resets:
+  ID-карточка привязывается к игроку через `idCard.OwnerName == info.Name` (Character:1930)
+  Если переименовать → имя не совпадает → старые ID-карты не работают!
+  (Character:1930: `if (idCard.OwnerName != info.Name) { continue; }`)
+
+## КАК ОТЛИЧИТЬ CharacterInfo (ID жертв vs кандидатов найма):
+  ID жертв = тот же счётчик idCounter что у тебя (растёт от 1)
+  ID кандидатов = отдельный, малый (обычно 0-5, генерируется на локацию)
+  Их можно различить по типу — кандидаты ВСЕГДА имеют Character == null,
+  персонажи экипажа имеют Character != null (если живы).
+
+== ВОЛНА 624 — VOTING ПОЛНЫЙ + LEVEL SEED МЕХАНИКА + ГОЛОСОВАНИЯ С КЛИЕНТА ==
+
+## VoteType enum (11 значений): Unknown=0, Sub=1, Mode=2, EndRound=3, Kick=4,
+StartRound=5, PurchaseAndSwitchSub=6, PurchaseSub=7, SwitchSub=8, TransferMoney=9, Traitor=10
+
+## ServerRead полные гейты для всех VoteType:
+- Sub: БЕЗ гейтов, просто sender.SetVote(voteType, sub). SubInfo ищется по
+  EqualityCheckVal или MD5Hash — несуществующий не найдётся, sub == null → SetVote(null)
+- Mode: БЕЗ гейтов, mode.Votable проверка. При смене highest voted → NetLobbyScreen.LastUpdateID++
+- EndRound: sender.HasSpawned только. SetVote(voteType, ReadBoolean)
+- Kick: AllowVoteKick + DisallowKickVoteTime + target != OwnerConnection + !HasKickVoteFrom
+- StartRound: БЕЗ гейтов, SetVote(voteType, bool)
+- PurchaseAndSwitchSub/PurchaseSub/SwitchSub: если startVote → проверяется
+  CanPurchaseSub(subInfo, sender) — кошелёк отправителя. Иначе SetVote(int vote)
+- TransferMoney: если startVote → ShouldRejectVote (rate limit) + полная формула
+  из волны 585. Иначе SetVote(int vote)
+- Traitor: sender.InGame && sender.Character != null. clientId = ReadInt32.
+  Client ищется по SessionId. SetVote + Radio-сообщение на [name] блэйм
+
+## ⚡ Traitor Vote: клиент может "проголосовать" за ЛЮБОГО SessionId
+SetVote(voteType, client) → voteList содержит каждого клиента как ключ.
+Т.е. можно подставить не только игроков, но и БОТОВ. Максимум голосов = max
+можно менять подменой SessionId в repeated пакетах (голос сохраняется на клиенте).
+⇒ Blame button на Radio — чат-сообщение "Я думаю это [name]" — с твоим ником.
+
+## 🎯 LevelSeed МЕХАНИКА:
+- Хранится в NetLobbyScreen (server: `levelSeed` string, client: то же через sync)
+- Server setter: `LocationType.Random(new MTRandom(ToolBox.StringToInt(levelSeed)))`
+  = seed управляет генерацией уровней в ПОСЛЕДУЮЩИХ переходах. Текущий уровень не меняется.
+- Client setter (NetLobbyScreen client) — то же самое.
+- Уровень генерится в LoadNewLevel с текущим seed из NetLobbyScreen.
+- ToolBox.StringToInt: Djb2-like hash (deterministic).
+- ServerRead (Misc flag): SetMissionTypes + LevelSeed = ReadString
+  = АРБИТРАРНАЯ строка. Гейт = ManageSettings (жёсткий) в ServerRead
+  AnyOneAllowedToManageCampaign НЕ применяется к ServerRead — только к AllowedToManageCampaign!
+  Проверено кодом ServerSettings.ServerRead:167:
+  `if (!c.HasPermission(Networking.ClientPermissions.ManageSettings)) return;`
+  ⇒ LevelSeed НЕ меняется без перма ManageSettings.
+
+## ⚡ CLIENT GetVoteCountYes/No/Max:
+  Локальные Dictionary<VoteType, int> на клиенте. Обновляются от ServerWrite.
+  Мой NegTransferModule корректно их читает.
+
+## Итог: голосования работают честно. Гейтжк только server settings.
+LevelSeed — требует ManageSettings, не обходимо.
