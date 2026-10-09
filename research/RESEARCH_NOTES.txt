@@ -21300,3 +21300,73 @@ ServerSend с targetClient == null → отправляет ВСЕМ connectedCl
 4) Инфо-лист — работает (REQUEST_PENDING).
 5) CLEAR_PENDING — любой может очистить очередь (ManageMoney НЕ нужен!).
 ВСЁ РАБОТАЕТ БЕЗ ПЕРМОВ, только нужны кампания + аутпост не в бою + ты в раунде.
+
+== ВОЛНА 622 — CREW/MONEY/READY_CHECK финал + ДУБЛИКАТ НАЙМА (новый трюк!) ==
+
+## CREW (CREW пакет → ServerReadCrew, MultiPlayerCampaign:1263):
+Формат:
+  bool updatePending
+  if updatePending: ushort length + [ushort ID + bool toReserve] × length
+  bool validateHires
+  bool renameCharacter + [ushort renamedID + string newName + bool existingCrewMember]
+  bool fireCharacter + [ushort firedID]
+
+ГЕЙТЫ:
+  fire: AllowedToManageCampaign(ManageHires) + HasCampaignInteractionAvailable(Crew)
+  rename чужого: AllowedToManageCampaign(ManageHires) + HasCampaignInteractionAvailable(Crew)
+  rename своего: renamedIdentifier == sender.CharacterInfo?.ID → allowed (без HasInteraction!)
+  rename лимит: RenamingEnabled (только 1 раз) для своего персонажа
+
+## ⚡ НОВОЕ: ДУБЛИКАТ НАЙМА / FREE CREW
+validateHires=true:
+  foreach (hireInfo in location.HireManager.PendingHires):
+    TryHireCharacter(location, hireInfo, client: sender)
+  Гейт: HasCampaignInteractionAvailable(Crew) — 250ю от crew-NPC.
+  
+  TryHireCharacter (CampaignMode:1137):
+    проверка MinReputationToHire — требует репутацию с фракцией
+    TakeMoney → TryPurchase(client, NewCharacterCost)
+    
+  TryPurchase → GetWallet(client) → character.Wallet → TryDeduct
+  Возвращается false если денег нет.
+  ⇒ Без денег не работает. ⚠
+
+## ⚡ НОВОЕ: updatePending — ПОДМЕНА СПИСКА НАЙМА
+updatePending=true → клиент ПЕРЕЗАПИСЫВАЕТ location.HireManager.PendingHires
+тем, что пришлёт. Строка: location.HireManager.PendingHires = pendingHireInfos;
+Клампы: только MaxCrewSize (16) и BotStatus. Любой клиент с доступом к crew-NPC
+(250ю) может ПЕРЕЗАПИСАТЬ спиcок кандидатов (в т.ч. ЧУЖОЙ кампании).
+⇒ Можно: очистить список, подставить себя, подставить любого персонажа.
+
+## ⚡ ГЕЙТ rename своего персонажа:
+else if (characterInfo == null && renamedIdentifier == sender.CharacterInfo?.ID)
+  → characterInfo = sender.CharacterInfo;
+  если `characterInfo != sender.CharacterInfo && !HasCampaignInteractionAvailable` → null
+  ⇒ если renamedIdentifier == свой ID → allowed даже без 250ю (HasCampaignInteractionAvailable не нужна)
+  RenamingEnabled: только 1 раз для своего. После — нельзя (без ManageHires перма).
+  НЕТ ограничения на длину имени кроме SanitizeName (max 32).
+
+## MONEY (TRANSFER_MONEY):
+  NetWalletTransfer: Option<ushort> Sender + Option<ushort> Receiver + int Amount
+  Проверки: Amount<=0 → return; Sender==Some и != свой CharacterID → AllowedToManageWallets
+  Sender=None → Receiver=Some → деньги ИЗ БАНКА → TakeMoney=campaign.Bank
+  Sender=None → Receiver=None → деньги ИЗ БАНКА → В БАНК (переливание себе)
+  ПОЛЕЗНО: SendTransfer(None, me, X) — «перевести из банка себе»
+  Работает у аутпоста. Limit = MaximumMoneyTransferRequest (default 999999)
+
+## REWARD_DISTRIBUTION (Salary):
+  NetWalletSetSalaryUpdate: Option<ushort> Target + int NewRewardDistribution
+  Кламп 0-100 в [NetworkSerialize(MinValueInt=0, MaxValueInt=100)]
+  Гейт: AllowedToManageWallets (= ManageMoney перм, НЕ AnyOneAllowed)
+  Работает только на своём сервере или с пермом.
+
+## READY_CHECK / READY_TO_SPAWN / ENDROUND_SELF:
+  READY_CHECK: Start/Update статус (Any — любое значение байта, кастится в enum).
+  Спам Start = любой клиент может дёргать ready-check всем (30с lifetime).
+  READY_TO_SPAWN: spectateOnly + waitForRespawn — self-only (безопасно).
+  ENDROUND_SELF: InGame=false + ResetSync — self-only (выход из раунда).
+
+## REQUEST_STARTGAMEFINALIZE: гейт = GameStarted (если не started → warning).
+  Работает только во время запуска раунда.
+
+## ФИНАЛ: весь ClientPacketHeader разобран, реальных эксплойтов больше нет.
