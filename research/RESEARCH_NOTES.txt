@@ -22987,3 +22987,40 @@ eligible. ≤4 человека на сервере → 2 сообщника к�
 
 ## ЧИСТО: Sub-вот (по имени/MD5 из сохранённых), Mode-вот (только Votable),
 StartRound (булев), EndRound (HasSpawned+InGame), перки-фиксы 641-642.
+
+== ВОЛНА 650 — WIRE NODES: сервер принимает ОДНУ точку, клиент интерполирует ==
+
+## ServerEventRead (серверный Wire.cs:49-76):
+byte nodeCount + [float X, float Y] (последняя нода). Больше ничего!
+Логика: RemoveRange за концом / Add / заменить последнюю — по сути сервер
+только УКОРАЧИВАЕТ или двигает ОДНУ ноду. Гейты: CanClientAccess + Locked +
+AllowRewiring. Allocations нулевые. Чисто.
+
+## ГЛАВНОЕ (апдейт «клона проводов» из 448):
+Длина провода СЧИТАЕТСЯ НА КЛИЕНТЕ в Wire.Update: currLength по ВСЕМ нодам
++ дистанция до предмета → превышение MaxLength*1.5 → ClearConnections.
+Но сервер нод-массив ПОЧТИ НЕ ХРАНИТ → «телепорт ноды за уровень» (448) —
+клиентская иллюзия: серверу этот полёт невидим, но и не валидируется.
+=> клоны/рисование через стены = клиентский диз-синк, НЕ сервер-сайд.
+
+## ★ КАНДИДАТ БОЛЬШОГО ВЕСА: sectionExtents → DrawSize → IsVisible
+Wire.ServerEventRead ставит lastNodePos = ЛЮБЫЕ 2 флоата (CanClientAccess
+после чтения, но нода уже применена для УПРАВЛЕНИЯ списком... wait —
+CreateNetworkEvent вызывается ВСЕГДА (line 75) даже при отказе гейтов!
+item.CreateServerEvent(this) броадкастит провод ВСЕМ с новой нодой.
+sectionExtents = max(|node - itemPos|) — НЕ клампится нигде (сервер).
+Клиент: DrawSize = sectionExtents → Item.IsVisible расширяет bounding-box
+до extents → если нода за 1e9 юнитов, extents ~1e9 → провода ВСЕГДА
+IsVisible=true (worldView всегда внутри гигантского бокса) →
+Draw() рисует ВСЕ секции проводов на карте КАЖДЫЙ КАДР У КАЖДОГО КЛИЕНТА.
+Плюс CalculateExtents → ResetCachedVisibleSize.
+ЭФФЕКТ: N проводов * K клиентов * фулл-draw = клиентский FPS-смерть.
+УСЛОВИЕ: нужен CanClientAccess к ОДНОМУ проводу (свой саб-панель) —
+послать nodeCount=1 + координаты (1e9, 1e9).
+⚠ ЧЕСТНО: Draw рисует линии по nodes[] позициям — узел за 1e9 рисует
+линию за экран; главная стоимость = IsVisible always-true на ВСЕ предметы
+клиента + фулл рендер линий. Софт-DoS на fps, требует проверки веса
+(гипотеза «1 провод = смерть FPS» возможно завышена — мериется в игре).
+
+## МЕЛОЧЬ: PowerDistributor SharedEventRead — клампы (ranged 0-1,
+Take(MaxNameLength)) чистые. PowerContainer: ranged 0-10. Всё гвардится.
