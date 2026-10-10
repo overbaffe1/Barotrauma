@@ -22882,3 +22882,33 @@ MessageReader: NetBitWriter.ReadByte = fromBuffer[bytePtr] БЕЗ bounds check �
 Паттерн для дальнейшего ханта: писать ли клиенту в сеттеры/поля значения,
 которые читаются в Update БЕЗ try — таких мест проверить грепом
 `set { selectedOption = value; }`-стиля по ServerEventRead-хендлерам.
+
+== ВОЛНА 647 — МИНУС-БАЛАНС И КРАШ-ХАНТ: кошелёк клиники, инпут, головы ==
+
+## ПОЧЕМУ КЛИНИКА СПИСАЛА СВОЙ КОШЕЛЁК (для юзера):
+HealAllPending → campaign.TryPurchase(client=ОТПРАВИТЕЛЬ, totalCost) →
+Wallet.TryDeduct → CanAfford(Balance >= price) + Deduct(Balance -= price).
+Банк тут вообще не участвует. Отрицательная цена проходит CanAfford
+(всегда true) → принтер (600-603/585, известные пути). СЕТТЕР Balance
+клампит [0, MaxMoney] → НАСТОЯЩЕГО минуса в состоянии не бывает никогда.
+Новых минус-векторов в heal-пути нет.
+
+## ServerReadInput (инпут — единственный пакет 60/с на игрока): ДИСЦИПЛИНИРОВАН
+Флаги через ReadRangedInteger(0..MaxVal) — кламп; i<60; memInput кап 60
+(RemoveRange при переливе); aim = ushort-доля (NaN невозможен); interact =
+ushort entity ID, резолвится лениво с null-финдами. Пусто.
+
+## RecreateHead: индексы причёски/бороды/усов/лица (int из пакета)
+хранятся СЫРЫМИ (HeadInfo хранит, не индексирует). Сервер массивы не
+индексирует → сервер не крашится. НО: эти индексы рассылаются всем
+клиентам в crew-синке → КЛИЕНТ при рендере твоего персонажа индексирует
+ими спрайт-массивы → КАНДИДАТ В «КРАШ ЧУЖИХ ИГР ВИДОМ ПЕРСОНАЖА».
+Патчи в CharacterInfo (catch IndexOutOfRangeException) касаются только
+XML-загрузки, не рендера. Требуется проверка клиентского рендера
+(LoadHeadAttachments + guard главного цикла клиента) — СЛЕДУЮЩАЯ ВОЛНА.
+
+## ОЧЕРЕДЬ КРАШ-КАНДИДАТОВ (паттерн 646):
+- head-индексы → рендер клиентов (см. выше)
+- ReadyCheck: (ReadyCheckState)byte / (ReadyStatus)byte — enum-касты без валидации
+- NetJobVariant/JobVariants в UpdateCharacterInfo — парсинг вариантов профессий
+- NetProjectile/EntityState — размеры массивов в секции EntityState
