@@ -22457,3 +22457,51 @@ targetCharacter?.Wallet.SetRewardDistribution(0) = жертва не получ�
 (соло-фоллбэк AnyOneAllowedToManageCampaign работает, на больших серверах нужны права).
 
 ## НЕ ФАН: READY_CHECK, TOGGLE_RESERVE_BENCH, REQUEST_BACKUP_INDICES — самообслуживание.
+
+== ВОЛНА 638 — FORCESAY ПОДРОБНО: как твой персонаж говорит scripted-фразу ==
+
+## ЦЕПОЧКА (когда опция диалога имеет ForceSay=true):
+EVENTMANAGER_RESPONSE {u16 actionId, byte option (255=ignore)}
+→ EventManager.ServerRead: ты TargetClient + опция не ending
+→ ConversationAction.SelectedOption = option
+→ sender.Character.ForceSay(текст, ForceSayInRadio, ForceSayRemoveQuotes, delay)
+
+## Character.ForceSay (Character.cs:4459-4493):
+- ГЕЙТЫ: text не пуст, SpeechImpediment < 100 (немой не скажет), не мёртв.
+- removeQuotes: TrimLString обрезает " ” “ и пробелы по краям.
+- Тип: ChatMessage.CanUseRadio(Я, out radio) — экипированный хедсет с LinkToChat
+  (CanTransmit: батарея, не заглушен) && sayInRadio → ChatMessageType.Radio,
+  иначе Default (голосовой радиус 20 м).
+- CoroutineManager.Invoke(..., delay) — опция может задать задержку.
+- SERVER: GameMain.Server.SendChatMessage(text, messageType, senderClient: null,
+  senderCharacter: Я).
+
+## SendChatMessage (GameServer.cs:3797+, senderClient=null, персонаж):
+- senderName = senderCharacter.DisplayName → В ЧАТЕ ВЫГЛЯДИТ КАК ТВОЯ РЕЧЬ:
+  «SkylEiotic: <фраза из скрипта>». БЕЗ спам-фильтра (он только в CHAT-пакете).
+- Radio-гейт повторно: CanUseRadio.
+- ★★ ГЛАВНОЕ: if type == Radio:
+    Signal s = new Signal(message, sender: Я, source: senderRadio.Item);
+    senderRadio.TransmitSignal(s, sentFromChat: true);
+  РЕПЛИКА УХОДИТ СИГНАЛОМ В WIFI-СЕТЬ ТВОЕГО ХЕДСЕТА:
+  (а) все wifi в range ХЕДСЕТА (тот канал; TeamID None дефолт — и враги):
+      LinkToChat → у них в чат; signal_out → ТЕКСТ ПРИХОДИТ В ИХ ЦЕПЬ
+      (аналог инъекции 627, но текст — scripted, не твой);
+  (б) foreach клиент: ApplyDistanceEffect(радио-ветка, garble по хедсетам/дистанции).
+
+## КТО КОНТРОЛИРУЕТ ТЕКСТ: ТОЛЬКО XML СОБЫТИЯ (Text опции или ForceSayText).
+Инъекция произвольного текста НЕВОЗМОЖНА — пакет несёт только {actionId, byte}.
+Но выбор опции — ТВОЙ, и реплика идёт ОТ ТВОЕГО ИМЕНИ.
+
+## ГДЕ СМЕШНОЕ:
+- ★ RACE CONDITION ДИПЛОМАТИИ: диалог TargetClients = НЕСКОЛЬКО игроков
+  (весь экипаж/все в аванпосте). ПЕРВЫЙ ответивший выбирает опцию ДЛЯ ВСЕХ
+  (остальным ServerWrite(interrupt)), и ЕГО чар озвучивает строку. Успел выбрать
+  оскорбление/отказ/взятку до товарища → исход диалога фракции решён тобой.
+  Быстрый клиент = дипломат-диверсант.
+- Спуфинг речи: единственное место, где ЧУЖОЙ XML пишет реплику ТВОЕГО чара
+  от твоего имени, минуя чат-пакет (и спам-фильтр).
+- Реплика-признание с ForceSayInRadio уходит вражескому экипажу (None-None)
+  и в их цепи (если wifi за signal_out).
+- ОГРАНИЧЕНИЯ: нужно быть TargetClient активного диалога; не-ending опция;
+  валидный index (иначе краш 637); хедсет для радио.
