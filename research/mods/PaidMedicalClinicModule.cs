@@ -10,11 +10,15 @@ using Microsoft.Xna.Framework;
 namespace CSHUB.Modules
 {
     // ============================================================
-    //  GUI-версия: кнопки "Heal Self" / "Heal Whole Crew"
-    //  ПЛАТНАЯ версия: каждая аффликция в списке стоит фиксированную цену.
-    //  Сервер: totalCost = сумма ВСЕХ Price → TryPurchase(client, totalCost)
-    //  → если денег меньше чем cost → InsufficientFunds, лечение ОТКЛОНЕНО целиком.
-    //  Платишь ЗА КАЖДУЮ СТРОКУ (включая аффликции, которых на теле нет).
+    //  ПЛАТНАЯ медклиника — ОТДЕЛЬНЫЙ файл, имена классов УНИКАЛЬНЫ
+    //  (PaidMedicalClinicExploit вместо MedicalClinicExploit),
+    //  чтобы не конфликтовать со старым FreeMedicalClinicModule.cs.
+    //
+    //  Сервер при HEAL_PENDING: totalCost = сумма ВСЕХ Price
+    //  → TryPurchase(client, totalCost) → если денег меньше —
+    //  InsufficientFunds, лечение ОТКЛОНЯЕТСЯ целиком.
+    //  Платишь за КАЖДУЮ строку (включая аффликции, которых на теле нет).
+    //  Ваниль: ~180+4 строк × 100 = ~18 400 mk за одного персонажа.
     // ============================================================
     public class PaidMedicalClinicModule : CSModuleBase
     {
@@ -22,27 +26,26 @@ namespace CSHUB.Modules
         public override string Name => "Paid Medical Clinic";
         public override string Description =>
             "Same clinic packet as Free Medical Clinic, but Price = " +
-            MedicalClinicExploit.PricePerAffliction + " per affliction entry — spends your money.";
+            PaidMedicalClinicExploit.PricePerAffliction + " per affliction entry — spends your money.";
         public override string Category => "exploit";
 
         public override string GetLabel() => "Paid Medical Clinic";
 
         public override void OnClick()
         {
-            // примерная стоимость одной обработки: строк × цена (ванили ~180 аффликций)
             int entries = AfflictionPrefab.List
                 .Count(p => p != null && !p.Identifier.IsEmpty && p.MaxStrength > 0) + 4;
-            int approxCost = entries * MedicalClinicExploit.PricePerAffliction;
+            int approxCost = entries * PaidMedicalClinicExploit.PricePerAffliction;
 
             var box = new GUIMessageBox(
                 "PAID MEDICAL CLINIC",
                 "Sends ADD_PENDING + HEAL_PENDING with Price = " +
-                    MedicalClinicExploit.PricePerAffliction + " per entry.\n" +
+                    PaidMedicalClinicExploit.PricePerAffliction + " per entry.\n" +
                 "Server sums ALL prices and TryPurchase()s it — must be affordable,\n" +
                 "otherwise InsufficientFunds and NOTHING is healed.\n" +
                 "\n" +
                 "Approx cost per heal: ~" + entries + " entries x " +
-                    MedicalClinicExploit.PricePerAffliction + " = ~" + approxCost + " mk per person.\n" +
+                    PaidMedicalClinicExploit.PricePerAffliction + " = ~" + approxCost + " mk per person.\n" +
                 "\n" +
                 "Requirements:\n" +
                 " - MultiPlayerCampaign, outpost with a medical NPC\n" +
@@ -66,7 +69,7 @@ namespace CSHUB.Modules
             box.Buttons[0].OnClicked = (_, _) =>
             {
                 if (Character.Controlled?.Info != null)
-                    MedicalClinicExploit.Heal(new[] { Character.Controlled.Info });
+                    PaidMedicalClinicExploit.Heal(new[] { Character.Controlled.Info });
                 return true;
             };
 
@@ -76,7 +79,7 @@ namespace CSHUB.Modules
                     .Where(c => c?.Info != null)
                     .Select(c => c.Info)
                     .ToImmutableArray();
-                MedicalClinicExploit.Heal(crew);
+                PaidMedicalClinicExploit.Heal(crew);
                 return true;
             };
 
@@ -93,7 +96,7 @@ namespace CSHUB.Modules
         public override string Name => "Paid Heal Under Cursor";
         public override string Description =>
             "Heals the Team1 crewmember under the mouse cursor, paying " +
-            MedicalClinicExploit.PricePerAffliction + " per affliction entry.";
+            PaidMedicalClinicExploit.PricePerAffliction + " per affliction entry.";
         public override string Category => "exploit";
 
         private const float MaxPickDistance = 220f;
@@ -108,7 +111,7 @@ namespace CSHUB.Modules
             // Медклиника лечит только Team1, на остальных пакет проглотится вхолостую
             if (target.TeamID != CharacterTeamType.Team1) return;
 
-            MedicalClinicExploit.Heal(new[] { target.Info });
+            PaidMedicalClinicExploit.Heal(new[] { target.Info });
         }
 
         private static Character FindCharacterUnderCursor(float maxDist)
@@ -150,9 +153,10 @@ namespace CSHUB.Modules
     }
 
     // ============================================================
-    //  Общая логика (reflection + сетевые пакеты), Price = константа
+    //  Общая логика (reflection + сетевые пакеты), Price = константа.
+    //  Имя класса УНИКАЛЬНОЕ: PaidMedicalClinicExploit.
     // ============================================================
-    internal static class MedicalClinicExploit
+    internal static class PaidMedicalClinicExploit
     {
         /// <summary>Цена ОДНОЙ строки аффликции в пакете (0..65535).</summary>
         public const ushort PricePerAffliction = 100;
