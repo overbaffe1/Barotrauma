@@ -23102,3 +23102,41 @@ set_output на всех RegEx-компонентах карты (если Expre
 КОЛИЧЕСТВО сигналов (шт.), регекс — через ВРЕМЯ каждого тика (мс).
 Комбинация = максимум: осц. 240Гц питает signal_in, регекс matches
 медленно → каждый тик = полный matchTimeout.
+
+== ВОЛНА 653 — CVE-ХАНТ: официальный статус Barotrauma (веб) ==
+
+## НОМЕРНЫХ CVE НЕТ — проверено:
+- NVD/cve.org: ни одной записи по "Barotrauma" (FakeFish/Daedalic не CNA,
+  репорты не оформлялись как CVE).
+- GitHub Security Advisories FakeFishGames/Barotrauma: «There aren't any
+  published security advisories» (проверено fetch'ем напрямую).
+- Security policy отсутствует (No security policy detected).
+
+## НО ЗАФИКСИРОВАННЫЕ ЭКСПЛОЙТЫ ЕСТЬ — все БЕЗ CVE, в ченджлогах:
+- v1.5.9.2 (авг 2024): «Fixed an exploit that allowed CLIENTS TO CRASH SERVERS
+  when hosting through SteamP2P» — та самая волна апрельских крэшей (Reddit
+  трейс: P2POwnerPeer.OnP2PData → DualStackP2PSocket.ProcessIncomingMessages,
+  Regalis подтвердил «malformed packet crashes servers, someone is abusing
+  this to take down servers»).
+- v1.3.0.3 и v1.3.0.4 (2023): ДВА эксплойта «crashing servers by sending
+  specifically crafted malformed data» — паттерн дважды за месяц.
+- v0.14.9.1 (2024): malicious campaign save files SERVER→CLIENT (приват.
+  дисклоуз).
+- v1.13.3.1 (июнь 2026, СВЕЖЕЕ!): «Fixed an exploit that allowed modified
+  CLIENTS to cause OTHER CLIENTS to get out of sync and disconnect»
+  = клиент-на-клиент дезинк-эксплойт, жил до 2026!
+- v0.13.0.x / Steam анонс (нояб 2021): «Fixed an exploit that allowed modified
+  clients to cause other clients to eventually get out of sync and disconnect»
+  — тот же КЛАСС бага жил минимум с 2021.
+
+## ВЫВОД ДЛЯ ИССЛЕДОВАНИЯ:
+FakeFish латает краш-эксплойты тихо, ченджлогом одной строкой, без номеров,
+без advisory. Это значит:
+1) наши находки (ConversationAction 646, wire-extents 650, регекс 652,
+   вот-лок 649, клиника 600) — НЕ исправлены (в свежем 1.13.4.0 их нет),
+   работают на актуальной версии;
+2) паттерн «сервер роняют malformed-пакетом» у них регулярно находят и
+   чинят — значит такие пакеты можно ещё искать (наш класс NRE-жалобилок
+   и ConversationAction — ровно эта категория);
+3) направление клиент-на-клиент (сервер транслирует пакеты жертве) —
+   официально признанный класс, чинился минимум дважды (2021, 2026).
