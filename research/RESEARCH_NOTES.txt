@@ -23024,3 +23024,41 @@ Draw() рисует ВСЕ секции проводов на карте КАЖ�
 
 ## МЕЛОЧЬ: PowerDistributor SharedEventRead — клампы (ranged 0-1,
 Take(MaxNameLength)) чистые. PowerContainer: ranged 0-10. Всё гвардится.
+
+== ВОЛНА 651 — TREATMENT/STATUS: Complete audit клиентских ItemEvent'ов ==
+
+## EventType.Treatment (Item.cs:202-229) — КОНТРОЛИРУЕТСЯ:
+CanInteractWith (дистанция, hull-видимость), HealingCooldown 0.4с
+(Dictionary<Client, DateTimeOffset>), target==селекшен-чек (нельзя лечить
+ID-шного чужака без селекта), limbIndex гвард, цель не мёртвая, UseInHealthInterface.
+ApplyTreatment: random DegreeOfSuccess → статусы. НО: статусы идут от КАКОГО
+предмета я «лечу» — предмет МОЙ в руках (CanInteractWith). Т.е. лечить можно
+только тем, что реально держишь. Чисто.
+
+## EventType.Status (SetCondition) — КЛИЕНТСКИЙ путь, серву НЕ доступен:
+сервер НЕ принимает Status-event от клиентов (switch на сервере: только
+ComponentState/InventoryState/Treatment/ChangeProperty/Combine — Status
+и ApplyStatusEffect СЕРВЕР→КЛИЕНТ only). = клиент не может менять condition
+предмета пакетом ✓ (клиник-принтеры работают через MEDICAL, не через это).
+
+## ApplyStatusEffectEventData (сервер→клиент): limb index пишется как
+Array.IndexOf (byte 255 если null). Клиент: гвард targetLimbID < Limbs.Length ✓.
+componentIndex: гвард < components.Count ✓ (сервер пишет byte 255 если null).
+
+## EventType.Combine: CanInteractWith ОБОИХ + Combine() идёт по компонентам
+(ic.Combine — каждая своя логика). ПРЕДМЕТ А + ПРЕДМЕТ Б — обей дистанции.
+
+## EventType.ComponentState → ItemContainer cast БЕЗ null-чека:
+`(components[containerIndex] as ItemContainer).Inventory.ServerEventRead`
+— если клиент шлёт InventoryState для предмета БЕЗ ItemContainer →
+NullReferenceException! НО: поймается обёрткой LidgrenServerPeer (646) →
+лог, не краш. И индекс валиден ranged'ом. = ЖАЛКОБНАЯ ИСКЛЮЧИЛКА, не кила.
+Аналог ComponentState: `as IClientSerializable` может дать null → NRE тоже.
+Эти NRE — единственный способ СЕРВЕРУ спамить свой же error-лог
+(Warning-логгинг в лог-файл растёт → io-рост; теоретически disk-fill
+через VerboseLogging при спаме 512-буфера... — некритично, логи ротируются
+игрой? НЕ ПРОВЕРЕНО, отметить).
+
+## ИТОГ 651: Treatment/Status/ApplyStatus/Combine — чисто, кроме двух
+слабых NRE-жалобилок (ComponentState/InventoryState на не-контейнерных
+предметах) — лог-спам класс, не кила. Кила остаётся ConversationAction 646.
