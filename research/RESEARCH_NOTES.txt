@@ -22831,3 +22831,54 @@ GameMain.Client.ConnectedClients — ОБЫЧНЫЙ List на клиенте →
 - Фейк-сервер из способа 1 нельзя сделать «заходибельным» без настоящего
   Barotrauma-процесса (хендшейк+версия+аутентификация Steam).
 - Ванильных «fake players» настроек НЕТ (grep fake по нетворкингу — пусто).
+
+== ВОЛНА 646 — КРАШ-ХАНТ: карта исключений + СМЕРТЕЛЬНАЯ ЦЕПОЧКА ConversationAction ==
+
+## ЗАВИСИМОСТИ (где чей try/catch, полный трейс):
+Пакет → транспорт-пир → ReadDataMessage (БЕЗ try) → хендлеры (БЕЗ try) →
+  [LidgrenServerPeer.Update: try вокруг foreach HandleDataMessage → catch Exception → лог, сервер ЖИВЁТ]
+  [P2PServerPeer: тот же try + спец-catch NetStructReadException]
+  [ServerEntityEventManager.Update: try/catch вокруг КАЖДОГО ReadEvent]
+  → НО: главный цикл GameSession.Update:1005 EventManager?.Update — БЕЗ try
+    → ev.Update (EventManager.cs ~964) — БЕЗ try
+    → GameServer/GameMain Run — БЕЗ try → UnhandledException → CrashHandler → ПРОЦЕСС УМИРАЕТ.
+MessageReader: NetBitWriter.ReadByte = fromBuffer[bytePtr] БЕЗ bounds check →
+  чтение за концом = IndexOutOfRangeException (не нули!) → любые wireCount=4e9
+  циклы ОБРЫВАЮТСЯ первым past-end → бесконечных циклов чтения НЕТ.
+
+## ★★★ KILLER: EVENTMANAGER_RESPONSE с опцией > индекса = ГАРАНТИРОВАННАЯ СМЕРТЬ ПРОЦЕССА
+Цепочка (все звенья проверены):
+1. Пакет {u16 actionId, byte option=200} — клиент в TargetClients АКТИВНОГО
+   ConversationAction (скриптовые диалоги: аванпосты/фракции/миссии).
+2. EventManager.ServerRead: `convAction.SelectedOption = 200;` — сеттер
+   СЕРВЕРНЫЙ партиал: `set { selectedOption = value; }` — ВАЛИДАЦИИ НЕТ.
+3. Следом `convAction.Options[200]` → IndexOutOfRange в ПАКЕТНОМ пути →
+   глотается обёрткой пира → сервер пока жив, но действие ИСПОРЧЕНО.
+4. КАЖДЫЙ ТИК: EventManager.Update → ev.Update → ConversationAction
+   IsFinished/Update → `Options[200]` → throw → БЕЗ try до самого Main →
+   UnhandledException → КРАШ ПРОЦЕССА СЕРВЕРА.
+Условие: быть адресатом активного диалога (реплики аванпост-NPC, фракционные
+события, миссийные диалоги). Диалогов на кампанийных серверах много.
+После рестарта раунд свежий — юзер повторяет при следующем диалоге.
+ВОЛНА 637 НАШЛА БАГ, 646 НАШЛА ЧТО ОН УБИВАЕТ ПРОЦЕСС (не лог-строка).
+
+## НЕДОБИТОЕ (исследовано, но глотается):
+- ReadPerks: `new Identifier[VariableUInt32]` → до 4 млрд × sizeof(Identifier)
+  аллокация → OOM/коммит-спайк. Гейт: HasPermissionToChangePerks ДО чтения
+  → работает на серверах без админа (фоллбэк 641). Поймается обёрткой,
+  но свап/фризы на слабых машинах = софт-DoS.
+- ReadMonsterEnabled: `BitPosition += (int)receivedMonsterCount` — int-овервлоу
+  отрицательного → past-end на СЛЕДУЮЩИХ чтениях того же пакета → исключение →
+  поймано. Гейт ManageSettings. Мусор.
+- BanList.ServerAdminRead: без прав — skip по BitPosition корректный; с правами —
+  читает только админ. Чисто.
+- ConnectionPanel: чтение проводов ДО гейтов CanClientAccess/Locked — но past-end
+  бросает сразу → цикл умирает рано. Не фриз.
+- Санитизация CreateSavePath (RemoveInvalidFileNameChars) — traversal'а нет.
+
+## ВЫВОД ПО КРАШАМ:
+Единственный процесс-киллер из протокола = порча состояния в пакетном пути
+(SelectedOption), которая стреляет ПОЗЖЕ в незащищённом главном цикле.
+Паттерн для дальнейшего ханта: писать ли клиенту в сеттеры/поля значения,
+которые читаются в Update БЕЗ try — таких мест проверить грепом
+`set { selectedOption = value; }`-стиля по ServerEventRead-хендлерам.
