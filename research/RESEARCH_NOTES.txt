@@ -23062,3 +23062,43 @@ NullReferenceException! НО: поймается обёрткой LidgrenServerP
 ## ИТОГ 651: Treatment/Status/ApplyStatus/Combine — чисто, кроме двух
 слабых NRE-жалобилок (ComponentState/InventoryState на не-контейнерных
 предметах) — лог-спам класс, не кила. Кила остаётся ConversationAction 646.
+
+== ВОЛНА 652 — POLICE VERIFIED: RegEx ReDoS-глушилка (полевое подтверждение из ишью) ==
+
+## КОНТЕКСТ (веб): GitHub discussion #14192 (июнь 2024) — РЕАЛЬНЫЙ СЛУЧАЙ:
+игрок подключился к серверу, собрал Regex+Terminal+WaterDetector, воткнул
+провод — сервер ЗАГРУХ. Люди посыпались с desync (event queue 255), хост
+получил блок от ISP (флуд аплинка), сервер оффлайн. = эксплойт подтверждён
+в бою настоящим админом. Разбираем код.
+
+## КАК РАБОТАЕТ ГЛУШИЛКА (RegExFindComponent):
+- Expression setter: new Regex(expr, matchTimeout: 50ms) + СВОЙ stopwatch:
+  Elapsed > 1ms → timeOutsInARow++; >= 3 подряд → RegexMatchTimeoutException
+  → timedOut=true → компонент молчит, шлёт "TIMEOUT".
+- Глушилка САМОЗАЩИЩЕНА... НО: timedOut=false СБРАСЫВАЕТСЯ при КАЖДОЙ смене
+  Expression (line 98)! Смена = через set_output сигнал (ReceiveSignal) или
+  через сеть (ChangeProperty — Expression InGameEditable!)
+  → цикл: set_output="(a+)+$" → сигнал → 1-3 тика CPU-сжигания → таймаут →
+  set_output="x" → снова активен → set_output="(a+)+$" → ...
+  КАЖДЫЙ цикл = до 50мс 100% CPU ОДНОГО ПОТОКА СЕРВЕРА.
+- Умножение: N регексов на разных компонентах = N×50мс на тик.
+  Игра однопоточная (Update в главном цикле) → 20 компонент = сервер
+  стоит на месте ПОЛНОСТЬЮ (652-я волна математики: тик 50мс + остальной
+  Update > реального шага → spiral of death, Accumulator clamp → TPS в пол).
+- Данные для матчинга: signal_in с WaterDetector/любого датчика — любой
+  вход годится (receivedSignal любая строка).
+- Доступ: свой саб / CircuitBox / доступные панели — то же что осциллятор-бомба
+  (631), но СИЛЬНЕЕ: осциллятор даёт 4 сигнала/тик по цепи, регекс даёт
+  50мс БЛОКИРОВКУ тика. Это самый тяжёлый легальный CPU-груз из сигнальных.
+
+## ВАЖНО: сетевой вектор — Expression через ChangeProperty!
+RegExFindComponent.Expression = [InGameEditable, Serialize] → Item.
+ReadPropertyChange (448) может ставить его удалённо при CanClientAccess.
+=> НЕ НУЖНО даже подключать провода: Wi-Fi-инъекция (627/633, ∞ range) →
+set_output на всех RegEx-компонентах карты (если Expression предустановлен
+модом) ИЛИ ChangeProperty прямо Expression на доступных компонентах.
+
+## ОТЛИЧИЕ ОТ ИЗВЕСТНОЙ 631 (Oscillator 240Гц): осциллятор жрёт через
+КОЛИЧЕСТВО сигналов (шт.), регекс — через ВРЕМЯ каждого тика (мс).
+Комбинация = максимум: осц. 240Гц питает signal_in, регекс matches
+медленно → каждый тик = полный matchTimeout.
