@@ -22505,3 +22505,63 @@ EVENTMANAGER_RESPONSE {u16 actionId, byte option (255=ignore)}
   и в их цепи (если wifi за signal_out).
 - ОГРАНИЧЕНИЯ: нужно быть TargetClient активного диалога; не-ending опция;
   валидный index (иначе краш 637); хедсет для радио.
+
+== ВОЛНА 639 — ПОЖЁЩЕ: SPECTATEPOS ESP + ушная шпионка + попап-флуд ==
+
+## ★★★ ГЛАВНОЕ: SPECTATING_POS = ESP-ВИСОР БЕЗ ВСЯКИХ ПРАВ
+Пакет: ClientNetSegment.SPECTATING_POS = просто 2 флоата:
+  GameServer.cs:1489-1491: c.SpectatePos = new Vector2(ReadSingle(), ReadSingle());
+  ВАЛИДАЦИИ НЕТ ВООБЩЕ: ни SpectateOnly, ни прав, ни дистанции, ни NaN-чека, ни rate limit.
+ДЛЯ ЧЕГО СЕРВЕР ИСПОЛЬЗУЕТ SpectatePos:
+1. ClientWriteIngame (GameServer.cs:2084+): фильтр КООМ СИНКА ПЕРСОНАЖЕЙ:
+   if (c.SpectatePos == null) → обычный путь (только вокруг своего чара,
+   DisableDistance). ИНАЧЕ (SpectatePos != null!): шлём апдейты персонажей
+   ВОКРУГ SpectatePos (кроме своего чара). GetShortestDistance включает
+   ViewTarget цели. ТО ЕСТЬ: поставил SpectatePos в точку → сервер СТРИМИТ
+   ПОЗИЦИИ ВСЕХ ПЕРСОНАЖЕЙ ВОКРУГ ЭТОЙ ТОЧКИ.
+2. GetPositionUpdateInterval (CharacterNetworking.cs:56):
+   comparePosition = recipient.SpectatePos ?? char.WorldPosition →
+   приоритет синка считается ОТ SpectatePos.
+3. Hull.cs:34: данные ХУЛЛОВ (уровни воды!) шлются если SpectatePos в
+   hullUpdateDistance от хулла → интелование целостности чужой сабы.
+4. VoipServer.cs:105-121: СПЕКТАТОР СЛЫШИТ ГОЛОС (proximity VOIP) в радиусе
+   1000 от SpectatePos → УШИ: слышать голосовой чат врагов у точки якоря
+   (с грамлом по дистанции), находясь через всю карту. Радио-ветка — по
+   CanReceive, обычная ветка — чисто по якорю.
+ЭКСПЛОЙТ: ЖИВОЙ ИГРОК (или мёртвый/спектатор — ещё лучше) шлёт
+SPECTATING_POS с координатами чужой сабы → сервер честно льёт ему:
+  - точные позиции/лимбы/скорости ВСЕХ персонажей рядом (игроки+боты+монстры)
+  - уровни воды в их хуллах
+  - голос вражеского экипажа поблизости якоря
+Мод на клиенте читает принятый синк → ПОЛНЫЙ ESP + эар-спай. Два флоата, ноль гейтов.
+НЮАНС: при SpectatePos != null ветка своего чара не выполняется (else if
+otherCharacter != clientCharacter) → свои position-апдейты приостанавливаются
+→ для живого игрока пропадают серверные коррекции себя (десинк себя).
+ЧИСТЫЙ вариант: спекать после смерти / SpectateOnly=true (637) — тогда
+своего чара нет и нечего терять. Снять SpectatePos нельзя (нет «null»
+пакета) — до конца раунда/реконнекта.
+NaN SpectatePos: Vector2 из 2 флоатов без чека → NaN-якорь: все
+DistanceSquared > NaN² = false → в обеих ветках continue (Skip) → для
+спекататора «слышно всё, вижу ничего»; для живого — наверно sync stop.
+Дистанция покрытия: DisableDistance персонажа (у людей ~ несколько тысяч
+юнитов = десятки метров). Якорь двигать пакетами хоть 60/с.
+
+## ★ READY CHECK ПОПАП-ФЛУД (ReadyCheck.cs:89-108)
+ServerRead: state=Start и ActiveReadyCheck==null → StartReadyCheck:
+ПОПАП ВСЕМ игрокам (30 сек lifetime). Кулдауна нет, права не нужны.
+Цикл: старт → 30 сек висит → старт... = бесконечный попап-харасс сервера.
+Update ставит только свой статус (SessionId match) — подделать чужой нельзя.
+
+## CREW ПАКЕТ (MultiPlayerCampaign.ServerReadCrew 1263-1410) — ГЕЙТЫ:
+- УВОЛИТЬ бота: AllowedToManageCampaign(ManageHires) + HasCampaignInteractionAvailable(Crew)
+  (рядом NPC или AllowRemoteCampaignInteractions). Соло-фоллбэк работает.
+- ПЕРЕИМЕНОВАТЬ бота экипажа/кандидата: те же гейты (ManageHires + NPC доступ),
+  своё — без перми (RenamingEnabled, один раз, 637).
+- updatePending: клиент ПЕРЕЗАПИСЫВАЕТ HireManager.PendingHires списком
+  {u16 id, bool reserveBench}×N (капа MaxCrewSize на активных).
+- validateHires: TryHireCharacter для ВСЕХ PendingHires разом (массовый найм).
+ИТОГ: под замком, если нет ManageHires; на своём/соло — полная свобода
+(уволить/переименовать/нанять волной).
+
+## НЕ-НАХОДКИ: голос-спуф VoIP с чужим SessionId — нет (id match); мьют
+серверный чекает; Update readycheck — только свой статус.
