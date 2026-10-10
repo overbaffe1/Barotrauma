@@ -22662,3 +22662,51 @@ ServerSettings.ReadPerks(клиентский wrapper, сервер 133-165) —
   распаковка каждого .save.bk в папке ради одного тега. Путь в папку с гигабайтами
   бэкапов + циклическая отправка = диск/проц сервера заняты только распаковкой
   = лаги до ребута. Rate limit нет.
+
+== ВОЛНА 642 — PvP: АДМИН В ЧУЖОЙ КОМАНДЕ = ТЕБЕ РАЗРЕШЁНО ВСЁ С ПЕРКАМИ ==
+
+## ГЕЙТ (ServerSettings.cs:144-164, HasPermissionToChangePerks):
+1. Сам имеешь ManageSettings → всегда да (админ может ЧИНИТЬ из любой команды).
+2. ИНАЧЕ PvP: PreferredTeam ∈ {Team1,Team2} И НЕТ никого с ManageSettings
+   в ТВОЕЙ PreferredTeam → ДОСТУП ОТКРЫТ. Админ на другой команде НЕ СЧИТАЕТСЯ.
+3. Не-PvP: нет ДРУГИХ ManageSettings онлайн.
+PreferredTeam клиент выбирает СВОБОДНО через UPDATE_LOBBY (byte newTeam,
+GameServer.cs:3479-3482, RefreshPvpTeamAssignments) → «перейти туда, где нет
+админов» = один байт в лобби, в любой момент.
+
+## ЧТО ДАЁТ ДОСТУП (пакет перезаписывает ОБА массива, count без лимита):
+- buff себе: GiveTalentPointPerk (+очки талантов на старте), SpawnItemPerk
+  (спавн предметов в сабу), UpgradeSubmarinePerk, SubItemSwapPerk.
+- wipe врагу: массив Team2 = пустой → их выбранные перки СТЁРТЫ (не-админы
+  врага вернуть не могут — у них нет прав; админ может).
+- ПЕРСИСТЕНТНОСТЬ: SaveSettings() → конфиг сервера перезаписан (переживает
+  раунды и рестарты).
+
+## ★ ЗАЛИПАНИЕ СТАРТА РАУНДА (TryStartGame:2572-2578):
+perks cost > ServerSettings.DisembarkPointAllowance → TryStartGame возвращает
+PerksExceedAllowance — СТАРТ НЕ ПРОИСХОДИТ ВООБЩЕ (без всякого варнинга
+клиентам). Проверяется ОБЕ команды в PvP (ValidatedDisembarkPoints 1256+).
+Ты перезаписываешь перки опять → админ чинит → ты опять ломаешь (твоё право
+не отбирается, пока в твоей команде не появится ManageSettings).
+
+## ★ ОКНО 15 СЕКУНД + ОТМЕНА (WarnAndDelayStartGame:2715):
+CheckIfAnyPerksAreIncompatible (2651-2700, в PvP проверяет и Team2):
+перк не CanApply(саба) → корутина варнинга, isRoundStartWarningActive=true,
+duration 15с → клиенты видят диалог отмены → RESPONSE_CANCEL_STARTGAME (1 байт,
+629) → старт аборт. = BlockStartModule теперь запускается САМИМ собой:
+сам ставишь несовместимые перки → сам отменяешь старты → цикл.
+
+## ПОРЯДОК ДЕЙСТВИЙ (PvP, админ в Team2, ты в Team1):
+1. UPDATE_LOBBY: preferredTeam=Team1 (если вдруг не там).
+2. SERVER_SETTINGS_PERKS: buff Team1 / wipe Team2 / cost>allowance.
+3. (а) халява команде на след. раунд, (б) старты не проходят, (в) окно 15с +
+   CANCEL-спам = бесконечное «не можем начать».
+4. Профит персистентный (конфиг перезаписан).
+
+## ОГРАНИЧЕНИЯ (честно):
+- Ванильных перков нет — нужен перк-мод на сервере (на модовых PvP обычное дело).
+- Сила баффа = что моды дают.
+- Админ с ManageSettings может чинить из ЛЮБОЙ команды (первая проверка),
+  но отобрать твоё право может только зайдя ManageSettings-игроком В ТВОЮ
+  команду (или выгнав тебя).
+- Остальной SERVER_SETTINGS — жёстко ManageSettings, фоллбэка нет.
