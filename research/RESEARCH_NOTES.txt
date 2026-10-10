@@ -22946,3 +22946,44 @@ XML-загрузки, не рендера. Требуется проверка �
 
 ## ИТОГ 648: кандидаты ReadyCheck/JobVariants/head — ЧИСТО.
 Единственный подтверждённый киллер остаётся ConversationAction (646).
+
+== ВОЛНА 649 — VOTING.CS ЦЕЛИКОМ: вечный минус-вот + вот-лок сервера ==
+
+## ★ ВЕЧНАЯ БЛОКИРОВКА ПЕРЕИМЕНОВАНИЯ ОДНИМ ВОТОМ:
+Кик-воты сбрасываются ТОЛЬКО когда вотер ДИСКОННЕКТИТСЯ
+(Client.UpdateKickVotes: kickVoters.RemoveAll(not connected)) или жертву
+кикнули. Межраундовый ResetVotes(resetKickVotes: FALSE) (GameServer.cs:3184)
+— кик-воты ПЕРЕЖИВАЮТ РАУНДЫ.
+IsNameValid (GameServer.cs:3542): KickVoteCount > 0 → NameChangeFailedVoteKick.
+= ОДИН тролль вотит кик на тебя (не проходит порог кика, просто остаётся в
+kickVoters) → ты НЕ МОЖЕШЬ сменить имя на сервере, пока он онлайн.
+Комбо с 637 (self-rename UPDATE_CHARACTERINFO): жертва купила_rename
+(например взяла бота после пермадета, RenamingEnabled) → минус-вот = баннер
+переименования. Регенится только дисконнектом тролля. Мелочь, но вечная.
+
+## ★★ ВОТ-ЛОК: очередь pendingVotes БЕЗ ЛИМИТА
+ServerRead VoteType.TransferMoney (startVote=true): НЕТ проверки InGame,
+НЕТ Allow-сеттинга (Kick имеет AllowVoteKick, EndRound — CanVoteToEndRound,
+переводы — ТОЛЬКО ShouldRejectVote), НЕТ рейт-лимита (кулдаун появляется
+ТОЛЬКО после первого отклонённого вота — RegisterRejectedVote → 60с).
+→ любой клиент ЕНКУЕВИТ неограниченное число TransferVote.
+Дрейн: по одному за VoteTimeout (StopActiveVote → Dequeue → ActiveVote=next),
+каждый = ПОПАП ВСЕМ игрокам на весь таймаут + UpdateVoteStatus броадкаст.
+ЭФФЕКТ: pre-enqueue K переводов → K последовательных попапов на сервере,
+ЛЕГИТИМНЫЕ воты (смена сабы/режима) ЗАБЛОКИРОВАНЫ — ActiveVote занят.
+Два аккаунта по очереди = ВЕЧНЫЙ вот-лок (пока один на 60с кулдауне,
+второй заэнквевивает). Никаких прав, работает из лобби (InGame не нужен!).
+Бонус: на соло/малолюдке воты мгновенно проходят/отклоняются (total==0
+ветки) → дрейн быстрее, но попапы всё равно броадкастятся.
+
+## КИК-АВТОБАН МАТЕМАТИКА (для полноты):
+minimumKickVotes = max(2, eligible * KickVoteRequiredRatio); жертва тоже в
+eligible. ≤4 человека на сервере → 2 сообщника кикают+автобанят
+(AutoBanTime) любого не-админа. Дизайн, но на малых серверах = «2 акка = кик
+кого хочешь». Админ-флаги (Kick/Ban/Unban) защищают, OwnerConnection защищён.
+
+## ТРАТОР-ВОТ: sender.InGame + Character != null; блейм-сообщение через радио
+с HandleSpamFilter. «X предатель!» — рацио-харасс с фильтром, уже известный класс.
+
+## ЧИСТО: Sub-вот (по имени/MD5 из сохранённых), Mode-вот (только Votable),
+StartRound (булев), EndRound (HasSpawned+InGame), перки-фиксы 641-642.
