@@ -22390,3 +22390,70 @@ Priority 255 чекбокс. Формат пакета — см. выше.
 2. Или crew-ордер FIGHTINTRUDERS (жертва на борту) / ASSAULTENEMY (соседняя саба)
 3. Приоритет 255 в пакете = одержимость (635)
 4. Тиммейта — никак (хаск-экзотика не считается)
+
+== ВОЛНА 637 — ФАН-ФУНКЦИИ: радио-пираты, голос-шум, угоны и зарплата 0% ==
+
+## ★★ ФАН #1: РАДИО-ПИРАТСТВО (WifiComponent TransmitSignal 286-325)
+Приняв сигнал, wifi с LinkToChat=true у ПРИЁМНИКА создаёт ЧАТ-СООБЩЕНИЕ:
+  GameMain.Server.SendDirectChatMessage(
+    ChatMessage.Create(signal.source?.Name ?? "", chatMsg, ChatMessageType.Radio, item), recipientClient)
+- recipientClient = ВЛАДЕЛЕЦ приёмника (хедсет в инвентаре игрока). ПРЯМОЙ чат:
+  БЕЗ спам-фильтра, БЕЗ SanitizeText, БЕЗ прав — только chatMsgCooldown
+  (MinChatMessageInterval, дефолт 1.0с на передатчик).
+- ИМЯ ОТПРАВИТЕЛЯ = signal.source?.Name = ИМЯ ПРЕДМЕТА-ИСТОЧНИКА (твой «Терминал»).
+  Жертва видит: [Радио] Терминал: "<текст до 200 символов>". Предмет-радиоведущий.
+- ЧИТАЕМОСТЬ: garble по range ПРИЁМНИКА (1 - dist/theirRange → Clamp 0-1).
+  Стоковый хедсет range 20000 (200м) → в радиусе 200м от твоего передатчика текст
+  ЧИСТЫЙ, дальше — "-----". (Если доинъектить set_range на их ХЕДСЕТ нельзя —
+  не подключён signal_in; на настенных wifi можно.)
+- ГЕЙТЫ CanReceive: канал (дефолт хедсетов 0 — общий эфир), TeamID (дефолт None ==
+  None → ПРОХОДИТ МЕЖДУ КОМАНДАМИ), HasRequiredContainedItems (батарея в хедсете).
+- ГДЕ ВЗЯТЬ ПЕРЕДАТЧИК: ЛЮБОЙ wifi (стена твоей сабы, аванпоста) + Terminal/Memory
+  на signal_in. Разнести: 200м радиуса читаемости, дальше шум.
+- ПРАНК-МЕНЮ: музыкальные партии текстом, фейковые приказы капитана, «реактор
+  перегревается, эвакуация!», дискламер что это не их бот говорит.
+
+## ★ ФАН #2: ГОЛОСОВОЙ ШУМ НА ЧУЖОЙ ВОЛНЕ (VoipServer)
+VoipServer.Read: гейты только VoiceChatEnabled + !Muted + SessionId match.
+Радио-маршрут голоса: recipientRadio.CanReceive(senderRadio) — те же TeamID None
+дефолты → твой голос на канале 0 СЛЫШАТ ЧУЖИЕ ИГРОКИ в хедсетах. Rate limit на
+VoipQueue нет (круговой буфер). Шумопомехи/эйрхорн по радио врагам = готово.
+
+## ★ ФАН #3: САМОПЕРЕИМЕНОВАНИЕ + НОВАЯ ГОЛОВА (UPDATE_CHARACTERINFO)
+UpdateCharacterInfo (GameServer.cs:4361): читает NetCharacterInfo:
+  newName → SanitizeName + IsNameValid(clientRenamingSelf:true) → sender.PendingName
+  + СОЗДАЁТСЯ НОВЫЙ CharacterInfo: RecreateHead(tags/hair/beard/moustache/face),
+  цвета валидируются ПО СПИСКУ (unsupported → первый из списка).
+- Гейты: charInfoRateLimiter; КАМПАНИЯ: если уже есть character data у клиента →
+  «Ignoring the modifications» (нельзя). Работает в Mission/Sandbox.
+- Побочка: sender.SpectateOnly = spectateOnly && (AllowSpectating || локальный хост)
+  — переключалка наблюдателя одним битом.
+- При взятии бота: botCharacter.Info.RenamingEnabled = true — ОДНА возможность
+  переименовать угнанного бота (любое имя!).
+
+## ★ ФАН #4: УГОН ТЕЛА (permadeath сервера)
+TAKEOVERBOT → два пути:
+  (a) нанять из аутпоста: TryHireCharacter(деньги с тебя) + SpawnAndTakeOverBot;
+  (b) бот экипажа: если ServerSettings.AllowBotTakeoverOnPermadeath →
+      TryTakeOverBot(bot): гейты = RespawnMode.Permadeath + ТВОЙ чар PermanentlyDead
+      + target.IsBot. ПРОВЕРКИ «ботом уже играет другой игрок» В КОДЕ НЕТ —
+      SetClientCharacter(this, botCharacter) просто перенацелевает управление.
+  Врагам недоступно (CrewManager = общий экипаж сервера, чужих NPC там нет).
+
+## ⚠ БАГ #5: ConversationAction selectedOption БЕЗ ВАЛИДАЦИИ (IndexOutOfRange)
+EventManager.ServerRead (серверный, 28-95): selectedOption = ReadByte() (255=ignore).
+Если ты TargetClient диалога: convAction.SelectedOption = selectedOption; затем
+  if (Options.Any() && !GetEndingOptions().Contains(selectedOption))
+      { var option = convAction.Options[selectedOption]; ← БАЙТ 200 ПРИ 2 ОПЦИЯХ = КРАШ
+Не TargetClient + isIgnore → IgnoreClient(sender, 3f) = отключить себе любой диалог.
+ForceSay: выбрав опцию с ForceSay — ТВОЙ персонаж ГОВОРИТ scripted строку
+(ForceSayInRadio → в радио!) — тебя заставляют озвучивать тексты событий.
+
+## ФАН #6: ЗАРПЛАТА ЖЕРТВЕ 0% (REWARD_DISTRIBUTION)
+MultiPlayerCampaign.ServerReadRewardDistribution: NetWalletSetSalaryUpdate =
+  {Option<ushort> Target, [Min 0 Max 100] int NewRewardDistribution}.
+targetCharacter?.Wallet.SetRewardDistribution(0) = жертва не получает долю наград.
+Гейт: AllowedToManageWallets = AllowedToManageCampaign(ManageMoney) — стандартный
+(соло-фоллбэк AnyOneAllowedToManageCampaign работает, на больших серверах нужны права).
+
+## НЕ ФАН: READY_CHECK, TOGGLE_RESERVE_BENCH, REQUEST_BACKUP_INDICES — самообслуживание.
