@@ -22912,3 +22912,37 @@ XML-загрузки, не рендера. Требуется проверка �
 - ReadyCheck: (ReadyCheckState)byte / (ReadyStatus)byte — enum-касты без валидации
 - NetJobVariant/JobVariants в UpdateCharacterInfo — парсинг вариантов профессий
 - NetProjectile/EntityState — размеры массивов в секции EntityState
+
+== ВОЛНА 648 — HEAD-ИНДЕКСЫ: ОПРОВЕРЖЕНО (гварды на каждом шаге) ==
+
+## ЦЕПОЧКА ПРОВЕРЕНА ПОЛНОСТЬЮ — краш «от причёски» НЕ РАБОТАЕТ:
+1. Провод: клиент шлёт свою голову как NetCharacterInfo — ВСЕ индексы
+   приведены к byte (GameClient.cs:2934, struct: byte HairIndex...) → 0-255 кап.
+2. Сервер хранит сырые int (0-255) и рассылает в crew-синке.
+3. РЕНДЕР НА КЛИЕНТЕ ГВАРДИРОВАН: HeadInfo.HairElement (CharacterInfo.cs:144-148):
+   if (HairIndex >= Hairs.Count) → AddWarning + ElementAtOrDefault(HairIndex)
+   → null при любом выходе (и < 0 тоже) → причёска просто НЕ РИСУЕТСЯ (лысый).
+   hairWithHatIndex: HairElement?.GetAttributeInt — null-safe.
+4. IdCard (дискайз): getElementFromList → CharacterInfo.IsValidIndex — гвард.
+5. JobVariants (UPDATE_CHARACTERINFO): ToJobVariant → JobPrefab.Prefabs.TryGet
+   + HiddenJob → null → вызывающий `is { } variant` — null-guard.
+6. ReadyCheck enum-касты: switch БЕЗ default → неизвестный byte = no-op.
+
+## НО АРХИТЕКТУРА ПОДТВЕРЖДЕНА: Update/Draw КЛИЕНТА тоже БЕЗ try/catch
+(Client GameMain.cs:725 Update, 1102 Draw — голые override; исключение = вылет игры).
+= вся «серверная» краш-архитектура 646-й симметрична на клиентах:
+любая будущая порча состояния из серверного пакета, читаемая в Update,
+крушит ИГРУ у клиента. ConversationAction-класс жив для обеих сторон.
+(Сервер→клиент ConversationAction: клиент читает выбранный сервером опшен —
+злой сервер может ронять клиенты тем же трюком, 0.14.9.1-стиль.)
+
+## ГВАРД-СТИЛЬ ИГРЫ (для будущих хантов):
+- ElementAtOrDefault + AddWarning — стандарт игры для head-индексов
+- IsValidIndex статик-хелпер
+- NetCharacterInfo: byte-капы на всё
+- JobVariant: TryGet+null
+- НЕ гвардится: ConversationAction.Options[...] (646), и его SelectedOption
+  сеттер. Больше таких мест — греп Options[ по shared.
+
+## ИТОГ 648: кандидаты ReadyCheck/JobVariants/head — ЧИСТО.
+Единственный подтверждённый киллер остаётся ConversationAction (646).
