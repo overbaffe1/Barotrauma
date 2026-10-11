@@ -23181,3 +23181,45 @@ Imба-поля (InGameEditable с большим эффектом):
   всех сетевых сеттеров; имб среди них НЕТ честных (все визуал/сигнал).
 
 ## ДЖОБ-АЙТЕМЫ РЕСПАВНА (PvP): дизайн, не эксплойт — отмечено для полноты.
+
+== ВОЛНА 655 — XP/ДОП.ОЧКИ/РЕФАНДЫ: полная карта (след заход) ==
+
+## UpdateExperience: КЛИЕНТ НЕ ПИШЕТ — ВСЁ, ЗАКРЫТО.
+Серверный ServerEventRead (CharacterNetworking): свитч принимает ТОЛЬКО
+InventoryState/Treatment/Status/ConfirmTalentRefund/UpdateTalents.
+UpdateExperience (10), UpdateSkills (12), UpdateMoney (13),
+UpdatePermanentStats (14), UpdateTalentRefundPoints (17) — SERVER->CLIENT
+ONLY (клиент их только читает: CharacterNetworking.cs:530+).
+XP/уровни/очки — целиком серверная монополия. НАСТОЯЩИЙ ПУТЬ ОЧКОВ:
+кампания (награды за миссии), пассивный XP за раунд.
+=> «+100 AdditionalTalentPoints» из 654 самим клиентом НЕДОСТИЖИМ.
+   (Это поле правится только серверным кодом — эндокрин-бустер-стиль таланты.)
+
+## ЗАТО НАШЛАСЬ ЖИРНАЯ ШТУКА: ConfirmTalentRefund = ЛЕГАЛЬНЫЙ ЗАПРОС
+case ConfirmTalentRefund: CanManageTalents(c) → Info.RefundTalents().
+RefundTalents (CharacterInfo:1542):
+  if (TalentRefundPoints <= 0) return;   // единственный гейт!
+  UnlockedTalents.Clear();               // СНОСИТ ВСЕ ТАЛАНТЫ
+  SavedStatValues.Clear();
+  Character.ResetTalents(talentPointReduction: talentResetCount);
+  TalentRefundPoints--; talentResetCount++;
+  + ВЫДАЁТ ОБРАТНО только GetUnlockedTalentsOutsideTree() - ResettableExtraTalents.
+КУДА ИДУТ ОЧКИ: ResetTalents(talentPointReduction) → XP возврат по формуле
+  (5730: SetExperience(XP - ExperienceRequiredPerLevel(level))).
+ИСТОЧНИК ОЧКОВ РЕФАНДА: StatusEffect refundtalents="true" → AddRefundPoints(1)
+  — ЭТО САМ ENDOCRINE BOOSTER! Талант даёт статаффект, статаффект даёт
+  refund point, ConfirmTalentRefund сбрасывает всё дерево и возвращает XP.
+ЮЗЕРУ (спрашивал в 618): Эндокрин-бустер = талант, который даёт refund point;
+  нажимаешь Reset в талантах → всё дерево сносится, XP возвращается,
+  вне-деревянные таланты (бустер) переигрываются заново. Честный механизм,
+  НО: гейт ОДИН — TalentRefundPoints>0. Где клиент берёт их ЛЕГАЛЬНО:
+  только талант. Имбы нет, НО:
+## ★ МИКРО-ИМБА REFUND LOOP (требует теста): ResetTalents возвращает XP
+  за СТОИМОСТЬ талантов... если оверспенднутые таланты (600-603, «бесплатные»)
+  учитываются в возврате XP как потраченные — цикл «оверспенд → рефанд → XP
+  вернулся за халявные таланты → снова оверспенд» = печать XP. Гвард от
+  этого: talentPointReduction = talentResetCount (растёт с каждым сбросом)?
+  ПРОВЕРИТЬ ResetTalents формулу возврата — СЛЕДУЮЩИЙ ЗАХОД.
+
+## UpdateMoney тоже сервер→клиент only (клиентский кошелёк только читает).
+## UpdateSkills: IncreaseSkillLevel капается Job-ограничениями + сервер only.
