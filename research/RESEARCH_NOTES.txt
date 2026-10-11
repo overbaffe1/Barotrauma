@@ -23253,3 +23253,26 @@ talentResetCount растёт неограниченно? сеттер Max(0) �
 (боевые → медицинские → инженерные). Для юзера: в его TalentFloodModule
 добавить кнопку REFUND (ConfirmTalentRefund пакет: 1 byte header=18) и
 цепочку FLOOD→REFUND→FLOOD = мгновенная смена всего билда.
+
+== ВОЛНА 658 — ВЕЧНЫЙ РЕСПЕК: цикл замкнут? (проверка GiveTalent) ==
+
+## ДВА СЧЁТЧИКА, КОТОРЫЕ МЕШАЮТ «БЕСКОНЕЧНОСТИ»:
+1. TalentRefundPoints-- при каждом рефанде (Consumed).
+2. talentResetCount++ → XP-налог растёт (450+500*lvl за каждый прошлый сброс).
+
+## ★ НО ЦИКЛ САМОПОДДЕРЖИВАЮЩИЙСЯ — RefundTalents СЕБЯ ПЕРЕЗАПРАВЛЯЕТ:
+RefundTalents (CharacterInfo:1573-1576) перезаёт вне-древесные таланты:
+  talentsFromOutsideTree.ForEach(t => Character.GiveTalent(t, addingFirstTime: TRUE));
+GiveTalent(addingFirstTime: true) → ActivateTalent(true) → ability groups
+активируются с флагом «первой выдачи» → CharacterAbilityApplyStatusEffects
+таланта ПЕРЕПРИМЕНЯЕТСЯ → если в его statuseffect есть refundtalents=true →
+AddRefundPoints(1) → ТОЛЬКО ЧТО СЖЖЁННОЕ ОЧКО ВЕРНУЛОСЬ.
+Исключение: таланты с resettable="true" в сейве НЕ переза даются
+(ResettableExtraTalents вычитаются в RefundTalents:1550-1553).
+⇒ Если бустер-талант НЕ помечен resettable — цикл Refund→Re-give→+1 point
+= САМОПОДДЕРЖИВАЮЩИЙСЯ ВЕЧНЫЙ РЕСПЕК (XP-налог копится, но flood'у на него
+плевать). Если помечен — нужно N очков на N сбросов (бустер чаще всего
+даёт 1 очко за активацию; повторная активация через re-flood дерева
+восстановит, только если эффект вешается на талант В ДЕРЕВЕ).
+ПРОВЕРКА В ИГРЕ: после REFUND смотреть TalentRefundPoints (тайтл меню талантов):
+вернулось в 1 = вечно; осталось 0 = каждый сброс требует нового очка.
