@@ -23740,3 +23740,29 @@ Submarine origin-фильтр через predicate). Солофоллбэк (Any
 ## Честный итог 673: кампания-магазин свапов/апгрейдов = перм-зона.
 Ничего для игрока без прав. Паттерн «ItemPrefab.Prefabs[_throw»
 подтверждён дважды (продажа + покупка хендлеры) — но это DoS-класс.
+
+== ВОЛНА 674 — REPAIRABLE: QTE-буст и тинкер (новый разбор) ==
+
+## ServerEventRead (Repairable сервер, 16-52):
+{ranged 0-2 action}{bool QTESuccess} + гейты: CanClientAccess +
+HasRequiredItems (нужен инструмент в руках — базовый ItemComponent-чек).
+- action == None → RepairBoost(QTESuccess)!
+- Sabotage-гейт: !IsTraitor → даунгрейд в Repair (серверный флаг, не клиентский
+  664-фейк!) ✓.
+- Tinker (2) — достижим из пакета! (649-я волна писала что Tinker=3 не входит
+  в ranged(0,2) — ЭТО НЕ ТАК: enum FixActions {None=0, Repair=1, Sabotage=2} —
+  Tinker отдельный механизм (не из пакета), ranged(0,2) покрывает все 3
+  значения. Tinker включается только сервер-сайд талантами. Проверить —
+  WAS WRONG in 664 notes; Tinker в пакет НЕ приходит.
+
+## ★ РЕПАИР-БУСТ Х4 (реальная имба для ботлета):
+RepairBoost(qteSuccess=true): item.Condition += DegreeOfSuccess × 3
+Клиент шлёт QTESuccess=true КАЖДЫЙ ПАКЕТ → +DoS×3 за пакет без задержек!
+Официальный клиент шлёт буст только на QTE-иконке (редко). Мод может
+спамить RepairBoost → ремонт со скоростью «N пакетов × DoS×3».
+Гейт: CurrentFixer == sender (надо начать ремонт = быть у предмета с
+инструментом), cooldown НЕТ. Rate limit — только сетевой DoS-протект.
+→ «Скоростной ремонт»: 60 пак/с × DoS×3 — дерьмо чинится за секунды.
+И ОБРАТНО: action=Repair(1), QTE=false → Rand(0,2)>DoS → OnFailure статусы
+на чинильщике (не нам). Спам буста — главная находка.
+ПРОВЕРКА НА ЧУЖОМ СЕРВЕРЕ: начать ремонт с инструментом → спам {None,true}.
