@@ -227,10 +227,7 @@ namespace CSHUB.Modules
                 _sent++;
                 _nextMsgId++;
                 _nextSendTime = Timing.TotalTime + SendInterval;
-                if (_sent % 100 == 0)
-                {
-                    DebugConsole.NewMessage($"[FragmentBloat] отправлено {_sent} (~{_sent}MB занято на сервере)", Color.Orange);
-                }
+                DebugConsole.NewMessage($"[FragmentBloat] пакет #{_sent} (id={_nextMsgId - 1}, {_fragmentCount} слотов) — осталось {_remaining}, ~{_sent}MB на сервере", Color.Orange);
             }
             if (_remaining <= 0 && _running)
             {
