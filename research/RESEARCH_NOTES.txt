@@ -23536,3 +23536,17 @@ CharacterTalent объект) при каждом GiveTalent. short-circuit (alr
 ## ЗАКРЫТАЯ ПРОВЕРКА (согласуется с волной 660):
 OnTalentGiven (клиент) — только жёлтый месседж в чат у СЕБЯ. Сервер — только
 лог. Уведомление «X получил талант» другим НЕ шлётся (не спалится даже).
+
+== ВОЛНА 667 — FILE RECEIVER (клиент принимает файлы от сервера): чисто ==
+
+Только что закрыл последний нетронутый приёмник клиента.
+FileReceiver (сервер→клиент сабы/сейвы): fileName гвapda —
+  ValidateInitialData: Enum.IsDefined(type) + max file size + invalid chars
+  (GetInvalidFileNameCharsCrossPlatform) + расширение (.sub/.save) =>
+  traversal и мусорные имена закрыты. FilePath = Path.Combine(фикс-папка).
+  TransferOnSameMachine — отдельно (локальный путь, только LAN-хост?).
+ValidateReceivedData: DecompressFileToStream try/catch => битые архивы = отказ.
+Перезапись существующего файла? Требуется отдельная проверка (не смотрел
+  до конца — пометить как хвост), но стартовая валидация плотная.
+ВЫВОД: приёмник файлов жертвы — НЕ вектор (после фиксов). Это был последний
+  крупный нетронутый блок клиентской стороны.
