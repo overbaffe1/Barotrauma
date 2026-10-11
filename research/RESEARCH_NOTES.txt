@@ -23932,3 +23932,44 @@ IO-ошибку при закачке модов/сейва.
 ## ПАРТНАРКА С 676 (тот же стимв): сервер не проверяет дубль-аккаунтов,
 Names разные — два процесса = два «тебя» онлайн. Модуль SelfSpawnModule:
   Process.Start("Barotrauma.exe", $"-multiclienttestmode -connect \"{name}\" {endpointStr} -username {myName}_2 -skipintro")
+
+== ВОЛНА 681 — FIELD REPORT: SelfSpawn + фантом-стейт + клиентский краш ==
+
+## ЧТО СЛУЧИЛОСЬ У ЮЗЕРА (лог полный):
+1. Модуль сгенерил ПРАВИЛЬНУЮ команду:
+   Barotrauma.exe -multiclienttestmode -connect "friends_server" "76561198041382932" -username "Dummy_2" -skipintro
+2. НО «сам не коннектился, я должен был сам зайти» → второй процесс стартанул,
+   НО СТЕМ НЕ ПОДХВАТИЛ СЕССИЮ АВТОМАТОМ (два процесса одного SteamID — Steam
+   просит подтверждение/логин в новом окне) → юзер вручную зашёл.
+   ОБЪЯСНЕНИЕ: Steam-тикеты на процесс — второй процесс получает СВОЙ тикет,
+   но если Steam client не связал его автоматически (оверлей/логин), нужен
+   ручной вход. ЭТО ОЖИДАЕМО (676: тест вне кода).
+3. ЗАШЁЛ ВТОРЫМ → ПЕРВЫЙ СТАЛ ФАНТОМОМ: пинги ВСЕХ пропали, «ничего делать
+   нельзя». ОБЪЯСНЕНИЕ: GameMain.Client СТАТИК + SteamManager/EOS — ОДИН
+   Steamworks-контекст на процесс... НЕТ, второй был ПРОЦЕССОМ. Реальная
+   причина: сервер (хост-from-game) увидел ДВА соединения одного SteamID.
+   P2PServerPeer.HandleDataMessage: auth-ticket верификация P2P —
+   SteamAuthTicketForEosHost/ForSteamHost BeginAuthSession ОДНОГО ID дважды;
+   ON VALIDATE RESPONSE — общий handler; второй коннект может переопределить/
+   прервать auth-стейт первого (Steamworks EndAuthSession при дисконнекте
+   одного убивает сессию ОБЕИХ). + KICKAFK: у первого перестали обновляться
+   пинги → сервер мыслит его AFK.
+   => ОДИН SteamID = ОДНА Steamworks auth-сессия на хосте. Двойной вход
+   фрагментирует auth — первый становится «фантомом» (соединение есть,
+   auth-состояние потерто). ЭТО НЕ БАГ НАШЕГО МОДА, это Steamworks-семантика.
+4. Выход из лобби первого → EndRoundForSelf NRE @ GameClient.cs:3242
+   `MyClient.CharacterID = Entity.NullEntityID` — MyClient == null!
+   EndRoundForSelf вызван из пауз-меню кнопки «Return to server lobby».
+   После фантомизации MyClient (Client-объект на сервере) отвалился/
+   пересоздался, а КЛИЕНТ держит старое состояние (GameStarted=true,
+   GameSession не null, но MyClient null после каких-то дисконнектов).
+   КЛИЕНТСКИЙ КРАШ от null — не сервер, не наш пак: ванильный NRE
+   в EndRoundForSelf (нет null-чека MyClient перед присвоением).
+
+## ИТОГИ:
+- SelfSpawn РАБОТАЕТ (команда/процесс/подключение ок)
+- НО двойной вход одного SteamID на P2P-хост = фантом первого (Steamworks
+  auth-сессия одна на ID). Решение для ДЕЙСТВИТЕЛЬНО двух живых клиентов:
+  второй Steam-аккаунт (family share) — тогда auth-сессий две.
+- Бонус: найден ванильный клиентский NRE EndRoundForSelf (MyClient null) —
+  краш клиента «возврат в лобби» из фантом-стейта.
