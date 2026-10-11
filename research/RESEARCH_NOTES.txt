@@ -23866,3 +23866,35 @@ JoinServer (ServerListScreen:1819) просто делает GameMain.Client = n
   Barotrauma.exe -connect "server <IP/endpoint> <port>" -username SkylEiotic2 -skipintro
 (для P2P-сервера друга формат -connect server <name> <endpoint...> — см.
 ConnectCommand парсинг). Это дешевле, чем второй Steam.
+
+== ВОЛНА 678 — «КОННЕКТ-ПАКЕТ»: можно ли войти вторым клиентом пакетом? ==
+
+## ЧТО ЕСТЬ: коннект — это не один пакет, а STATE MACHINE инициализации:
+ConnectionStarted (P2P only) → AuthInfoAndVersion (ClientAuthTicketAndVersionPacket:
+  {name, ownerKey, accountId, AuthTicket(Steam), gameVersion, language})
+→ [Password: SHA256+соль] → ContentPackageOrder (клиент подтверждает список
+  модов сервера) → Success → GameStarted-синк.
+Всё это обменивается через ClientPeer-пир (Lidgren/P2P), НЕ через GameMain.
+
+## ПОЧЕМУ ИЗ ЗАПУЩЕННОЙ ИГРЫ «ПАКЕТОМ КОННЕКТА» НЕ ЗАЙТИ:
+- клиентские стейты (AuthSessionStarted, initializationStep, ContentPackageOrder)
+  хранятся в ClientPeer — второй вход = ВТОРОЙ ClientPeer с полной машиной
+  стейтов + свой транспорт-сокет (Lidgren connection или Steam P2P session).
+- Steam auth ticket: GetAccountId() вызывает Steamworks-тикет на процесс —
+  два ClientPeer в одном процессе потянут два запроса (теоретически), НО:
+  второй Peer надо ещё создать (сокеты, callbacks, ReadDataMessage-роутинг
+  — всё захардкожено на GameMain.Client/ClientPeer статик).
+- сервер после Success шлёт SPAWN-DATA/ ENTITY SYNC, адресованный
+  ServerConnection второго пира — читать его будет твой роутер, который
+  ждёт пакеты только для первого пира => второй «бумажный» клиент ослепнет.
+
+## ВЕРДИКТ: коннект-«пакета» нет — есть мультишаговый handshake с
+per-peer state. Из одного процесса — только reassign GameMain.Client
+(677, переподключение). Второй одновременный = второй ПРОЦЕСС (флаги
+-connect из 677) или второй Steam-аккаунт. CSHUB-мод «невидимый второй
+клиент пакетами» — не реализуемо в разумные сроки (надо писать второй
+ClientPeer+роутер поверх игры = отдельный бот-клиент).
+Единственный реалистичный «пакетный» путь — бот-клиент: mini-peer на
+сокете, полный handshake, чтение спавн-данных — НЕ мод-задача, а отдельный
+проект (лицензионный Steam ticket для него взять можно из своего клиента
+через Steamworks API того же процесса... сложно, но возможно).
