@@ -23711,3 +23711,32 @@ TPS падает — сервер «умирает стоя» ещё до OOM. �
 ## МЕЛОЧЬ: SellItems (ReadSoldItems) — ItemPrefab.Prefabs[prefabId]
 Dictionary indexer → THROW на несуществующий id! Как в SoldItems-эксплойте
 (2-я кнопка краш-меню, ✅ работает). Это тот же вектор (лаг-спам), не новое.
+
+== ВОЛНА 673 — ITEM SWAP через кампанию: всё за ManageCampaign (не для нас) ==
+
+## ItemSwap-ветка кампании (замена орудий/реактора в торговом меню):
+- ГЕЙТ 1: HasCampaignInteractionAvailable(Upgrade) — у NPC-апгрейдера/remote
+- ГЕЙТ 2 (в PurchaseItemSwap): HasPermissionToManageUpgrades =
+  AllowedToManageCampaign(ManageCampaign) — жёсткий перм, НЕ софоллбэкнутый
+  (allowed list, не AnyOneAllowed!)
+- Клиент может слать {itemToRemoveID, itemToInstallID}: null-install
+  (пустой Identifier → null) превращается в CancelItemSwap = СНЯТЬ орудие
+  чужого... нет: гейт 2 всё равно ManageCampaign. Молча.
+- Валидация свапа сервером: HiddenInGame, AllowSwapping, та же
+  upgrade-категория, AvailableSwaps (price 0 если swap уже разрешён!)
+- Побочка с AvailableSwaps: цена 0 если swap «already available» — но
+  AvailableSwaps заполняется ТОЛЬКО легально (покупкой/сейвом).
+
+## ВЫВОД: кампания-свапы НЕ для игрока без прав (в отличие от ItemSwap
+пакета 592 — он шёл через SetItem/ChangeProperty с CanClientAccess).
+Ветка закрыта.
+
+## НОВОЕ-МАЛОЕ: SellItems позволяет продать чужой инвентарь? НЕТ:
+allowedToSellInventoryItems = AllowedToManageCampaign(SellInventoryItems),
+sub-items = SellSubItems — оба перма гейтят ЧТО продавать (Character vs
+Submarine origin-фильтр через predicate). Солофоллбэк (AnyOneAllowed)
+действует при 1 клиенте — известный паттерн.
+
+## Честный итог 673: кампания-магазин свапов/апгрейдов = перм-зона.
+Ничего для игрока без прав. Паттерн «ItemPrefab.Prefabs[_throw»
+подтверждён дважды (продажа + покупка хендлеры) — но это DoS-класс.
