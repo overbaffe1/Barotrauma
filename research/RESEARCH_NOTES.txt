@@ -23898,3 +23898,37 @@ ClientPeer+роутер поверх игры = отдельный бот-кли
 сокете, полный handshake, чтение спавн-данных — НЕ мод-задача, а отдельный
 проект (лицензионный Steam ticket для него взять можно из своего клиента
 через Steamworks API того же процесса... сложно, но возможно).
+
+== ВОЛНА 679 — КАК СОЗДАТЬ ВТОРОГО КЛИЕНТА: точные команды ==
+
+## ОФИЦИАЛЬНЫЙ ПУТЬ (как делают сами разработчики, StartLocalMPSession):
+Barotrauma.exe -multiclienttestmode -connect server localhost -username client2 -skipintro
+и для удалённого сервера друга:
+  -connect "<имя сервера>" <endpoint>
+Endpoint-форматы (ConnectCommand.Parse):
+  - Lidgren:  "IP:PORT"  (StringRepresentation = IPEndPoint.ToString(), порт
+    опционален, дефолт NetConfig.DefaultPort=27015)
+  - Steam P2P: СТРИМОВСКИЙ SteamId64 хоста (SteamP2PEndpoint.Parse = SteamId.Parse)
+  - EOS P2P: eos-идентификатор
+  Несколько endpoint'ов через ЗАПЯТУЮ (если P2P, до 3), имя в кавычках если
+  содержит пробелы.
+Флаги: -username X -skipintro -multiclienttestmode (второй клиент пишет
+  загрузки в свою папку, чтобы не конфликтовать).
+
+## КАК УЗНАТЬ ENDPOINT СЕРВЕРА ДРУГА:
+- если UDP-дедикатед: просто IP:порт из списка серверов
+- если Steam P2P (host from game): SteamId64 ХОСТА — виден в списке серверов
+  (SteamDedicatedServerProvider берёт entry из лобби), либо из консоли хоста
+  (his own endpoint print), либо mod-ом на хосте (GameMain.Server.StringRep).
+  С ним: Barotrauma.exe -connect "имя" <SteamId64> -username X2 -skipintro
+- CSHUB-мод может УЗНАТЬ endpoint сам: GameMain.Client.ClientPeer
+  .ServerEndpoint.StringRepresentation и засунуть в Process.Start с
+  -connect + своим именем => кнопка «второй я» без ручного ввода.
+
+## МУЛЬТИКЛИЕНТ-ТЕСТМОД ЗАЧЕМ: отдельные папки загрузок (чтобы два
+клиента не дрались за скачиваемый файл) — иначе второй может словить
+IO-ошибку при закачке модов/сейва.
+
+## ПАРТНАРКА С 676 (тот же стимв): сервер не проверяет дубль-аккаунтов,
+Names разные — два процесса = два «тебя» онлайн. Модуль SelfSpawnModule:
+  Process.Start("Barotrauma.exe", $"-multiclienttestmode -connect \"{name}\" {endpointStr} -username {myName}_2 -skipintro")
