@@ -112,6 +112,8 @@ namespace CSHUB.Modules
         private static int _sent;
         private static int _fragmentCount = 65535;
         private const double SendInterval = 1.0 / 40.0; // 40/s — под рейтом
+        private static Harmony _harmony;
+        private static bool _patched;
 
         // --- reflection (все нужные типы internal в сборке игры) ---
         private static Type _tPeerPacketHeaders, _tMessageFragment, _tFragmentId;
@@ -184,6 +186,16 @@ namespace CSHUB.Modules
             if (!IsP2PTransport()) { return "не P2P-транспорт — бесполезно (нужен host-from-game сервер)"; }
             if (!EnsureReflection(out string err)) { return err; }
 
+            if (!_patched)
+            {
+                _harmony = new Harmony("cshub.fragmentbloat");
+                // постфикс на Update ПИРА (транспорт): тикает каждый кадр, пока
+                // подключены — персонаж/раунд не нужны (можно слать из лобби).
+                _harmony.Patch(AccessTools.Method(GameMain.Client.ClientPeer.GetType(), "Update"),
+                    postfix: new HarmonyMethod(typeof(FragmentBloatEngine), nameof(FragmentBloatEngine.PeerUpdatePostfix)));
+                _patched = true;
+            }
+
             _running = true;
             _remaining = Math.Min(packets, 20000);
             _fragmentCount = Math.Clamp(fragmentCount, 1, 65535);
@@ -204,7 +216,15 @@ namespace CSHUB.Modules
                                     "Аллокации на сервере живут, пока ты подключён — дисконнект их освободит.", Color.Orange);
         }
 
-        /// <summary>Вызывается из Update-хука CSModuleBase (если хаб качает Update) либо лениво из SendOne.</summary>
+        /// <summary>Хук обновления ПИРА — вызывается каждый кадр, пока транспорт жив (основной памп).</summary>
+        public static void PeerUpdatePostfix(object __instance)
+        {
+            if (!_running) { return; }
+            if (!ReferenceEquals(__instance, GameMain.Client?.ClientPeer)) { return; }
+            PumpLoop();
+        }
+
+        /// <summary>Опциональный памп; основной — PeerUpdatePostfix.</summary>
         public static void Update()
         {
             if (!_running) { return; }
