@@ -23140,3 +23140,44 @@ FakeFish латает краш-эксплойты тихо, ченджлогом
    и ConversationAction — ровно эта категория);
 3) направление клиент-на-клиент (сервер транслирует пакеты жертве) —
    официально признанный класс, чинился минимум дважды (2021, 2026).
+
+== ВОЛНА 654 — ИМБЫ/ДИЗБАЛАНС: карта халявы игры ==
+
+## ТАЛАНТЫ — УЖЕ НАЙДЕНО (600-603), но вот ПОЛНЫЙ гвард:
+UpdateTalents (сервер): CanManageTalents + IsViableTalentForCharacter(бот, job,
+  точка) — бюджет по GetTotalTalentPoints() - selected.Count > 0,
+  selected = список ПАКЕТА (пересоздаётся) => overspend работает (база).
+GetTotalTalentPoints = GetCurrentLevel() + AdditionalTalentPoints;
+AdditionalTalentPoints сеттер: Clamp(0, MaxAdditionalTalentPoints=100)!
+= +100 ТОЧЕК ТАЛАНТОВ сверху возможны (кто пишет это поле? XP-события
+  сервера; клиент получает UpdateExperience как SERVER->CLIENT; юзеру:
+  если где-то клиент пишет XP — имба, проверить путь UpdateExperience).
+Level даёт очки сами по себе: GetCurrentLevel от ExperiencePoints.
+
+## SPAWN-ХАЛЯВА (сверено):
+GiveJobItems: выдаётся на спавне ЕСЛИ НЕТ CharacterData (первый спавн
+  раунда) ИЛИ (!HasItemData && !StartItemsGiven) (респавн-пенальти).
+  CharacterData.SpawnInventoryItems восстанавливает СОХРАНЁННЫЙ инвентарь
+  => классика «сдохнуть до смерти с сохранением хвоста»: сейв инвентаря
+  происходит в SaveInventory; несохранённое теряется; НО НИКТО НЕ ЧИСТИТ
+  сохранённое при получении нового => спорно.
+PvP: GiveJobItems(isPvPMode: true) выдаёт базовые job items КАЖДЫЙ спавн
+  (characterData null в PvP) => бесконечные халявные медкиты/патроны
+  респавном — ДИЗАЙН PvP, но в обычной кампании респавн-шаттл
+  RespawnManager:613 тоже зовёт GiveJobItems => прикинуться
+  «первым спавном» нельзя (characterData уже есть) — путь закрыт в кампании.
+
+## ПРОВЕРКА READPROPERTYCHANGE (права на InGameEditable-сеттеры):
+Гейт двойной: CanClientAccess(sender) (или ЦБ unlocked) + ConditionallyEditable.
+БЕЗ Min/Max клампов на значения — float/int/raw TrySetValue (448).
+Imба-поля (InGameEditable с большим эффектом):
+  - PowerContainer.Capacity?? (нет — не InGameEditable, MaxRechargeSpeed тоже нет)
+  - RegExFindComponent.Expression (652 — глушилка)
+  - Terminal.OutputValue (сетевой сигнал-инжект 627)
+  - MemoryComponent.Value (string, произвольная трансляция)
+  - LightComponent.Color/Range (визуал), Pump.FlowPercentage? (не это поле)
+  - IdCard.Tags? (не Editable — güvenli)
+  Проверить статически: grep InGameEditable по компонентам = список
+  всех сетевых сеттеров; имб среди них НЕТ честных (все визуал/сигнал).
+
+## ДЖОБ-АЙТЕМЫ РЕСПАВНА (PvP): дизайн, не эксплойт — отмечено для полноты.
