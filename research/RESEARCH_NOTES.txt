@@ -23619,3 +23619,44 @@ JoinRequest → сервер шлёт СОЛЬ (CryptoRandom.Next, per-client, �
 
 ## ВЫВОД: авторизация аккуратная. Единственный практический изъян —
   опциональный unlimited password retry (зависит от BanAfterWrongPassword).
+
+== ВОЛНА 670 — ★★ P2P DEFRAGMENTER: НЕОГРАНИЧЕННАЯ ПАМЯТЬ (новый DoS) ==
+
+## МЕСТО: MessageDefragmenter (только P2P-транспорт — SteamP2P-хостинг,
+та самая схема «host through SteamP2P»! У Lidgren свой фрагментатор).
+
+## КОД (MessageDefragmenter.cs, 40 строк):
+ProcessIncomingFragment(fragment):
+  новый MessageId → partialMessages[id] = new MessageFragment[FragmentCount]
+  FragmentCount — ushort ИЗ ПАКЕТА (до 65535!)
+  index-гвapd ✓, count-mismatch ✓ — а вот ВЫСВОБОЖДЕНИЯ НЕТ:
+  словарь ЧИСТИТСЯ только при ЗАВЕРШЕНИИ сообщения (все слоты заполнены).
+  Никаких таймаутов, никаких лимитов на partialMessages.Count,
+  никакого капа на FragmentCount.
+
+## АТАКА (клиент с модом, остаётся на связи):
+Каждый фрагмент с НОВЫМ MessageId аллоцирует массив FragmentCount ×
+sizeof(MessageFragment) (Id 3×ushort + ImmutableArray ref ≈ 16+ байт).
+- 1 фрагмент с FragmentCount=65535 → ~1 МБ массива (почти пустого).
+- 1000 уникальных MessageId → ~1 ГБ.
+- 10000 → 10 ГБ → OOM/своп-смерть сервера, либо тяжёлый GC-фриз (сайз-тюнинг).
+Плюс каждый фрагмент триггерит All()-скан всего массива = CPU-нагрузка.
+DoSProtection НЕ считает страйки: пакеты крошечные и обрабатываются мгновенно
+(только аллокация). Отключение не лечит — словарь живёт в ClientConnectionData
+пока соединение... а атакующий просто ДЕРЖИТ соединение. После дисконнекта
+память освободится — но OOM уже случился ДО того.
+
+## УСЛОВИЯ: P2P-сервер друга (host through Steam), мод-клиент (как все наши
+пакеты). Это ПЕРВЫЙ найденный чистый OOM-вектор: клиника/перки жрут память
+одноразово и с гейтами, а тут аллокации копятся НА СЕРВЕРЕ без лимита и
+без очистки. Родственник официального «crash SteamP2P servers» (1.5.9.2),
+но другой механизм (не malformed-parse, а resource exhaustion).
+
+## ДОСТУП К ОТПРАВКЕ: клиентские фрагменты формируются MessageFragmenter'ом
+автоматически для больших сообщений; для ПРОИЗВОЛЬНЫХ фрагментов мод
+перехватывает P2PClientPeer/канал отправки (Harmony на SendMsgInternal) и
+шлёт готовые MessageFragment-структуры. Реализуемо в CSHUB.
+
+## ЛИДГРЕН-ТРАНСПОРТ: свой фрагментатор в Libraries/Lidgren.Network —
+проверить отдельно, но там лимиты библиотечные (NetPeerConfiguration
+configuredIncomingCapacity?). P2P — вот где дырка.
