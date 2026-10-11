@@ -23832,3 +23832,37 @@ Steamworks-уровень: дубли BeginAuthSession одного ID — Edge 
 - флад рефанд-очков... нет, персист по CharacterInfo.
 ОГРАНИЧЕНИЕ: имена должны быть разные; SessionId разные; оба получают
 полную синхронизацию — двойная нагрузка на вас же.
+
+== ВОЛНА 677 — ВТОРОЙ КЛИЕНТ ИЗ ОДНОЙ ИГРЫ (без второго процесса) ==
+
+## ОТВЕТ: ДА, из ОДНОЙ запущенной игры можно открыть второе соединение.
+GameMain.Client — ОБЫЧНОЕ СТАТИЧЕСКОЕ ПОЛЕ (GameClient : NetworkMember).
+JoinServer (ServerListScreen:1819) просто делает GameMain.Client = new GameClient(...).
+
+## ДВА ПУТИ:
+1. CSHUB-мод (новое соединение, старое живёт? НЕТ — старое остаётся висеть):
+   сохранить old = GameMain.Client → сделать GameMain.Client = new GameClient(
+   "второе_имя", endpoints...). Старый ClientPeer НЕ закрыт — сервер увидит
+   таймаут первого (или продолжит слать — трафик в никуда, памяти у нас).
+   ОСТОРОЖНО: GameMain.Client глобален — весь UI/синк переключится на нового.
+   Старый клиент умирает по таймауту (P2P ~15-30с, Lidgren по timeout).
+   ЭТО НЕ «два одновременно в одной игре», а «переподключение другим именем».
+2. DEBUG-путь разработчиков (ClientRunMultiClient, DebugConsole:4470+):
+   из ОДНОЙ игры GameMain.Client = new GameClient("client1", loopback) +
+   Process.Start(Barotrauma.exe -connect server localhost -username client2 ...)
+   = штатный механизм запуска ВТОРОГО ПРОЦЕССА с другим именем.
+   MultiClientTestMode помечен #if DEBUG, но Process.Start с аргументами
+   работает и в релизе: Barotrauma.exe -connect "server <endpoint> <port>"
+   -username X -skipintro — ЕСЛИ хочешь второй клиент, проще запускать
+   процесс с этими флагами (тот же SteamID — 676: сервер не запретит).
+
+## ОГРАНИЧЕНИЯ ОДНОГО ПРОЦЕССА:
+- GameMain.Client — синглтон по дизайну: 2 живых клиента в 1 процессе
+  НЕ поддерживается (UI, SoundManager listener, Character.Controlled — всё
+  завязано на один Client).
+- Steam auth ticket у обоих — валиден (676), имена разные — правило.
+
+## ПРАКТИКА ДЛЯ ЮЗЕРА: перезапуск-под-другим-именем за 5 секунд:
+  Barotrauma.exe -connect "server <IP/endpoint> <port>" -username SkylEiotic2 -skipintro
+(для P2P-сервера друга формат -connect server <name> <endpoint...> — см.
+ConnectCommand парсинг). Это дешевле, чем второй Steam.
