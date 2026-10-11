@@ -23766,3 +23766,32 @@ RepairBoost(qteSuccess=true): item.Condition += DegreeOfSuccess × 3
 И ОБРАТНО: action=Repair(1), QTE=false → Rand(0,2)>DoS → OnFailure статусы
 на чинильщике (не нам). Спам буста — главная находка.
 ПРОВЕРКА НА ЧУЖОМ СЕРВЕРЕ: начать ремонт с инструментом → спам {None,true}.
+
+== ВОЛНА 675 — «ГРОМКОСТЬ 1000»: музыка/саунд-компоненты ==
+
+## ВАЖНО: отдельного «музыкального автомата» в ванили НЕТ — музыка через
+предметы идёт как САУНД-АТТАЧМЕНТЫ компонентов (ItemSound: RoundSound с
+Volume/Range, Type=OnActive и пр., играется клиентом с позиции предмета).
+
+## КТО ЧИТАЕТ ГРОМКОСТЬ:
+GetSoundVolume(ItemSound): если VolumeProperty задан — читает свойство
+КОМПОНЕНТА/предмета (клиент). Иначе VolumeMultiplier = RoundSound.Volume
+(readonly, из XML, default 1.0).
+Плей: loopingSoundChannel.Gain += clamp(diff, ±0.1) — гейн ползёт к target.
+SoundChannel.Gain сеттер: IsValid → Max(value, 0) → Al.Sourcef(Gain) —
+ВЕРХНЕГО КЛАМПА НЕТ! OpenAL сам клипует на выходе, но значение можно задать
+любое. Т.е. 1000技术上 принимается.
+
+## КАК СДЕЛАТЬ ГРОМЧЕ:
+1) ChangeProperty на свойство, если компонент экспонирует volume-свойство
+   (у музыкальных мод-предметов часто Editable float Volume) — сервер
+   рассинхронизирует только InGameEditable; значение без клампа (448).
+2) Чисто КЛИЕНТСКИЙ способ (CSHUB мод, работает у тебя): Harmony постфикс
+   на GetSoundVolume → return targetGain × N. НО это только у ТЕБЯ в
+   наушниках (гейн клиентский). Чтобы ГРОМКО ДРУГИМ — нужно менять Volume
+   на сервере: item-sound Volume XML-readonly, ChangeProperty его не даст.
+3) Мод-предметы с Editable «volume» свойством: ChangeProperty это поле
+   покрутит У ВСЕХ (сервер рассинхронизирует InGameEditable и клиенты
+   получают стейт) — это единственный путь «громко всем».
+ВЫВОД: без модов с volume-свойством — «громкость 1000 всем» недостижима;
+для себя — тривиальный хук GetSoundVolume.
