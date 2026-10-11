@@ -66,7 +66,7 @@ namespace CSHUB.Modules
 
             // вручную введённый endpoint/имя — ПЕРВЫЙ приоритет (правь константы и
             // ПЕРЕЗАПУСТИ ИГРУ / перезагрузи модули CSHUB, константы читаются при компиляции)
-            const string ManualEndpoint = "steam_76561198041382932";   // ← steam_... или ip:port
+            const string ManualEndpoint = "76561198041382932";   // ← голый SteamID64 / steam_1:0:X / ip:port (steam_7656... НЕ парсится!)
             const string ManualName     = "";   // ← впиши имя второго вручную если надо
 
             var box = new GUIMessageBox(
@@ -126,10 +126,11 @@ namespace CSHUB.Modules
         {
             try
             {
-                string exePath = typeof(GameMain).Assembly.Location;
+                // ВАЖНО: Assembly.Location = Barotrauma.dll (Process.Start на .dll не работает)!
+                string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
                 if (string.IsNullOrWhiteSpace(exePath))
                 {
-                    exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "Barotrauma.exe";
+                    exePath = "Barotrauma.exe";
                 }
 
                 // ConnectCommand.Parse: -connect "name" endpoint[,endpoint2...]
@@ -149,8 +150,12 @@ namespace CSHUB.Modules
 
                 Process.Start(psi);
 
+                string fullCmd = $"\"{exePath}\" {args}";
+                LuaCsLogger.Log("[SelfSpawn] CMD: " + fullCmd);
+                DebugConsole.NewMessage("[SelfSpawn] CMD: " + fullCmd, Color.Cyan);
+
                 return $"второй процесс запущен: имя \"{secondName}\", endpoint \"{endpoint}\". " +
-                       "Подожди загрузки (~20-40с). Если не зашёл — проверь суффикс имени (NameTaken).";
+                       "Полная команда в логе (можно запустить руками). Если не зашёл — проверь суффикс имени (NameTaken).";
             }
             catch (Exception e)
             {
