@@ -23687,3 +23687,27 @@ TPS падает — сервер «умирает стоя» ещё до OOM. �
 Дисконнект тебя освободит память — если дошёл до OOM, сервер уже упал,
 если нет — откатайся и заново (счётчики MessageId у тебя перезапустятся,
 на сервере словарь чист — свежая кампания блоата).
+
+== ВОЛНА 672 — МАГАЗИН (покупка предметов): можно ли бесплатный спавн? ==
+
+## ГЕЙТЫ СЕРВЕРА (MultiPlayerCampaign.ServerRead 1038 → CargoManager.PurchaseItems):
+- HasCampaignInteractionAvailable(Store): у магазина 250ю ИЛИ AllowRemoteCampaignInteractions
+- Quantity: ReadRangedInteger(0, MaxQuantity=100) — кламп на чтении ✓
+- availableQuantity: Math.Min(desired, СКЛАД магазина Stock.Quantity) —
+  нельзя купить больше чем есть на складе локации ✓
+- Деньги: item.Quantity × buyValue → TryPurchase(client) — НЕ хватает:
+  строка удаляется (partial purchase разрешён: покупает что может!) ✓
+- desiredQuantity -= alreadyPurchased.Quantity (анти-дабл-спавн между пакетами) ✓
+
+## СПАВН ЕСТЬ (DeliverImmediately=true → DeliverItemsToCharacter спавнит
+предметы ПРЯМО НА ПЕРСОНАЖА, в инвентарь или контейнеры, Quantity × Item) —
+но каждый спавн оплачен по полной серверной цене. ПЕРЕПОЛНЕНИЕ = спавн
+падает НА ПОЛ (Item создаётся, TryPutItem не влез → остаётся на позиции).
+Итого: бесплатного спавна НЕТ — цены серверные, склад серверный, клампы есть.
+БАЛАНС-ЭКСПЛОЙТ: partial purchase (снимаешь до нуля) + DeliverImmediately
+= докупить-прилепить после рейда; недоукомплектованный инвентарь = предметы
+на полу у персонажа (не портится).
+
+## МЕЛОЧЬ: SellItems (ReadSoldItems) — ItemPrefab.Prefabs[prefabId]
+Dictionary indexer → THROW на несуществующий id! Как в SoldItems-эксплойте
+(2-я кнопка краш-меню, ✅ работает). Это тот же вектор (лаг-спам), не новое.
