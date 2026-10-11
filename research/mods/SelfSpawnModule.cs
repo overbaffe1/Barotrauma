@@ -64,14 +64,20 @@ namespace CSHUB.Modules
 
             try { myName = GameMain.Client?.Name ?? "Player"; } catch { }
 
+            // вручную введённый endpoint/имя — ПЕРВЫЙ приоритет (правь константы и
+            // ПЕРЕЗАПУСТИ ИГРУ / перезагрузи модули CSHUB, константы читаются при компиляции)
+            const string ManualEndpoint = "steam_76561198041382932";   // ← steam_... или ip:port
+            const string ManualName     = "";   // ← впиши имя второго вручную если надо
+
             var box = new GUIMessageBox(
                 "SELF SPAWN",
                 (ok
-                    ? "Current server endpoint:\n" + endpoint + "\n\n"
-                    : "⚠ Не виден endpoint (не подключён?) — впишешь вручную.\n\n") +
-                "Second client name: " + myName + "_2\n" +
-                "(если занято — измени суффикс ниже)\n" +
+                    ? "Auto endpoint (из пира):\n" + endpoint + "\n\n"
+                    : "⚠ Auto endpoint не определён — будет использован ManualEndpoint.\n\n") +
+                "Base name: " + myName + "\n" +
+                "Second client name: " + (string.IsNullOrWhiteSpace(ManualName) ? myName + "_2" : ManualName) + "\n" +
                 "\n" +
+                "Пароль сервера второй клиент спросит сам при входе.\n" +
                 "Запускается второй процесс игры с -connect. Steam-тикеты обоих валидны, " +
                 "сервер дубли-аккаунты не проверяет.",
                 new LocalizedString[]
@@ -86,18 +92,18 @@ namespace CSHUB.Modules
 
             // вручную введённый endpoint/имя — через MessageBox нельзя, поэтому
             // просто два режима: авто (из текущего пира) и ручной (правь константы)
-            const string ManualEndpoint = "";   // ← впиши "steam_76561198041382932" или "ip:port" если авто не сработал
-            const string ManualName     = "";   // ← впиши имя второго вручную если надо
-
             box.Buttons[0].OnClicked = (_, _) =>
             {
-                string ep = ok ? endpoint : ManualEndpoint;
+                // ManualEndpoint (заполнен выше) — ГЛАВНЫЙ приоритет
+                string ep = !string.IsNullOrWhiteSpace(ManualEndpoint)
+                    ? ManualEndpoint
+                    : (ok ? endpoint : "");
                 string baseName = string.IsNullOrWhiteSpace(ManualName) ? myName : ManualName;
                 string secondName = baseName + "_2";
 
                 if (string.IsNullOrWhiteSpace(ep))
                 {
-                    GUI.AddMessage("[SelfSpawn] endpoint пуст — подключись к серверу или впиши ManualEndpoint", Color.Red);
+                    GUI.AddMessage("[SelfSpawn] endpoint пуст: не подключён к серверу И ManualEndpoint не задан", Color.Red);
                     return true;
                 }
 
