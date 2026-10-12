@@ -623,7 +623,7 @@ namespace CSHUB.Modules
             }
             _printerQueue += Math.Clamp(count, 1, 5000);
             // генератор несуществующих ID: верхний диапазон, реальные ID туда почти не попадают
-            _printerNextId = (ushort)Math.Max(_printerNextId, 64000);
+            _printerNextId = _printerNextId < 64000 ? (ushort)64000 : _printerNextId; // Math.Max(ushort,ushort) ambiguous in Mono compiler
         }
 
         // Памп очереди: 1 пакет (≤100 строк) каждые 0.7с, пока окно принтера открыто
