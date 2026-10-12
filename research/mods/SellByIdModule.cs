@@ -144,6 +144,7 @@ namespace CSHUB.Modules
         private static int _printerQueue;               // сколько строк осталось отправить
         private static ushort _printerNextId;           // генератор несуществующих ID
         private static int _printerSentTotal;
+        private static bool _printerCloseRequested;
 
         // ------------------- UI-корутина (вместо мёртвого Update) -------------------
         // Пока окно открыто: полл кошелька (дельта = ответ сервера на продажу),
@@ -599,12 +600,16 @@ namespace CSHUB.Modules
             }, "Считает сколько строк съедят весь Balance магазина и ставит в очередь");
 
             AddPBtn("Стоп (очистить очередь)", new Color(90, 100, 120), () => { _printerQueue = 0; });
-            AddPBtn("Закрыть", new Color(100, 100, 120), () =>
+            var closeSelf = new GUIButton(new RectTransform(new Vector2(1f, 0.14f), btns.RectTransform), "Закрыть");
+            closeSelf.Color = new Color(100, 100, 120);
+            closeSelf.OnClicked = (bb, dd) =>
             {
-                _printerWindow?.Close();
-                _printerWindow = null;
-                _printerStatus = null;
-            });
+                // НЕ трогаем поля окна изнутри его собственного OnClicked:
+                // GUIButton.Update после колбэка ещё обращается к родителю.
+                // просто откладываем закрытие на следующий кадр.
+                _printerCloseRequested = true;
+                return true;
+            };
 
             CoroutineManager.StartCoroutine(PrinterLoop());
         }
@@ -639,6 +644,14 @@ namespace CSHUB.Modules
             while (_printerWindow != null)
             {
                 yield return CoroutineStatus.Running;
+                if (_printerCloseRequested)
+                {
+                    _printerCloseRequested = false;
+                    _printerWindow?.Close();
+                    _printerWindow = null;
+                    _printerStatus = null;
+                    yield return CoroutineStatus.Success;
+                }
                 if (Timing.TotalTime < next) { continue; }
                 if (_printerQueue <= 0) { next = Timing.TotalTime + 0.3; continue; }
                 next = Timing.TotalTime + 0.7;
