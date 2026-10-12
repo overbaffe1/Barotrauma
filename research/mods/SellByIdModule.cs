@@ -599,6 +599,12 @@ namespace CSHUB.Modules
             }, "Считает сколько строк съедят весь Balance магазина и ставит в очередь");
 
             AddPBtn("Стоп (очистить очередь)", new Color(90, 100, 120), () => { _printerQueue = 0; });
+            AddPBtn("Закрыть", new Color(100, 100, 120), () =>
+            {
+                _printerWindow?.Close();
+                _printerWindow = null;
+                _printerStatus = null;
+            });
 
             CoroutineManager.StartCoroutine(PrinterLoop());
         }
