@@ -24038,3 +24038,36 @@ foreach item in itemsToSell:
 ## СПОСОБ 2: ценовой префаб ($$$ + tickbox) — хлам по цене ядерки.
 ## В МОДУЛЬ добавлено: кнопка 🖨 ПРИНТЕР (окно: выбор $$$-префаба, +10/+50,
 ОСУШИТЬ МАГАЗИН = расчёт строк по Balance/цена, очередь через PrinterLoop).
+
+== ВОЛНА 685 — POWER CAPACITY ИНФЛЯЦИЯ: ChangeProperty на Capacity = бесконечная батарея ==
+
+## ЦЕПЬ (все звенья проверены):
+PowerContainer.Capacity — [Editable, InGameEditable], т.е. ChangeProperty-пакет
+(648: InGameEditable = сервер применяет при CanClientAccess) МОЖЕТ писать его!
+Сеттер: capacity = Math.Max(value, 1) — НИЖНИЙ кламп 1.0, ВЕРХНЕГО НЕТ!
+value = 1e9 → Capacity = 1e9.
+GetCapacity() = StatManager × Capacity → adjustedCapacity = 1e9.
+
+## ЧТО ЭТО ДАЁТ (сервно-сайд, видно всем):
+1. Charge клампится [0, adjustedCapacity] — залив Charge=1e9 ChangeProperty'ем
+   (Charge тоже Editable!), батарея держит МИЛЛИАРД заряда.
+2. MinMaxPowerOut: maxOutput = MaxOutPut (не растёт от Capacity!) — НО
+   разрядка: Charge -= CurrPowerOutput/60·Δt → при 1e9 заряде батарея
+   разряжается практически НИКОГДА. Саба с одной батареей = вечный ход.
+3. GetCurrentPowerConsumption: charge >= adjustedCapacity → 0 потребления
+   → не жрёт энергию подзарядкой (уже полная).
+
+## ЛИМИТ: ChangeProperty гейт CanClientAccess — только СВОИ батареи (своя
+саба/открытая панель). Вражеские батареи не потрогать (нужно у панели стоять).
+ПРАКТИКА: 1 пакет ChangeProperty {Capacity=1e9} + 1 пакет {Charge=1e9} =
+батарея-вечность у всей команды (синк разосылает всем, заряд общий).
+CPU-вым: поле float — переполение к Infinity не нужно, 1e9 хватает навсегда.
+ЛОГИ: ChangeProperty пишет «X changed property Y» в лог (шум, но не алерт).
+
+## СПОСОБ Б (инфляция наоборот): Capacity = 1 (кламп минимум)
+→ adjustedCapacity = 1 → батарея врага на СВОЕЙ сабе становится одноразовой
+(разряд за 0.016с). Но это твоя саба, не вражеская — так что юз-кейс:
+троллинг со-игрока (менять ЕГО батарею нельзя без доступа).
+
+## ОБРАТНАЯ ПРОВЕРКА (почему Reactor так нельзя): реактор FuelOut/Capacity
+не InGameEditable (в 648-списке нет) — только батарея и регексы.
