@@ -75,12 +75,12 @@ namespace CSHUB.Modules
         public override string Id => "sell_by_id";
         public override string Name => "Sell By ID";
         public override string Description =>
-            "Продажа по ID — 3 СПОСОБА:\n\n" +
-            "СПОСОБ 1 (обычный): SELL/ALL на реальных предметах — платят по префабу.\n" +
-            "СПОСОБ 2 (ценовой префаб): tickbox + $$$ — хлам продаётся по цене дорогого префаба.\n" +
-            "СПОСОБ 3 (ФАНТОМ-ПРИНТЕР, кнопка 🖨): несуществующие ID сущностей — сервер\n" +
-            "  платит по префабу, а удалять нечего (FindEntityByID=null → скип удаления,\n" +
-            "  Give выполняется). Лимит = Balance магазина; на каждом пакете до 100 строк.\n\n" +
+            "Продажа по ID — 3 СПОСОБА ПРЯМО В МЕНЮ:\n\n" +
+            "СПОСОБ 1: SELL/ALL на реальных предметах — платят по их префабу.\n" +
+            "СПОСОБ 2: tickbox + $$$ — хлам продаётся по цене дорогого префаба.\n" +
+            "СПОСОБ 3: фантом-принтер — несуществующие ID, сервер платит, удалять\n" +
+            "  нечего (FindEntityByID=null → скип удаления, Give выполняется).\n" +
+            "  В меню: строка «ПРИНТЕР» + кнопки +10/+50/ОСУШИТЬ/СТОП.\n\n" +
             "Гейты: рядом NPC-магазин (или AllowRemoteCampaignInteractions) +\n" +
             "права SellInventoryItems (1 клиент на сервере => фоллбэк разрешает).";
         public override string Category => "exploit";
@@ -94,7 +94,6 @@ namespace CSHUB.Modules
         private static GUITextBlock _hintLabel;
         private static GUIButton _backBtn;
         private static GUITextBlock _pageLabel;
-        private static GUITickBox _advancedTick;
 
         // ------------------- данные -------------------
         private sealed class PrefabGroup
@@ -118,7 +117,7 @@ namespace CSHUB.Modules
         private static readonly List<Identifier> _storeIds = new List<Identifier>();
         private static int _storeIndex;
 
-        private static bool _advanced;
+        private static int _sellMode = 1;              // 1=обычный, 2=ценовой префаб, 3=фантом-принтер
         private static Identifier _pricePrefabId;
         private static string _pricePrefabName = "";
 
@@ -171,11 +170,13 @@ namespace CSHUB.Modules
 
         public override string GetLabel()
         {
-            if (_advanced && !_pricePrefabId.IsEmpty)
+            string modeTag = _sellMode switch
             {
-                return "Sell By ID [$: " + _pricePrefabName + "] 💸";
-            }
-            return "Sell By ID 💸";
+                2 => " [С2: $" + _pricePrefabName + "]",
+                3 => " [С3: ПРИНТЕР]",
+                _ => ""
+            };
+            return "Sell By ID 💸" + modeTag;
         }
 
         public override void OnClick()
@@ -448,12 +449,6 @@ namespace CSHUB.Modules
             refreshBtn.Color = new Color(60, 120, 80);
             refreshBtn.OnClicked = (b, d) => { CollectStores(); CollectGroups(); RefreshList(); return true; };
 
-            var printerBtn = new GUIButton(
-                new RectTransform(new Vector2(0.1f, 0.9f), layout.RectTransform), "🖨 ПРИНТЕР");
-            printerBtn.Color = new Color(150, 60, 170);
-            printerBtn.ToolTip = "СПОСОБ 3: фантом-принтер — несуществующие ID, сервер платит, удалять нечего";
-            printerBtn.OnClicked = (b, d) => { OpenPrinterWindow(); return true; };
-
             var closeBtn = new GUIButton(
                 new RectTransform(new Vector2(0.12f, 0.9f), layout.RectTransform), "Закрыть");
             closeBtn.Color = new Color(100, 100, 120);
@@ -504,17 +499,17 @@ namespace CSHUB.Modules
             var nextBtn = new GUIButton(new RectTransform(new Vector2(0.06f, 1f), layout.RectTransform), ">>");
             nextBtn.OnClicked = (b, d) => { _currentPage++; RefreshList(); return true; };
 
-            _advancedTick = new GUITickBox(
-                new RectTransform(new Vector2(0.3f, 0.8f), layout.RectTransform),
-                "Ценовой префаб отдельно");
-            _advancedTick.Selected = _advanced;
-            _advancedTick.OnSelected = (tb) =>
-            {
-                _advanced = tb.Selected;
-                if (!_advanced) { _pricePrefabId = Identifier.Empty; _pricePrefabName = ""; }
-                RefreshList();
-                return true;
-            };
+            var m1 = new GUIButton(new RectTransform(new Vector2(0.1f, 1f), layout.RectTransform), "СПОС 1");
+            m1.ToolTip = "СПОСОБ 1: обычная продажа (платят по префабу предмета)";
+            m1.OnClicked = (b, d) => { _sellMode = 1; RefreshList(); return true; };
+
+            var m2 = new GUIButton(new RectTransform(new Vector2(0.1f, 1f), layout.RectTransform), "СПОС 2");
+            m2.ToolTip = "СПОСОБ 2: ценовой префаб — $$$ задаёт за что платят, SELL удаляет цель";
+            m2.OnClicked = (b, d) => { _sellMode = 2; RefreshList(); return true; };
+
+            var m3 = new GUIButton(new RectTransform(new Vector2(0.1f, 1f), layout.RectTransform), "СПОС 3");
+            m3.ToolTip = "СПОСОБ 3: фантом-принтер — несуществующие ID, сервер платит, удалять нечего";
+            m3.OnClicked = (b, d) => { _sellMode = 3; RefreshList(); return true; };
 
             var hintFrame = new GUIFrame(
                 new RectTransform(new Vector2(1f, 0.06f), content.RectTransform, Anchor.TopCenter)
@@ -710,18 +705,27 @@ namespace CSHUB.Modules
             _hintLabel = null;
             _backBtn = null;
             _pageLabel = null;
-            _advancedTick = null;
         }
 
         private static string HintText()
         {
-            if (_advanced && !_pricePrefabId.IsEmpty)
+            if (_sellMode == 2 && !_pricePrefabId.IsEmpty)
             {
-                return "ПРОДВИНУТЫЙ: удаляем выбранное, платят по «" + _pricePrefabName + "». Сброс — выключи tickbox.";
+                return "СПОСОБ 2: удаляем выбранное, платят по «" + _pricePrefabName + "». Смена режима — кнопки СПОС.";
             }
-            if (_advanced)
+            if (_sellMode == 2)
             {
-                return "ПРОДВИНУТЫЙ: кнопка [$$$] на строке задаёт ценовой префаб, потом SELL/ALL на цели.";
+                return "СПОСОБ 2: кнопка [$$$] на строке задаёт ценовой префаб, потом SELL/ALL на цели.";
+            }
+            if (_sellMode == 3)
+            {
+                int bal = GetStoreBalance();
+                return "СПОСОБ 3 ПРИНТЕР: " +
+                    (_pricePrefabId.IsEmpty
+                        ? "сначала $$$ на дорогом предмете!"
+                        : "цена " + _pricePrefabName + " = " + _printerPrice + " mk; магазин заплатит ~" + (bal / Math.Max(_printerPrice, 1)) + " строк") +
+                    " | очеред: " + _printerQueue + " | отпл: " + _printerSentTotal +
+                    "\n[+10] [+50] [ОСУШИТЬ] [СТОП] — кнопки под списком. Лимит = баланс магазина.";
             }
             return "SELL = продать один (ближайший), ALL = все экземпляры. «<»/«>» — выбор магазина локации.";
         }
@@ -834,7 +838,7 @@ namespace CSHUB.Modules
                 allBtn.ToolTip = "Продать до " + MaxEntriesPerPacket + " экземпляров одним пакетом";
                 allBtn.OnClicked = (b, d) => { SellAll(g); return true; };
 
-                if (_advanced)
+                if (_sellMode == 2)
                 {
                     var priceBtn = new GUIButton(
                         new RectTransform(new Vector2(0.08f, 0.9f), layout.RectTransform), "$$$");
@@ -850,6 +854,43 @@ namespace CSHUB.Modules
                         return true;
                     };
                 }
+            }
+
+            if (_sellMode == 3)
+            {
+                var pr = new GUIFrame(
+                    new RectTransform(new Vector2(1f, 0.09f), _list.Content.RectTransform), style: null);
+                pr.Color = new Color(60, 35, 75);
+
+                var prl = new GUILayoutGroup(
+                    new RectTransform(new Vector2(0.985f, 0.9f), pr.RectTransform, Anchor.Center), isHorizontal: true);
+                prl.RelativeSpacing = 0.01f;
+
+                var hint = new GUITextBlock(
+                    new RectTransform(new Vector2(0.34f, 1f), prl.RectTransform),
+                    "🖨 ПРИНТЕР: " + (_pricePrefabId.IsEmpty ? "выбери $$$!" : _pricePrefabName + " @ " + _printerPrice + " mk"),
+                    textAlignment: Alignment.CenterLeft);
+                hint.Wrap = true;
+                hint.TextColor = new Color(220, 170, 255);
+                hint.CanBeFocused = false;
+
+                void AddPB(string lbl, Color col, System.Action act, string tip)
+                {
+                    var b = new GUIButton(new RectTransform(new Vector2(0.15f, 0.92f), prl.RectTransform), lbl);
+                    b.Color = col;
+                    b.ToolTip = tip;
+                    b.OnClicked = (bb, dd) => { act(); RefreshList(); return true; };
+                }
+
+                AddPB("+10", new Color(60, 140, 70), () => QueuePrinter(10), "10 фантомных строк");
+                AddPB("+50", new Color(140, 90, 40), () => QueuePrinter(50), "50 фантомных строк");
+                AddPB("ОСУШИТЬ", new Color(180, 60, 60), () =>
+                {
+                    int bal = GetStoreBalance();
+                    int price = _printerPrice > 0 ? _printerPrice : 1;
+                    QueuePrinter(Math.Clamp(bal / price, 1, 2000));
+                }, "сколько строк съедят весь баланс магазина");
+                AddPB("СТОП", new Color(90, 100, 120), () => { _printerQueue = 0; }, "очистить очередь");
             }
         }
 
@@ -910,7 +951,7 @@ namespace CSHUB.Modules
                     new RectTransform(new Vector2(0.11f, 0.9f), layout.RectTransform), "SELL");
                 sellBtn.Color = new Color(60, 140, 70);
                 sellBtn.ToolTip = "Продать эту сущность по ID " + item.ID +
-                    (_advanced && !_pricePrefabId.IsEmpty ? "\n(цена: " + _pricePrefabName + ")" : "");
+                    (_sellMode == 2 && !_pricePrefabId.IsEmpty ? "\n(цена: " + _pricePrefabName + ")" : "");
                 Item captured = item;
                 sellBtn.OnClicked = (b, d) => { SellInstance(captured); return true; };
             }
@@ -979,7 +1020,7 @@ namespace CSHUB.Modules
                 string storeStr = store + (bal >= 0 ? " (" + bal + " mk)" : "");
                 string wallet = _walletBalance >= 0 ? _walletBalance.ToString() : "?";
                 string bank = _bankBalance >= 0 ? " | банк " + _bankBalance : "";
-                string priceTag = _advanced && !_pricePrefabId.IsEmpty ? " | $$$ " + _pricePrefabName : "";
+                string priceTag = _sellMode == 2 && !_pricePrefabId.IsEmpty ? " | $$$ " + _pricePrefabName : "";
                 string result = string.IsNullOrEmpty(_lastResult) ? "" : "\n" + _lastResult;
                 _statusLabel.Text = "Магазин: " + storeStr + "\nКошелёк: " + wallet + " mk" + bank + priceTag + result
                     + "\n" + GateStatus();
@@ -1070,7 +1111,7 @@ namespace CSHUB.Modules
                 return;
             }
 
-            Identifier priceId = (_advanced && !_pricePrefabId.IsEmpty) ? _pricePrefabId : g.PrefabId;
+            Identifier priceId = (_sellMode == 2 && !_pricePrefabId.IsEmpty) ? _pricePrefabId : g.PrefabId;
             var entry = new SellEntry
             {
                 PrefabId = priceId,
@@ -1098,13 +1139,13 @@ namespace CSHUB.Modules
             string ownName = item.Name ?? "?";
             try { ownId = item.Prefab.Identifier; } catch { ownId = _currentGroup?.PrefabId ?? Identifier.Empty; }
 
-            Identifier priceId = (_advanced && !_pricePrefabId.IsEmpty) ? _pricePrefabId : ownId;
+            Identifier priceId = (_sellMode == 2 && !_pricePrefabId.IsEmpty) ? _pricePrefabId : ownId;
             var entry = new SellEntry
             {
                 PrefabId = priceId,
                 EntityId = item.ID,
                 Desc = ownName + " #" + item.ID +
-                       ((_advanced && !_pricePrefabId.IsEmpty) ? " (цена: " + _pricePrefabName + ")" : "")
+                       ((_sellMode == 2 && !_pricePrefabId.IsEmpty) ? " (цена: " + _pricePrefabName + ")" : "")
             };
             SendEntries(new List<SellEntry> { entry });
         }
@@ -1117,7 +1158,7 @@ namespace CSHUB.Modules
                 return;
             }
 
-            Identifier priceId = (_advanced && !_pricePrefabId.IsEmpty) ? _pricePrefabId : g.PrefabId;
+            Identifier priceId = (_sellMode == 2 && !_pricePrefabId.IsEmpty) ? _pricePrefabId : g.PrefabId;
             var entries = new List<SellEntry>();
             foreach (var i in g.Items)
             {
