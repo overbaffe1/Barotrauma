@@ -416,6 +416,17 @@ namespace CSHUB.Modules
             return -1;
         }
 
+        private static void QueuePrinter(int count)
+        {
+            if (_printerPriceId.IsEmpty)
+            {
+                GUI.AddMessage("ПРИНТЕР (СПОСОБ 3): сначала выбери ценовой префаб кнопкой $$$", WarningColor);
+                return;
+            }
+            _printerQueue += Math.Clamp(count, 1, 5000);
+            _printerNextId = _printerNextId < 64000 ? (ushort)64000 : _printerNextId;
+        }
+
         // Памп очереди: вызывается из UiLoop каждый тик — шлёт по пакету ≤100 строк
         private static void PrinterPump()
         {
