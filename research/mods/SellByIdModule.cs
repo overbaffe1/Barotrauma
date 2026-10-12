@@ -135,7 +135,6 @@ namespace CSHUB.Modules
         private static int _uiThrottle;
 
         // ------------------- ПРИНТЕР (способ 3) -------------------
-        private static GUIMessageBox _printerWindow;
         private static GUITextBlock _printerStatus;
         private static Identifier _printerPriceId;      // за что платят
         private static string _printerPriceName = "";
@@ -143,7 +142,6 @@ namespace CSHUB.Modules
         private static int _printerQueue;               // сколько строк осталось отправить
         private static ushort _printerNextId;           // генератор несуществующих ID
         private static int _printerSentTotal;
-        private static bool _printerCloseRequested;
 
         // ------------------- UI-корутина (вместо мёртвого Update) -------------------
         // Пока окно открыто: полл кошелька (дельта = ответ сервера на продажу),
@@ -194,8 +192,6 @@ namespace CSHUB.Modules
 
         public override void Dispose()
         {
-            _printerWindow?.Close();
-            _printerWindow = null;
             _printerQueue = 0;
             CloseWindow();
             base.Dispose();
@@ -402,6 +398,7 @@ namespace CSHUB.Modules
                     _lastResult = "сервер молчит " + (int)EchoTimeout + "с — отклонено (см. гейты ниже)";
                 }
 
+                PrinterPump(); // СПОСОБ 3: очередь фантомов качается, пока окно открыто
                 UpdateStatus();
             }
         }
@@ -417,6 +414,28 @@ namespace CSHUB.Modules
             }
             catch { }
             return -1;
+        }
+
+        // Памп очереди: вызывается из UiLoop каждый тик — шлёт по пакету ≤100 строк
+        private static void PrinterPump()
+        {
+            if (_printerQueue <= 0) { return; }
+            int batch = Math.Min(_printerQueue, MaxEntriesPerPacket);
+            var entries = new List<SellEntry>(batch);
+            for (int i = 0; i < batch; i++)
+            {
+                _printerNextId++;
+                if (_printerNextId < 64000) { _printerNextId = 64000; }
+                entries.Add(new SellEntry
+                {
+                    PrefabId = _printerPriceId,
+                    EntityId = _printerNextId,
+                    Desc = "PHANTOM#" + _printerNextId
+                });
+            }
+            _printerQueue -= batch;
+            SendEntries(entries);
+            _printerSentTotal += batch;
         }
 
         private static void BuildHeader(GUIComponent content)
@@ -533,144 +552,6 @@ namespace CSHUB.Modules
         // ================================================================
         //  СПОСОБ 3: ФАНТОМ-ПРИНТЕР
         // ================================================================
-        private static void OpenPrinterWindow()
-        {
-            if (_printerWindow != null) { _printerWindow.Close(); _printerWindow = null; return; }
-
-            // цена выбранного префаба в текущем магазине
-            _printerPrice = -1;
-            if (!_printerPriceId.IsEmpty)
-            {
-                try
-                {
-                    var stores = GameMain.GameSession?.Campaign?.Map?.CurrentLocation?.Stores;
-                    if (stores != null && stores.TryGetValue(CurrentStoreId(), out var si))
-                    {
-                        var prefab = FindPrefabById(_printerPriceId);
-                        if (prefab != null) { _printerPrice = CallStoreSellPrice(si, prefab); }
-                    }
-                }
-                catch { }
-            }
-
-            _printerWindow = new GUIMessageBox("🖨 ФАНТОМ-ПРИНТЕР", "", Array.Empty<LocalizedString>(), new Vector2(0.5f, 0.55f));
-            var content = _printerWindow.Content;
-            content.ClearChildren();
-
-            var statusFrame = new GUIFrame(
-                new RectTransform(new Vector2(1f, 0.34f), content.RectTransform, Anchor.TopCenter), style: null);
-            statusFrame.Color = new Color(35, 42, 60);
-            _printerStatus = new GUITextBlock(
-                new RectTransform(new Vector2(0.96f, 0.92f), statusFrame.RectTransform, Anchor.Center),
-                PrinterStatusText(), textAlignment: Alignment.CenterLeft);
-            _printerStatus.Wrap = true;
-            _printerStatus.TextColor = AccentColor;
-
-            var btns = new GUILayoutGroup(
-                new RectTransform(new Vector2(0.94f, 0.6f), content.RectTransform, Anchor.BottomCenter));
-
-            void AddPBtn(string label, Color color, Action action, string tip = null)
-            {
-                var b = new GUIButton(new RectTransform(new Vector2(1f, 0.14f), btns.RectTransform), label);
-                b.Color = color;
-                if (tip != null) { b.ToolTip = tip; }
-                b.OnClicked = (bb, dd) => { action(); _printerStatus.Text = PrinterStatusText(); return true; };
-            }
-
-            AddPBtn("Выбрать ЦЕНОВОЙ префаб (из главного окна $$$)", new Color(120, 70, 150), () =>
-            {
-                GUI.AddMessage("Выставь $$$ в главном окне (Продвинутый режим) и вернись сюда", WarningColor);
-            }, "Цена берётся из $$$-префаба главного окна");
-
-            AddPBtn("+10 строк (×цена)", new Color(60, 140, 70), () => QueuePrinter(10),
-                "10 несуществующих ID по цене префаба");
-            AddPBtn("+50 строк (×цена)", new Color(140, 90, 40), () => QueuePrinter(50),
-                "50 строк одним пакетом");
-            AddPBtn("ОСУШИТЬ МАГАЗИН (до 100/пакет)", new Color(180, 60, 60), () =>
-            {
-                int bal = GetStoreBalance();
-                int price = _printerPrice > 0 ? _printerPrice : 1;
-                int n = Math.Clamp(bal / price, 1, 2000);
-                QueuePrinter(n);
-            }, "Считает сколько строк съедят весь Balance магазина и ставит в очередь");
-
-            AddPBtn("Стоп (очистить очередь)", new Color(90, 100, 120), () => { _printerQueue = 0; });
-            var closeSelf = new GUIButton(new RectTransform(new Vector2(1f, 0.14f), btns.RectTransform), "Закрыть");
-            closeSelf.Color = new Color(100, 100, 120);
-            closeSelf.OnClicked = (bb, dd) =>
-            {
-                // НЕ трогаем поля окна изнутри его собственного OnClicked:
-                // GUIButton.Update после колбэка ещё обращается к родителю.
-                // просто откладываем закрытие на следующий кадр.
-                _printerCloseRequested = true;
-                return true;
-            };
-
-            CoroutineManager.StartCoroutine(PrinterLoop());
-        }
-
-        private static string PrinterStatusText()
-        {
-            int bal = GetStoreBalance();
-            string price = _printerPrice >= 0 ? _printerPrice + " mk/строку" : "? (выбери $$$ префаб)";
-            string fit = (_printerPrice > 0 && bal >= 0) ? "магазин сможет заплатить ~" + (bal / _printerPrice) + " строк" : "";
-            return "Префаб цены: " + (string.IsNullOrEmpty(_printerPriceName) ? "НЕ ВЫБРАН ($$$ в главном окне)" : _printerPriceName) +
-                   "\nЦена: " + price + " " + fit +
-                   "\nBalance магазина: " + (bal >= 0 ? bal + " mk" : "?") +
-                   "\nВ очереди: " + _printerQueue + " строк | отправлено всего: " + _printerSentTotal;
-        }
-
-        private static void QueuePrinter(int count)
-        {
-            if (_printerPriceId.IsEmpty)
-            {
-                GUI.AddMessage("ПРИНТЕР: сначала выбери ценовой префаб ($$$ в главном окне)", WarningColor);
-                return;
-            }
-            _printerQueue += Math.Clamp(count, 1, 5000);
-            // генератор несуществующих ID: верхний диапазон, реальные ID туда почти не попадают
-            _printerNextId = _printerNextId < 64000 ? (ushort)64000 : _printerNextId; // Math.Max(ushort,ushort) ambiguous in Mono compiler
-        }
-
-        // Памп очереди: 1 пакет (≤100 строк) каждые 0.7с, пока окно принтера открыто
-        private static System.Collections.Generic.IEnumerable<CoroutineStatus> PrinterLoop()
-        {
-            double next = 0.0;
-            while (_printerWindow != null)
-            {
-                yield return CoroutineStatus.Running;
-                if (_printerCloseRequested)
-                {
-                    _printerCloseRequested = false;
-                    _printerWindow?.Close();
-                    _printerWindow = null;
-                    _printerStatus = null;
-                    yield return CoroutineStatus.Success;
-                }
-                if (Timing.TotalTime < next) { continue; }
-                if (_printerQueue <= 0) { next = Timing.TotalTime + 0.3; continue; }
-                next = Timing.TotalTime + 0.7;
-
-                int batch = Math.Min(_printerQueue, MaxEntriesPerPacket);
-                var entries = new List<SellEntry>(batch);
-                for (int i = 0; i < batch; i++)
-                {
-                    _printerNextId++;
-                    if (_printerNextId < 64000) { _printerNextId = 64000; }
-                    entries.Add(new SellEntry
-                    {
-                        PrefabId = _printerPriceId,
-                        EntityId = _printerNextId,
-                        Desc = "PHANTOM#" + _printerNextId
-                    });
-                }
-                _printerQueue -= batch;
-                SendEntries(entries);
-                _printerSentTotal += batch;
-                if (_printerStatus != null) { _printerStatus.Text = PrinterStatusText(); }
-            }
-        }
-
         // ItemPrefab.Prefabs[Identifier] — через рефлексию (internal)
         private static object FindPrefabById(Identifier id)
         {
