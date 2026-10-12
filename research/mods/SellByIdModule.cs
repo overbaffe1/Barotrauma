@@ -75,11 +75,12 @@ namespace CSHUB.Modules
         public override string Id => "sell_by_id";
         public override string Name => "Sell By ID";
         public override string Description =>
-            "Продажа любого предмета по ID (доверие пакету SERVER_COMMAND).\n\n" +
-            "• Список всех предметов в мире с иконками\n" +
-            "• Продажа выбранного экземпляра по ID (без владения)\n" +
-            "• Продвинутый режим: отдельный «ценовой префаб»\n" +
-            "• Декод MONEY-эха: видно, сколько сервер реально дал\n\n" +
+            "Продажа по ID — 3 СПОСОБА:\n\n" +
+            "СПОСОБ 1 (обычный): SELL/ALL на реальных предметах — платят по префабу.\n" +
+            "СПОСОБ 2 (ценовой префаб): tickbox + $$$ — хлам продаётся по цене дорогого префаба.\n" +
+            "СПОСОБ 3 (ФАНТОМ-ПРИНТЕР, кнопка 🖨): несуществующие ID сущностей — сервер\n" +
+            "  платит по префабу, а удалять нечего (FindEntityByID=null → скип удаления,\n" +
+            "  Give выполняется). Лимит = Balance магазина; на каждом пакете до 100 строк.\n\n" +
             "Гейты: рядом NPC-магазин (или AllowRemoteCampaignInteractions) +\n" +
             "права SellInventoryItems (1 клиент на сервере => фоллбэк разрешает).";
         public override string Category => "exploit";
@@ -134,6 +135,16 @@ namespace CSHUB.Modules
         private static int _bankBalance = -1;
         private static int _uiThrottle;
 
+        // ------------------- ПРИНТЕР (способ 3) -------------------
+        private static GUIMessageBox _printerWindow;
+        private static GUITextBlock _printerStatus;
+        private static Identifier _printerPriceId;      // за что платят
+        private static string _printerPriceName = "";
+        private static int _printerPrice = -1;          // цена за 1 строку в ТЕКУЩЕМ магазине
+        private static int _printerQueue;               // сколько строк осталось отправить
+        private static ushort _printerNextId;           // генератор несуществующих ID
+        private static int _printerSentTotal;
+
         // ------------------- UI-корутина (вместо мёртвого Update) -------------------
         // Пока окно открыто: полл кошелька (дельта = ответ сервера на продажу),
         // таймаут эха, рефреш статуса. Планировщик игры, главный поток.
@@ -181,6 +192,9 @@ namespace CSHUB.Modules
 
         public override void Dispose()
         {
+            _printerWindow?.Close();
+            _printerWindow = null;
+            _printerQueue = 0;
             CloseWindow();
             base.Dispose();
         }
@@ -433,8 +447,14 @@ namespace CSHUB.Modules
             refreshBtn.Color = new Color(60, 120, 80);
             refreshBtn.OnClicked = (b, d) => { CollectStores(); CollectGroups(); RefreshList(); return true; };
 
+            var printerBtn = new GUIButton(
+                new RectTransform(new Vector2(0.1f, 0.9f), layout.RectTransform), "🖨 ПРИНТЕР");
+            printerBtn.Color = new Color(150, 60, 170);
+            printerBtn.ToolTip = "СПОСОБ 3: фантом-принтер — несуществующие ID, сервер платит, удалять нечего";
+            printerBtn.OnClicked = (b, d) => { OpenPrinterWindow(); return true; };
+
             var closeBtn = new GUIButton(
-                new RectTransform(new Vector2(0.14f, 0.9f), layout.RectTransform), "Закрыть");
+                new RectTransform(new Vector2(0.12f, 0.9f), layout.RectTransform), "Закрыть");
             closeBtn.Color = new Color(100, 100, 120);
             closeBtn.OnClicked = (b, d) => { CloseWindow(); return true; };
 
@@ -512,6 +532,152 @@ namespace CSHUB.Modules
                 new RectTransform(new Vector2(1f, 0.74f), content.RectTransform, Anchor.BottomCenter), style: null);
             _list = new GUIListBox(new RectTransform(Vector2.One, listFrame.RectTransform));
             _list.Color = new Color(20, 25, 35);
+        }
+
+        // ================================================================
+        //  СПОСОБ 3: ФАНТОМ-ПРИНТЕР
+        // ================================================================
+        private static void OpenPrinterWindow()
+        {
+            if (_printerWindow != null) { _printerWindow.Close(); _printerWindow = null; return; }
+
+            // цена выбранного префаба в текущем магазине
+            _printerPrice = -1;
+            if (!_printerPriceId.IsEmpty)
+            {
+                try
+                {
+                    var stores = GameMain.GameSession?.Campaign?.Map?.CurrentLocation?.Stores;
+                    if (stores != null && stores.TryGetValue(CurrentStoreId(), out var si))
+                    {
+                        var prefab = FindPrefabById(_printerPriceId);
+                        if (prefab != null) { _printerPrice = CallStoreSellPrice(si, prefab); }
+                    }
+                }
+                catch { }
+            }
+
+            _printerWindow = new GUIMessageBox("🖨 ФАНТОМ-ПРИНТЕР", "", Array.Empty<LocalizedString>(), new Vector2(0.5f, 0.55f));
+            var content = _printerWindow.Content;
+            content.ClearChildren();
+
+            var statusFrame = new GUIFrame(
+                new RectTransform(new Vector2(1f, 0.34f), content.RectTransform, Anchor.TopCenter), style: null);
+            statusFrame.Color = new Color(35, 42, 60);
+            _printerStatus = new GUITextBlock(
+                new RectTransform(new Vector2(0.96f, 0.92f), statusFrame.RectTransform, Anchor.Center),
+                PrinterStatusText(), textAlignment: Alignment.CenterLeft);
+            _printerStatus.Wrap = true;
+            _printerStatus.TextColor = AccentColor;
+
+            var btns = new GUILayoutGroup(
+                new RectTransform(new Vector2(0.94f, 0.6f), content.RectTransform, Anchor.BottomCenter));
+
+            void AddPBtn(string label, Color color, Action action, string tip = null)
+            {
+                var b = new GUIButton(new RectTransform(new Vector2(1f, 0.14f), btns.RectTransform), label);
+                b.Color = color;
+                if (tip != null) { b.ToolTip = tip; }
+                b.OnClicked = (bb, dd) => { action(); _printerStatus.Text = PrinterStatusText(); return true; };
+            }
+
+            AddPBtn("Выбрать ЦЕНОВОЙ префаб (из главного окна $$$)", new Color(120, 70, 150), () =>
+            {
+                GUI.AddMessage("Выставь $$$ в главном окне (Продвинутый режим) и вернись сюда", WarningColor);
+            }, "Цена берётся из $$$-префаба главного окна");
+
+            AddPBtn("+10 строк (×цена)", new Color(60, 140, 70), () => QueuePrinter(10),
+                "10 несуществующих ID по цене префаба");
+            AddPBtn("+50 строк (×цена)", new Color(140, 90, 40), () => QueuePrinter(50),
+                "50 строк одним пакетом");
+            AddPBtn("ОСУШИТЬ МАГАЗИН (до 100/пакет)", new Color(180, 60, 60), () =>
+            {
+                int bal = GetStoreBalance();
+                int price = _printerPrice > 0 ? _printerPrice : 1;
+                int n = Math.Clamp(bal / price, 1, 2000);
+                QueuePrinter(n);
+            }, "Считает сколько строк съедят весь Balance магазина и ставит в очередь");
+
+            AddPBtn("Стоп (очистить очередь)", new Color(90, 100, 120), () => { _printerQueue = 0; });
+
+            CoroutineManager.StartCoroutine(PrinterLoop());
+        }
+
+        private static string PrinterStatusText()
+        {
+            int bal = GetStoreBalance();
+            string price = _printerPrice >= 0 ? _printerPrice + " mk/строку" : "? (выбери $$$ префаб)";
+            string fit = (_printerPrice > 0 && bal >= 0) ? "магазин сможет заплатить ~" + (bal / _printerPrice) + " строк" : "";
+            return "Префаб цены: " + (string.IsNullOrEmpty(_printerPriceName) ? "НЕ ВЫБРАН ($$$ в главном окне)" : _printerPriceName) +
+                   "\nЦена: " + price + " " + fit +
+                   "\nBalance магазина: " + (bal >= 0 ? bal + " mk" : "?") +
+                   "\nВ очереди: " + _printerQueue + " строк | отправлено всего: " + _printerSentTotal;
+        }
+
+        private static void QueuePrinter(int count)
+        {
+            if (_printerPriceId.IsEmpty)
+            {
+                GUI.AddMessage("ПРИНТЕР: сначала выбери ценовой префаб ($$$ в главном окне)", WarningColor);
+                return;
+            }
+            _printerQueue += Math.Clamp(count, 1, 5000);
+            // генератор несуществующих ID: верхний диапазон, реальные ID туда почти не попадают
+            _printerNextId = (ushort)Math.Max(_printerNextId, 64000);
+        }
+
+        // Памп очереди: 1 пакет (≤100 строк) каждые 0.7с, пока окно принтера открыто
+        private static System.Collections.Generic.IEnumerable<CoroutineStatus> PrinterLoop()
+        {
+            double next = 0.0;
+            while (_printerWindow != null)
+            {
+                yield return CoroutineStatus.Running;
+                if (Timing.TotalTime < next) { continue; }
+                if (_printerQueue <= 0) { next = Timing.TotalTime + 0.3; continue; }
+                next = Timing.TotalTime + 0.7;
+
+                int batch = Math.Min(_printerQueue, MaxEntriesPerPacket);
+                var entries = new List<SellEntry>(batch);
+                for (int i = 0; i < batch; i++)
+                {
+                    _printerNextId++;
+                    if (_printerNextId < 64000) { _printerNextId = 64000; }
+                    entries.Add(new SellEntry
+                    {
+                        PrefabId = _printerPriceId,
+                        EntityId = _printerNextId,
+                        Desc = "PHANTOM#" + _printerNextId
+                    });
+                }
+                _printerQueue -= batch;
+                SendEntries(entries);
+                _printerSentTotal += batch;
+                if (_printerStatus != null) { _printerStatus.Text = PrinterStatusText(); }
+            }
+        }
+
+        // ItemPrefab.Prefabs[Identifier] — через рефлексию (internal)
+        private static object FindPrefabById(Identifier id)
+        {
+            try
+            {
+                var t = typeof(GameMain).Assembly.GetType("Barotrauma.ItemPrefab");
+                var f = t.GetField("Prefabs", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                var coll = f.GetValue(null);
+                foreach (var m in coll.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    if (m.Name != "TryGet") { continue; }
+                    var ps = m.GetParameters();
+                    if (ps.Length == 2 && ps[0].ParameterType.Name == "Identifier" && ps[1].ParameterType.IsByRef)
+                    {
+                        var args = new object[] { id, null };
+                        return (bool)m.Invoke(coll, args) ? args[1] : null;
+                    }
+                }
+            }
+            catch { }
+            return null;
         }
 
         private static void CloseWindow()
