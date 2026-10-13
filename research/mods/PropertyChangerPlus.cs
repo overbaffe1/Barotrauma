@@ -92,8 +92,8 @@ namespace CSHUB.Modules
             _showAllTick.OnSelected = _ => { BuildPropertyList(); return true; };
 
             var showNoEditTick = new GUITickBox(
-                new RectTransform(new Vector2(0.2f, 1f), topRow.RectTransform),
-                new RawLString("Показать [noedit]"))
+                new RectTransform(new Vector2(0.18f, 1f), topRow.RectTransform),
+                new RawLString("[noedit]"))
             { Selected = true };
             showNoEditTick.OnSelected = tb => { _showNoEdit = tb.Selected; BuildPropertyList(); return true; };
             showNoEditTick.ToolTip = "Показывать компоненты с AllowInGameEditing=false " +
@@ -428,6 +428,18 @@ namespace CSHUB.Modules
                 return;
             }
 
+            // Диагностика: выбран ли вообще PowerContainer?
+            var pcDiag = _currentItem.GetComponent<PowerContainer>();
+            if (pcDiag != null)
+            {
+                var diag = new GUITextBlock(
+                    new RectTransform(new Vector2(1f, 0.05f), _propList.Content.RectTransform),
+                    "✓ PowerContainer найден: Charge=" + pcDiag.Charge.ToString("0") +
+                    " | Capacity=" + pcDiag.Capacity.ToString("0"),
+                    textColor: Color.Lime)
+                { CanBeFocused = false };
+            }
+
             var props = EnumerateProperties(_currentItem);
             if (props.Count == 0)
             {
@@ -446,7 +458,7 @@ namespace CSHUB.Modules
             if (entry.IsHeader)
             {
                 var hdr = new GUITextBlock(
-                    new RectTransform(new Vector2(1f, 0.07f), _propList.Content.RectTransform),
+                    new RectTransform(new Vector2(1f, 0.06f), _propList.Content.RectTransform),
                     entry.Label, textAlignment: Alignment.Center,
                     textColor: Color.MediumSpringGreen)
                 { CanBeFocused = false };
@@ -454,16 +466,16 @@ namespace CSHUB.Modules
             }
 
             var row = new GUILayoutGroup(
-                new RectTransform(new Vector2(1f, 0.13f), _propList.Content.RectTransform),
+                new RectTransform(new Vector2(1f, 0.16f), _propList.Content.RectTransform),
                 isHorizontal: true, childAnchor: Anchor.CenterLeft)
-            { RelativeSpacing = 0.015f };
+            { RelativeSpacing = 0.01f };
 
             var lbl = new GUITextBlock(
-                new RectTransform(new Vector2(0.36f, 1f), row.RectTransform),
+                new RectTransform(new Vector2(0.3f, 1f), row.RectTransform),
                 entry.Label + (entry.Conditional ? "  [cond]" : ""),
                 wrap: true,
-                textColor: entry.Conditional ? Color.Khaki : Color.White);
-            lbl.CanBeFocused = false;
+                textColor: entry.Conditional ? Color.Khaki : Color.White)
+            { CanBeFocused = false };
 
             Type type = entry.Property.PropertyType;
             object currentValue = entry.Property.GetValue(entry.Parent);
@@ -471,9 +483,10 @@ namespace CSHUB.Modules
             GUIComponent editor = BuildEditor(row, entry, type, currentValue);
             if (editor == null)
             {
-                new GUITextBlock(
-                    new RectTransform(new Vector2(0.40f, 1f), row.RectTransform),
-                    $"<{type.Name}> не поддерживается", textColor: Color.Gray);
+                var na = new GUITextBlock(
+                    new RectTransform(new Vector2(0.5f, 1f), row.RectTransform),
+                    $"<{type.Name}> нет редактора", textColor: Color.Gray)
+                { CanBeFocused = false };
             }
         }
 
@@ -512,7 +525,7 @@ namespace CSHUB.Modules
             if (type == typeof(string) || type == typeof(Identifier))
             {
                 var box = new GUITextBox(
-                    new RectTransform(new Vector2(0.4f, 1f), parent.RectTransform),
+                    new RectTransform(new Vector2(0.35f, 1f), parent.RectTransform),
                     currentValue?.ToString() ?? "");
                 MakeApplyButton(parent, () =>
                 {
