@@ -250,6 +250,44 @@ namespace CSHUB.Modules
             return null;
         }
 
+        private void ApplyItemFlag(string propName, object value)
+        {
+            if (_currentItem == null || _currentItem.Removed)
+            {
+                GUI.AddMessage("PropertyChanger+: предмет не выбран", Color.Red);
+                return;
+            }
+
+            SerializableProperty prop = null;
+            object parent = null;
+
+            foreach (var p in SerializableProperty.GetProperties<Editable>(_currentItem))
+            {
+                if (p.Name == propName) { prop = p; parent = _currentItem; break; }
+            }
+            if (prop == null)
+            {
+                foreach (var comp in _currentItem.Components)
+                {
+                    if (comp == null) { continue; }
+                    foreach (var p in SerializableProperty.GetProperties<Editable>(comp))
+                    {
+                        if (p.Name == propName) { prop = p; parent = comp; break; }
+                    }
+                    if (prop != null) { break; }
+                }
+            }
+
+            if (prop == null)
+            {
+                GUI.AddMessage("PropertyChanger+: свойство " + propName + " не найдено", Color.Red);
+                return;
+            }
+
+            SendChange(_currentItem, prop, parent, value);
+            GUI.AddMessage("PropertyChanger+: " + propName + " = " + value + " отправлено (жми Применить-эхо)", Color.Orange);
+        }
+
         private static void SendChange(Item item, SerializableProperty prop, object parent, object value)
         {
             try { prop.TrySetValue(parent, value); }
@@ -447,6 +485,65 @@ namespace CSHUB.Modules
                     textColor: Color.Lime)
                 { CanBeFocused = false };
             }
+
+            // ---- ИМБ-ПРЕСЕТЫ (волна 687): флаги предмета + фейк-описание ----
+            var presetHdr = new GUITextBlock(
+                new RectTransform(new Vector2(1f, 0.05f), _propList.Content.RectTransform),
+                "— ИМБ-ПРЕСЕТЫ (ChangeProperty, сетевые) —", textAlignment: Alignment.Center,
+                textColor: Color.Orange)
+            { CanBeFocused = false };
+
+            var prRow = new GUILayoutGroup(
+                new RectTransform(new Vector2(1f, 0.14f), _propList.Content.RectTransform),
+                isHorizontal: true, childAnchor: Anchor.CenterLeft)
+            { RelativeSpacing = 0.01f };
+
+            void AddFlagPreset(string label, string propName, object value, Color col, string tip)
+            {
+                var b = new GUIButton(
+                    new RectTransform(new Vector2(0.31f, 0.95f), prRow.RectTransform), label);
+                b.Color = col;
+                b.ToolTip = tip;
+                b.OnClicked = (bb, dd) =>
+                {
+                    ApplyItemFlag(propName, value);
+                    return true;
+                };
+            }
+
+            AddFlagPreset("🚫 Заморозить предмет", "NonInteractable", true, new Color(160, 60, 60),
+                "NonInteractable=true: предмет перестаёт реагировать на игроков\n" +
+                "(реактор/турели/двери/панели мертвы). Гейт: CanClientAccess.");
+            AddFlagPreset("🔓 Оживить предмет", "NonInteractable", false, new Color(60, 140, 70),
+                "NonInteractable=false: вернуть управляемость");
+            AddFlagPreset("👤 Анти-вор (NPC могут)", "NonPlayerTeamInteractable", true, new Color(120, 70, 160),
+                "NonPlayerTeamInteractable=true: игроки НЕ трогают, боты носят");
+
+            var descRow = new GUILayoutGroup(
+                new RectTransform(new Vector2(1f, 0.16f), _propList.Content.RectTransform),
+                isHorizontal: true, childAnchor: Anchor.CenterLeft)
+            { RelativeSpacing = 0.01f };
+
+            var descLbl = new GUITextBlock(
+                new RectTransform(new Vector2(0.3f, 1f), descRow.RectTransform),
+                "🏷 DescriptionTag:", wrap: true, textColor: Color.Khaki)
+            { CanBeFocused = false };
+
+            var descBox = new GUITextBox(
+                new RectTransform(new Vector2(0.4f, 1f), descRow.RectTransform),
+                "description.huskinfection");
+            descBox.ToolTip = "Ключ локализации TextManager (смотри vanilla translate-файлы).\n" +
+                              "Незнакомый тег = пустое описание. Сетевой канал разрешён!";
+
+            var descBtn = new GUIButton(
+                new RectTransform(new Vector2(0.22f, 1f), descRow.RectTransform),
+                new RawLString("Применить описание"))
+            { Color = Color.DarkGreen };
+            descBtn.OnClicked = (_, _) =>
+            {
+                ApplyItemFlag("DescriptionTag", descBox.Text?.Trim() ?? "");
+                return true;
+            };
 
             var props = EnumerateProperties(_currentItem);
             if (props.Count == 0)
