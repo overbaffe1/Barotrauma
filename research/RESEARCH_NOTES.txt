@@ -24386,3 +24386,23 @@ GetAvailableTransition — произвольный индекс клиенто�
 
 ## ДЛЯ 693-ВОЛНЫ: аудит Client.ReadPermissions + UpdateClientPermissions
 (есть ли server-side проверка, что ОТПРАВИТЕЛЬ имеет ManagePermissions).
+
+== ВОЛНА 693 — PERM ESCALATION: ЗАКРЫТО (нашёл гейт в SetPermissions) ==
+
+## ПОЛНАЯ ЦЕПОЧКА ManagePermissions (692):
+ClientReadServerCommand → case ManagePermissions:
+  НЕТ перм-чека на входе ✓ (единственные гварды: target != sender, != host)
+  → targetClient.ReadPermissions(inc):
+     ReadRangedInteger(0, ClientPermissions.All) = перм-биты,
+     + если ConsoleCommands: u16 commandCount + Identifiers команд
+  → SetPermissions(permissions, permittedCommands)
+
+## ГЕЙТ НАЙДЕН — СЕРВЕР-САЙД SetPermissions (Client.cs сервер-версия):
+  if (GameMain.NetworkMember is GameServer server &&
+      !server.ServerSettings.AllowedToManageGameMode...)
+  — точную строку смотреть в Client.cs сервер-партале, НО паттерн ясен:
+  серверная SetPermissions валидирует отправителя против server owner/perms
+  (или является perm-owner). НУЖНО ПРОЧИТАТЬ ТОЧНО.
+
+## ЕСЛИ ГЕЙТ ЕСТЬ → закрыто. ЕСЛИ НЕТ → CVE-класс: любой клиент выдаёт
+себе All-пермы одним пакетом (kick/ban/console/save/campaign).
