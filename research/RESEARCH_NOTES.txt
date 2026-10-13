@@ -24406,3 +24406,29 @@ ClientReadServerCommand → case ManagePermissions:
 
 ## ЕСЛИ ГЕЙТ ЕСТЬ → закрыто. ЕСЛИ НЕТ → CVE-класс: любой клиент выдаёт
 себе All-пермы одним пакетом (kick/ban/console/save/campaign).
+
+== ВОЛНА 695 — УПС: HasPermission(command) ПЕРЕХВАТЫВАЕТ ManagePermissions ==
+
+## КРИТИЧЕСКАЯ ПОПРАВКА (перечитал 1741-1755 МЕДЛЕННО):
+if (command == ManageRound && mpCampaign != null) { }          ← пропуск
+else if (command == ManageCampaign && mpCampaign != null) { }  ← пропуск
+else if (!sender.HasPermission(command)) { отказ }              ← СОСЮДА
+
+command == ManagePermissions => первый if false, второй false,
+=> третья ветка: !sender.HasPermission(ManagePermissions) =>
+У ТЕБЯ НЕТ ЭТОГО ПЕРМА => ОТКАЗ (лог "Permission denied", сервер молчит
+в чат, пакет умирает на входе).
+
+## МОЯ ОШИБКА в 693: я читал ветку switch (1960+) и пропустил преамбулу
+1741-1755. Ветка ManagePermissions НЕ имеет исключения из перм-чека
+(в отличие от Round/Campaign). => ВЕКТОР ЗАКРЫТ. Извиняюсь.
+
+## ЧТО РЕАЛЬНО ДАЁТ HasPermission(command) => false только если:
+- сервер без выдачи пермов никогда
+- ManagePermissions перм выдаётся только самим перм-холдером (693)
+=> ЦИКЛ: без перма не получить перм. Эскалация ЗАКРЫТА.
+
+## СПАСЕНИЕ ТОЛЬКО 688b: admin dead/lobby/60s => AllowedToManageCampaign
+для кампаний. ManagePermissions через фоллбэк НЕ ХОДИТ (это не категория
+кампании, это серверная привилегия — отдельный HasPermission).
+=> Admin Dead Menu (мой 688d) остаётся рабочим путём.
