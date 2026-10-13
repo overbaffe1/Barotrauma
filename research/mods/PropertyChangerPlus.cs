@@ -250,7 +250,8 @@ namespace CSHUB.Modules
             return null;
         }
 
-        private void ApplyItemFlag(string propName, object value)
+
+        private void ApplySignalProperty(string compName, string propName, object value)
         {
             if (_currentItem == null || _currentItem.Removed)
             {
@@ -258,34 +259,53 @@ namespace CSHUB.Modules
                 return;
             }
 
-            SerializableProperty prop = null;
-            object parent = null;
-
-            foreach (var p in SerializableProperty.GetProperties<Editable>(_currentItem))
+            ItemComponent comp = null;
+            foreach (var c in _currentItem.Components)
             {
-                if (p.Name == propName) { prop = p; parent = _currentItem; break; }
+                if (c != null && c.Name == compName) { comp = c; break; }
             }
-            if (prop == null)
+            if (comp == null)
             {
-                foreach (var comp in _currentItem.Components)
-                {
-                    if (comp == null) { continue; }
-                    foreach (var p in SerializableProperty.GetProperties<Editable>(comp))
-                    {
-                        if (p.Name == propName) { prop = p; parent = comp; break; }
-                    }
-                    if (prop != null) { break; }
-                }
-            }
-
-            if (prop == null)
-            {
-                GUI.AddMessage("PropertyChanger+: свойство " + propName + " не найдено", Color.Red);
+                GUI.AddMessage($"PropertyChanger+: компонент {compName} на предмете не найден", Color.Red);
                 return;
             }
 
-            SendChange(_currentItem, prop, parent, value);
-            GUI.AddMessage("PropertyChanger+: " + propName + " = " + value + " отправлено (жми Применить-эхо)", Color.Orange);
+            SerializableProperty prop = null;
+            foreach (var p in SerializableProperty.GetProperties<InGameEditable>(comp))
+            {
+                if (p.Name == propName) { prop = p; break; }
+            }
+            if (prop == null)
+            {
+                GUI.AddMessage($"PropertyChanger+: {compName}.{propName} не найден/не InGameEditable", Color.Red);
+                return;
+            }
+
+            SendChange(_currentItem, prop, comp, value);
+            GUI.AddMessage($"PropertyChanger+: {compName}.{propName} = {value} отправлено", Color.Orange);
+        }
+
+        private void ApplySignalProperty(string compName, string propName, GUIListBox target)
+            => ApplySignalProperty(compName, propName, (object)target);
+
+        private void AddSignalPresetRow(GUILayoutGroup row, string label, string compName,
+            string propName, object value, Color col, string tip, GUITextBox textbox = null)
+        {
+            var b = new GUIButton(
+                new RectTransform(new Vector2(0.31f, 0.95f), row.RectTransform), label);
+            b.Color = col;
+            b.ToolTip = tip;
+            b.OnClicked = (bb, dd) =>
+            {
+                object v = (value == null && textbox != null) ? textbox.Text?.Trim() : value;
+                if (v == null || (v is string sv && string.IsNullOrWhiteSpace(sv)))
+                {
+                    GUI.AddMessage("PropertyChanger+: значение пустое", Color.Red);
+                    return true;
+                }
+                ApplySignalProperty(compName, propName, v);
+                return true;
+            };
         }
 
         private static void SendChange(Item item, SerializableProperty prop, object parent, object value)
@@ -486,10 +506,10 @@ namespace CSHUB.Modules
                 { CanBeFocused = false };
             }
 
-            // ---- ИМБ-ПРЕСЕТЫ (волна 687): флаги предмета + фейк-описание ----
+            // ---- ПРЕСЕТЫ (волна 688: только [InGameEditable] — реально сетевые) ----
             var presetHdr = new GUITextBlock(
                 new RectTransform(new Vector2(1f, 0.05f), _propList.Content.RectTransform),
-                "— ИМБ-ПРЕСЕТЫ (ChangeProperty, сетевые) —", textAlignment: Alignment.Center,
+                "— ПРЕСЕТЫ (строгие [InGameEditable], сеть работает) —", textAlignment: Alignment.Center,
                 textColor: Color.Orange)
             { CanBeFocused = false };
 
@@ -498,7 +518,8 @@ namespace CSHUB.Modules
                 isHorizontal: true, childAnchor: Anchor.CenterLeft)
             { RelativeSpacing = 0.01f };
 
-            void AddFlagPreset(string label, string propName, object value, Color col, string tip)
+            void AddSignalPreset(string label, string compName, string propName, object value,
+                Color col, string tip)
             {
                 var b = new GUIButton(
                     new RectTransform(new Vector2(0.31f, 0.95f), prRow.RectTransform), label);
@@ -506,44 +527,57 @@ namespace CSHUB.Modules
                 b.ToolTip = tip;
                 b.OnClicked = (bb, dd) =>
                 {
-                    ApplyItemFlag(propName, value);
+                    ApplySignalProperty(compName, propName, value);
                     return true;
                 };
             }
 
-            AddFlagPreset("🚫 Заморозить предмет", "NonInteractable", true, new Color(160, 60, 60),
-                "NonInteractable=true: предмет перестаёт реагировать на игроков\n" +
-                "(реактор/турели/двери/панели мертвы). Гейт: CanClientAccess.");
-            AddFlagPreset("🔓 Оживить предмет", "NonInteractable", false, new Color(60, 140, 70),
-                "NonInteractable=false: вернуть управляемость");
-            AddFlagPreset("👤 Анти-вор (NPC могут)", "NonPlayerTeamInteractable", true, new Color(120, 70, 160),
-                "NonPlayerTeamInteractable=true: игроки НЕ трогают, боты носят");
+            AddSignalPreset("🌑 Невидимый свет", "LightComponent", "LightColor",
+                new Color(255, 255, 255, 0), new Color(120, 60, 160),
+                "LightComponent.LightColor = (255,255,255,0): свет физически работает,\n" +
+                "но прозрачный — саба в темноте при «целых» лампах (нужно CanClientAccess к лампе)");
+            AddSignalPreset("🌈 Дискотека", "LightComponent", "LightColor",
+                new Color(255, 0, 255, 255), new Color(140, 60, 160),
+                "LightComponent.LightColor = маджента: светомузыка (после — правь руками RGB)");
+            AddSignalPreset("🚨 Датчик-параноик", "MotionSensor", "RangeX",
+                1000.0f, new Color(160, 90, 60),
+                "MotionSensor.RangeX = 1000: датчик покрывает всю сабу по горизонтали " +
+                "(RangeY=1000 отдельной кнопкой в списке)");
 
-            var descRow = new GUILayoutGroup(
-                new RectTransform(new Vector2(1f, 0.16f), _propList.Content.RectTransform),
+            var prRow2 = new GUILayoutGroup(
+                new RectTransform(new Vector2(1f, 0.12f), _propList.Content.RectTransform),
                 isHorizontal: true, childAnchor: Anchor.CenterLeft)
             { RelativeSpacing = 0.01f };
 
-            var descLbl = new GUITextBlock(
-                new RectTransform(new Vector2(0.3f, 1f), descRow.RectTransform),
-                "🏷 DescriptionTag:", wrap: true, textColor: Color.Khaki)
+            var motionLbl = new GUITextBlock(
+                new RectTransform(new Vector2(0.24f, 1f), prRow2.RectTransform),
+                "MotionSensor.RangeY = 1000: верт. радиус (кнопкой слева для X)", wrap: true,
+                textColor: Color.Khaki)
             { CanBeFocused = false };
 
-            var descBox = new GUITextBox(
-                new RectTransform(new Vector2(0.4f, 1f), descRow.RectTransform),
-                "description.huskinfection");
-            descBox.ToolTip = "Ключ локализации TextManager (смотри vanilla translate-файлы).\n" +
-                              "Незнакомый тег = пустое описание. Сетевой канал разрешён!";
+            AddSignalPresetRow(prRow2, "👁 RangeY 1000", "MotionSensor", "RangeY",
+                1000.0f, new Color(160, 90, 60),
+                "MotionSensor.RangeY = 1000: вертикальное покрытие всей сабы");
 
-            var descBtn = new GUIButton(
-                new RectTransform(new Vector2(0.22f, 1f), descRow.RectTransform),
-                new RawLString("Применить описание"))
-            { Color = Color.DarkGreen };
-            descBtn.OnClicked = (_, _) =>
-            {
-                ApplyItemFlag("DescriptionTag", descBox.Text?.Trim() ?? "");
-                return true;
-            };
+            var prRow3 = new GUILayoutGroup(
+                new RectTransform(new Vector2(1f, 0.12f), _propList.Content.RectTransform),
+                isHorizontal: true, childAnchor: Anchor.CenterLeft)
+            { RelativeSpacing = 0.01f };
+
+            var tagLbl = new GUITextBlock(
+                new RectTransform(new Vector2(0.24f, 1f), prRow3.RectTransform),
+                "NameTag (32 симв): переименовать предмет всем на глаза", wrap: true,
+                textColor: Color.Khaki)
+            { CanBeFocused = false };
+
+            var tagBox = new GUITextBox(
+                new RectTransform(new Vector2(0.42f, 1f), prRow3.RectTransform),
+                "Мусорка");
+            tagBox.ToolTip = "NameTag.Text — переименование предмета, видно всем (до 32 символов)";
+
+            AddSignalPresetRow(prRow3, "🏷 Переименовать", "NameTag", "Text",
+                null, new Color(60, 120, 160),
+                "NameTag.Text = текст из поля слева", tagBox);
 
             var props = EnumerateProperties(_currentItem);
             if (props.Count == 0)
