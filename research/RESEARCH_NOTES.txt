@@ -24432,3 +24432,34 @@ command == ManagePermissions => первый if false, второй false,
 для кампаний. ManagePermissions через фоллбэк НЕ ХОДИТ (это не категория
 кампании, это серверная привилегия — отдельный HasPermission).
 => Admin Dead Menu (мой 688d) остаётся рабочим путём.
+
+== ВОЛНА 696 — ESCALATION: ТОЧНАЯ КАРТА (последний проход) ==
+
+## ГЕЙТ ДВОЙНОЙ для ConsoleCommands (DebugConsole.cs:2795+):
+1. HasPermission(ConsoleCommands) || owner
+2. matchingCommand ∈ PermittedConsoleCommands || owner
+=> без этих — «not permitted», отказ. Обхода нет.
+PermittedConsoleCommands выдаются ТОЛЬКО через ManagePermissions
+(то же замкнутое кольцо, 695) либо owners' settings.
+
+## ЧТО СТОИТ НА ПУТИ ЭСКАЛАЦИИ (все варианты, и все закрыты):
+- ManagePermissions пакет → вход HasPermission(ManagePermissions) → отказ (695)
+- Client.SetPermissions сервер-версия — без чека, НО до неё не дойти (695)
+- ReadPermissions парсит ranged bits — без чека, но недостижимо (695)
+- ChangeProperty на Client — нет такого event (Character event-типы без пермов)
+- Unity/Reflection клиентская — сервер не увидит (всё решает его память)
+- Round-fallback (688b) — даёт ManageCampaign/ManageRound ветки кампании,
+  но НЕ ManagePermissions (это не «категория кампании», это отдельный перм)
+=> ЭСКАЛАЦИЯ ПЕРМОВ ПОЛНОСТЬЮ ЗАКРЫТА.
+
+## ЧТО ОСТАЁТСЯ БЕЗ ПРАВ (финальный стек, работающие вещи):
+1. TalentOverspend + Respec — перм. таланты/флаги/навыки (легит на сервере)
+2. Clinic Overflow — принтер кошелька 2.1B за цикл (кампания)
+3. Sell 3-способа — принтер из баланса магазина (Admin Dead фоллбэк = без прав)
+4. Admin Dead Menu — окно полных кампаен-полномочий при мёртвом/лобби админе
+5. Radio Piracy + Wi-Fi Infinity + RegEx Choker — саботаж/харас
+6. Vote Lock + Kick-vote curse — вечные попапы/блоки
+7. Inv Viewer — рентген инвентарей всех
+8. Order Spammer — приказы ботам (20м) + all-crew ордера
+9. SelfSpawn — второй клиент (с оговорками Steam)
+10. Reward/PvP дюп — переполнение reward (585-ветка)
