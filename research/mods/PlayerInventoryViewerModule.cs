@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Barotrauma;
 using Microsoft.Xna.Framework;
 
@@ -269,6 +270,21 @@ namespace CSHUB.Modules
             foreach (var it in items) { AddItemRow(it); }
         }
 
+        // Item.Count в бинарнике — метод (в сорсфорке свойства нет): рефлексия, иначе 1
+        private static int GetStackSafe(Item it)
+        {
+            try
+            {
+                var t = it.GetType();
+                var pi = t.GetProperty("Count", BindingFlags.Public | BindingFlags.Instance);
+                if (pi != null && pi.CanRead) { return Math.Max(1, Convert.ToInt32(pi.GetValue(it))); }
+                var mi = t.GetMethod("Count", BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+                if (mi != null) { return Math.Max(1, Convert.ToInt32(mi.Invoke(it, null))); }
+            }
+            catch { }
+            return 1;
+        }
+
         private static void AddItemRow(Item it)
         {
             var row = new GUIFrame(
@@ -297,8 +313,7 @@ namespace CSHUB.Modules
             }
             catch { }
 
-            int stack = 1;
-            try { stack = Math.Max(1, it.Count); } catch { }
+            int stack = GetStackSafe(it);
             var nameTxt = new GUITextBlock(
                 new RectTransform(new Vector2(0.46f, 1f), lay.RectTransform),
                 it.Name + (stack > 1 ? " x" + stack : ""), textAlignment: Alignment.CenterLeft)
