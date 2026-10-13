@@ -24071,3 +24071,33 @@ CPU-вым: поле float — переполение к Infinity не нужн�
 
 ## ОБРАТНАЯ ПРОВЕРКА (почему Reactor так нельзя): реактор FuelOut/Capacity
 не InGameEditable (в 648-списке нет) — только батарея и регексы.
+
+== ВОЛНА 686 — ИНВЕНТАРЬ InGameEditable-СВОЙСТВ: полный список по компонентам ==
+
+## ФАКТ: InGameEditable — только 24 файла, из них 23 = Signal/* компоненты + NameTag.
+Тяжёлые машины (Reactor/Engine/Pump/Fabricator/Turret/Battery/Door) — НЕТ ни одного
+InGameEditable-поля. ChangeProperty к ним НЕ применяется (673-вывод про Capacity —
+частный случай общего правила).
+
+## КАТАЛОГ интересных сетевых полей (все = [InGameEditable]+CanClientAccess):
+- LightComponent.LightColor: ParseColor без клампа альфы → невидимый свет (A=0)
+  или подсветка любым цветом — г anderes светомузыка/саботаж.
+- WifiComponent.Channel: кламп 0-10000. Смена канала чужого вайфая = отвал
+  его радиосвязи (если стоишь у панели).
+- MotionSensor: Target, IgnoreDead, RangeX/RangeY (кламп 0..1000),
+  DetectOffset, Output/FalseOutput (строки!), MinimumVelocity.
+  → «вижу призраков»: датчик движения пищит на каждый чих с Output=любой текст.
+  range 1000×1000 = покрывает всю сабу одним датчиком.
+- DelayComponent.Delay: кламп 0..60 + сигнал set_delay NaN (633) всё ещё живой.
+- MemoryComponent.Value (Writeable) — бесконечный вещатель (671).
+- OscillatorComponent.Frequency — кламп 0..240, NaN через сигнал (685-связка).
+- RegExFindComponent.Expression — ReDoS-глушилка (652).
+- Terminal.WelcomeMessage — произвольный текст на экране терминала при открытии.
+- NameTag.Text (MaxLength 32) — переименование ЛЮБОГО предмета в мире,
+  включая чужие (CanClientAccess решает). «Абордажный топор» → «ДнилоТролололо».
+- BooleanOperator/Equals/Greater/Not/Concat/SignalCheck/ColorComponent —
+  output-строки, influence только свои цепи.
+
+## ЧЕСТНЫЙ ИТОГ: сетевой имба-канал через ChangeProperty — ТОЛЬКО
+LightColor (визуал) + MotionSensor-парано́йя + NameTag-граффити + RegEx-gluh.
+Статы (урон/скорость/броня/емкость) — НЕ InGameEditable нигде. Не существует.
