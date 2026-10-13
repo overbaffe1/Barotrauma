@@ -66,20 +66,21 @@ namespace CSHUB.Modules
 
             var root = _menu.Content;
 
+            // ---- строка 1: заголовок + обновить + tick ----
             var topRow = new GUILayoutGroup(
-                new RectTransform(new Vector2(1f, 0.07f), root.RectTransform),
+                new RectTransform(new Vector2(1f, 0.06f), root.RectTransform),
                 isHorizontal: true,
                 childAnchor: Anchor.CenterLeft)
             { RelativeSpacing = 0.02f };
 
             _header = new GUITextBlock(
-                new RectTransform(new Vector2(0.52f, 1f), topRow.RectTransform),
+                new RectTransform(new Vector2(0.6f, 1f), topRow.RectTransform),
                 "Предмет не выбран",
                 textAlignment: Alignment.CenterLeft,
                 textColor: Color.Cyan);
 
             var refreshBtn = new GUIButton(
-                new RectTransform(new Vector2(0.14f, 1f), topRow.RectTransform),
+                new RectTransform(new Vector2(0.16f, 1f), topRow.RectTransform),
                 new RawLString("Обновить"));
             refreshBtn.OnClicked = (_, _) => { RefreshAll(); return true; };
 
@@ -89,24 +90,35 @@ namespace CSHUB.Modules
             { Selected = true };
             _showAllTick.OnSelected = _ => { BuildPropertyList(); return true; };
 
-            // ============ ПРЕСЕТЫ ИМБ (волна 685) ============
+            // ---- строка 2: пресеты ----
+            var presetRow = new GUILayoutGroup(
+                new RectTransform(new Vector2(1f, 0.06f), root.RectTransform),
+                isHorizontal: true,
+                childAnchor: Anchor.CenterLeft)
+            { RelativeSpacing = 0.02f };
+
+            var presetLbl = new GUITextBlock(
+                new RectTransform(new Vector2(0.24f, 1f), presetRow.RectTransform),
+                "ПРЕСЕТЫ (прицельная батарея):",
+                textAlignment: Alignment.CenterLeft,
+                textColor: Color.Khaki);
+
             var infBtn = new GUIButton(
-                new RectTransform(new Vector2(0.16f, 1f), topRow.RectTransform),
-                new RawLString("♾ Батарея"));
+                new RectTransform(new Vector2(0.3f, 1f), presetRow.RectTransform),
+                new RawLString("♾ Батарея-вечность"));
             infBtn.Color = Color.MediumSpringGreen;
-            infBtn.ToolTip = "Пресет: Capacity=1e9 + Charge=1e9 на ПРИЦЕЛЬНОЙ батарее " +
-                             "(ChangeProperty, кламп только снизу). Вечная энергия, видно всем.";
+            infBtn.ToolTip = "Capacity=1e9 + Charge=1e9 (кламп только снизу). Вечная энергия, видно всем.";
             infBtn.OnClicked = (_, _) => { ApplyInfinityBattery(); return true; };
 
             var killBtn = new GUIButton(
-                new RectTransform(new Vector2(0.1f, 1f), topRow.RectTransform),
-                new RawLString("☠ Бат."));
+                new RectTransform(new Vector2(0.24f, 1f), presetRow.RectTransform),
+                new RawLString("☠ Разрядить"));
             killBtn.Color = Color.IndianRed;
-            killBtn.ToolTip = "Пресет: Capacity=1 — батарея разрядится за один тик (троль со-игрока)";
+            killBtn.ToolTip = "Capacity=1 — разрядится за один тик";
             killBtn.OnClicked = (_, _) => { ApplyKillBattery(); return true; };
 
             var split = new GUILayoutGroup(
-                new RectTransform(new Vector2(1f, 0.86f), root.RectTransform),
+                new RectTransform(new Vector2(1f, 0.8f), root.RectTransform),
                 isHorizontal: true,
                 childAnchor: Anchor.TopLeft)
             { RelativeSpacing = 0.02f, Stretch = true };
@@ -123,8 +135,8 @@ namespace CSHUB.Modules
             _propList = new GUIListBox(new RectTransform(new Vector2(0.66f, 1f), split.RectTransform));
 
             new GUITextBlock(
-                new RectTransform(new Vector2(1f, 0.06f), root.RectTransform),
-                "♾ Батарея — работает на ПРИЦЕЛЬНОМ PowerContainer (наведи прицел). Остальное — «Применить».",
+                new RectTransform(new Vector2(1f, 0.07f), root.RectTransform),
+                "Ищи «PowerContainer.Capacity» / «.Charge» в списке свойств — правь руками и жми Применить.",
                 wrap: true, textColor: Color.LightGray);
 
             RefreshAll();
@@ -412,15 +424,16 @@ namespace CSHUB.Modules
         private void AddPropertyRow(PropEntry entry)
         {
             var row = new GUILayoutGroup(
-                new RectTransform(new Vector2(1f, 0.10f), _propList.Content.RectTransform),
+                new RectTransform(new Vector2(1f, 0.13f), _propList.Content.RectTransform),
                 isHorizontal: true, childAnchor: Anchor.CenterLeft)
             { RelativeSpacing = 0.015f };
 
-            new GUITextBlock(
-                new RectTransform(new Vector2(0.34f, 1f), row.RectTransform),
+            var lbl = new GUITextBlock(
+                new RectTransform(new Vector2(0.36f, 1f), row.RectTransform),
                 entry.Label + (entry.Conditional ? "  [cond]" : ""),
                 wrap: true,
                 textColor: entry.Conditional ? Color.Khaki : Color.White);
+            lbl.CanBeFocused = false;
 
             Type type = entry.Property.PropertyType;
             object currentValue = entry.Property.GetValue(entry.Parent);
@@ -469,7 +482,7 @@ namespace CSHUB.Modules
             if (type == typeof(string) || type == typeof(Identifier))
             {
                 var box = new GUITextBox(
-                    new RectTransform(new Vector2(0.32f, 1f), parent.RectTransform),
+                    new RectTransform(new Vector2(0.4f, 1f), parent.RectTransform),
                     currentValue?.ToString() ?? "");
                 MakeApplyButton(parent, () =>
                 {
