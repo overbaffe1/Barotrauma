@@ -40,6 +40,7 @@ namespace CSHUB.Modules
         private GUIListBox _propList;
         private GUITextBlock _header;
         private GUITickBox _showAllTick;
+        private bool _showNoEdit = true;
 
         private Item _currentItem;
 
@@ -89,6 +90,14 @@ namespace CSHUB.Modules
                 new RawLString("Все editable"))
             { Selected = true };
             _showAllTick.OnSelected = _ => { BuildPropertyList(); return true; };
+
+            var showNoEditTick = new GUITickBox(
+                new RectTransform(new Vector2(0.2f, 1f), topRow.RectTransform),
+                new RawLString("Показать [noedit]"))
+            { Selected = true };
+            showNoEditTick.OnSelected = tb => { _showNoEdit = tb.Selected; BuildPropertyList(); return true; };
+            showNoEditTick.ToolTip = "Показывать компоненты с AllowInGameEditing=false " +
+                                     "(свойства видны, но сервер их скорее всего отклонит)";
 
             // ---- строка 2: пресеты ----
             var presetRow = new GUILayoutGroup(
@@ -348,13 +357,16 @@ namespace CSHUB.Modules
             public readonly SerializableProperty Property;
             public readonly string Label;
             public readonly bool Conditional;
+            public readonly bool IsHeader;
 
-            public PropEntry(object parent, SerializableProperty property, string label, bool conditional)
+            public PropEntry(object parent, SerializableProperty property, string label,
+                bool conditional, bool isHeader = false)
             {
                 Parent = parent;
                 Property = property;
                 Label = label;
                 Conditional = conditional;
+                IsHeader = isHeader;
             }
         }
 
@@ -374,22 +386,30 @@ namespace CSHUB.Modules
                     result.Add(new PropEntry(item, p, "Item." + p.Name, true));
             }
 
+            // ---- КОМПОНЕНТЫ: Capacity/Charge и прочее ЗДЕСЬ (ниже Item.*) ----
             foreach (var comp in item.Components)
             {
                 if (comp == null) continue;
                 bool componentEditable = comp.AllowInGameEditing;
 
-                foreach (var p in SerializableProperty.GetProperties<InGameEditable>(comp))
-                {
-                    if (componentEditable)
-                        result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name, false));
-                }
+                var editableProps = SerializableProperty
+                    .GetProperties<InGameEditable>(comp).ToList();
+                var condProps = showAll
+                    ? SerializableProperty.GetProperties<ConditionallyEditable>(comp).ToList()
+                    : new List<SerializableProperty>();
 
-                if (showAll && componentEditable)
-                {
-                    foreach (var p in SerializableProperty.GetProperties<ConditionallyEditable>(comp))
-                        result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name, true));
-                }
+                if (!componentEditable && !_showNoEdit && editableProps.Count == 0 && condProps.Count == 0)
+                { continue; }
+
+                // метка-секция, чтобы видеть: свойства компонента начались
+                result.Add(new PropEntry(comp, null,
+                    "— " + comp.Name + (componentEditable ? "" : " [noedit]") + " —", false, isHeader: true));
+
+                foreach (var p in editableProps)
+                    result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name, false));
+
+                foreach (var p in condProps)
+                    result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name, true));
             }
 
             return result;
@@ -423,6 +443,16 @@ namespace CSHUB.Modules
 
         private void AddPropertyRow(PropEntry entry)
         {
+            if (entry.IsHeader)
+            {
+                var hdr = new GUITextBlock(
+                    new RectTransform(new Vector2(1f, 0.07f), _propList.Content.RectTransform),
+                    entry.Label, textAlignment: Alignment.Center,
+                    textColor: Color.MediumSpringGreen)
+                { CanBeFocused = false };
+                return;
+            }
+
             var row = new GUILayoutGroup(
                 new RectTransform(new Vector2(1f, 0.13f), _propList.Content.RectTransform),
                 isHorizontal: true, childAnchor: Anchor.CenterLeft)
