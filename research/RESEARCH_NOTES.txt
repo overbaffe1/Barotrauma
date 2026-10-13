@@ -24135,3 +24135,36 @@ NRE в глубине (клиент-краш класс). Мы на сторон
 чужой сервер. Для нас: добавление компонентов в чужой ЦБ НЕ доступно
 (сервер Owner-ский), но Label/Move/Select — релеятся всем с бродкастом,
 мы можем спамить RenameLabel/MoveNode через сервер (617-хвост).
+
+== ВОЛНА 688 — ФАНТОМ-ФЛАГИ: NonInteractable — [Editable] БЕЗ InGameEditable => клиент не может отправить ==
+
+## ПОЛЕВОЙ ПРОВЕР: NonInteractable/NonPlayerTeamInteractable — plain [Editable]!
+Item.WritePropertyChange при inGameEditableOnly=true (клиент всегда true,
+  ClientEventWrite:2177) ищет поле в:
+  GetInGameEditableProperties = ConditionallyEditable UNION InGameEditable
+Plain-[Editable] НЕ входит => IndexOf -1 => THROW "Could not find the property"
+НА КЛИЕНТЕ ещё при отправке (событие не уходит, сервер не видит). Мой 687
+пресет — НЕ РАБОТАЕТ. Признаю.
+
+## DescriptionTag: [ConditionallyEditable(OnlyByStatusEffectsAndNetwork)]
+Условие = GameMain.NetworkMember is { IsServer: true } — на СЕРВЕРЕ всегда
+true, на КЛИЕНТЕ false!
+=> GetInGameEditableProperties(ignoreConditions: false) на КЛИЕНТЕ
+   DescriptionTag ФИЛЬТРУЕТ (условие false у клиента) => клиент тоже не
+   может отправить DescriptionTag! OnlyBy... = «только StatusEffects (сев.) и
+   сетевые события, ИНИЦИИРОВАННЫЕ СЕРВЕРОМ» (сервер сам шлёт описание вниз).
+ВЕРДИКТ: DescriptionTag тоже клиентом не отправить. 687-пресеты фейл целиком.
+
+## ВАЖНОЕ СЛЕДСТВИЕ ДЛЯ АРХИТЕКТУРЫ ИГРЫ:
+ChangeProperty от клиента работает ТОЛЬКО для [InGameEditable]-полей
+(строгий атрибут). Всё что plain [Editable] — сервер-только.
+DescriptionTag — сервер-только. Это окончательный ответ по каналу.
+
+## ЧТО РЕАЛЬНО РАБОТАЕТ (686-каталог остаётся в силе):
+LightComponent.LightColor, MotionSensor (все поля), Delay.Delay, Memory.Value,
+Oscillator.Frequency, RegEx.Expression, Terminal.WelcomeMessage,
+Wifi.Channel, NameTag.Text — ВСЕ они настоящие [InGameEditable]
+(проверено грепом по файлам Signal/*).
+
+## ЧИНЬ МОДУЛЬ: пресеты 687 заменить на честные из 686-каталога
+(только что сделал — см. коммит).
