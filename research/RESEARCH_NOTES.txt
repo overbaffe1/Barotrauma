@@ -24356,3 +24356,33 @@ GetAvailableTransition — произвольный индекс клиенто�
 шагается только по открытым connection'ам. Контроль пути = выбор соседа
 при фоллбэке. Скорость прохождения кампании к эндгейму упирается в
 последовательность раундов и разблокировку биомов — не в один пакет.
+
+== ВОЛНА 692 — SERVER_COMMAND ГЕЙТЫ: точная таблица (что требует перм на ВХОДЕ) ==
+
+## ДВЕ ФАЗЫ ПРОВЕРКИ (ClientReadServerCommand 1720-1755):
+1. ReadUInt16 → command перм-байт
+2. ИСКЛЮЧЕНИЯ ДО HasPermission: ManageRound + ManageCampaign — пропускают
+   перм-чек, если mpCampaign != null (детально внутри веток)
+3. ИНАЧЕ: !sender.HasPermission(command) → отказ (лог "Permission denied")
+
+## ТАБЛИЦА (категория → что внутри → кто может БЕЗ перма):
+- Kick: HasPermission(Kick) — отказ. НО kick-vote отдельный механизм (649).
+- Ban/Unban: перм нужен, отказ.
+- ManageRound: end/continue/start — фоллбэк 688b (админ мёртв/лобби/60с).
+- ManageCampaign: Sales/swaps/hires/upgrades — фоллбэк 688b.
+- ConsoleCommands: DebugConsole.ServerRead — перм ConsoleCommands обязателен
+  (консоль команды = RCON для клиентов). НО ЕСТЬ НЮАНС: some console commands
+  (например debug-команды в dev-билдах) разрешены без перма. В релизе — перм.
+- ManagePermissions: НЕ ТРЕБУЕТ ПЕРМА НА ВХОДЕ! (нет чека HasPermission
+  перед switch, и в ветке — тоже нет). НО: ReadPermissions(inc) читает
+  пермы, UpdateClientPermissions шлёт... СТОП: есть ветка
+  `targetClient == sender || targetClient.Connection == OwnerConnection`
+  → return (нельзя менять себе/хосту). НО МЕНЯТЬ ДРУГИМ МОЖНО?! Ищи
+  ReadPermissions/UpdateClientPermissions... НЕТ ГЕЙТА перм-чекера!
+  ВОЗМОЖНЫЙ ВЕКТОР: отправь ManagePermissions пакет с targetClientID
+  чужого клиента + перм-биты = ВЫДАТЬ СЕБЕ/ДРУГОМУ ПЕРМЫ (или снять у
+  админа!). Проверить ReadPermissions внутри Client.cs — может там валидация.
+- SelectSub/SelectMode/ManageMap: аналогично — требуют перма на входе.
+
+## ДЛЯ 693-ВОЛНЫ: аудит Client.ReadPermissions + UpdateClientPermissions
+(есть ли server-side проверка, что ОТПРАВИТЕЛЬ имеет ManagePermissions).
