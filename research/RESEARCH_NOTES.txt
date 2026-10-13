@@ -24101,3 +24101,37 @@ InGameEditable-поля. ChangeProperty к ним НЕ применяется (6
 ## ЧЕСТНЫЙ ИТОГ: сетевой имба-канал через ChangeProperty — ТОЛЬКО
 LightColor (визуал) + MotionSensor-парано́йя + NameTag-граффити + RegEx-gluh.
 Статы (урон/скорость/броня/емкость) — НЕ InGameEditable нигде. Не существует.
+
+== ВОЛНА 687 — ИТЕМ-ФЛАГИ через ChangeProperty: NonInteractable и NonPlayerTeamInteractable ==
+
+## Item.NonInteractable — [Editable, Serialize], сетевой клиент-сервер путь:
+IsPlayerTeamInteractable = !NonInteractable && !NonPlayerTeamInteractable
+IsInteractable(character) читает оба флага => ставит МЕРТВЫМ ЛЮБОЙ предмет:
+  - чужой реактор/двигатель/помпа/батареи становятся «нельзя использовать»
+  - кнопки дверей, турели, узлы пайки — всё
+ГЕЙТ: CanClientAccess на сервере — нужно быть у панели предмета.
+НО: свап нилью => твой модуль ChangeProperty уже умеет это слать.
+ПРИМЕНЕНИЕ: подойдя к панели чужой сабы (стыковка/открытая панель) —
+«стена-предмет»: Friend sаба перестаёт управляться (ты можешь даже
+нечаянно). Или наоборот: свой предмет вернуть = NonInteractable=false.
+
+## Item.NonPlayerTeamInteractable = true на СВОЕМ предмете:
+игроки НЕ могут трогать, NPC (non-player team) могут. Анти-вор: положил
+в общую комнату — игроки не поднимут, боты носят. Троллинг экипажа.
+
+## DescriptionTag [ConditionallyEditable(OnlyByStatusEffectsAndNetwork)]:
+Network-класс — ChangeProperty его ПРИНИМАЕТ (663/672-логика: сеть в
+allow-списке). TextManager.Get(tag) => локализованный текст описания.
+Фейк-описания предметам («это ядерный ключ, снесите реактор»).
+Tag = ключ локализации: незнакомый тег => пусто/сырой тег — надо юзать
+существующие теги из translate-файлов или vanilla-ключи.
+
+## CircuitBox AddComponent (сервер→клиент): сервер рассылает
+CircuitBoxServerCreateComponentEvent {UsedResource prefab-uint, ComponentId,
+BackingItemId, Position}; клиент AddComponentFromData: FindPrefab по uint
+=> throw если мусор; FindItemByID(BackitemId) может вернуть null —
+AddComponentInternalUnsafe(nullable backing) — скормить битый => возможно
+NRE в глубине (клиент-краш класс). Мы на стороне клиента — это про
+чужой сервер. Для нас: добавление компонентов в чужой ЦБ НЕ доступно
+(сервер Owner-ский), но Label/Move/Select — релеятся всем с бродкастом,
+мы можем спамить RenameLabel/MoveNode через сервер (617-хвост).
