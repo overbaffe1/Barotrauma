@@ -24463,3 +24463,47 @@ PermittedConsoleCommands выдаются ТОЛЬКО через ManagePermissi
 8. Order Spammer — приказы ботам (20м) + all-crew ордера
 9. SelfSpawn — второй клиент (с оговорками Steam)
 10. Reward/PvP дюп — переполнение reward (585-ветка)
+
+== ВОЛНА 696b — НОВЫЕ НАСТРОЙКИ КАМПАНИИ КАК ПАКЕТ (CAMPAIGN_SETUP_INFO isNew=true) ==
+
+## ГЕЙТ: AllowedToManageCampaign(ManageRound) — тот же фоллбэк 688b
+## ПАКЕТ: CAMPAIGN_SETUP_INFO
+  bool isNew=true, padBits
+  string saveName
+  string seed
+  string subName
+  string subHash (MD5 субмарины — можно сверить через GetSubList)
+  CampaignSettings (INetSerializableStruct) — НАСТРОЙКИ КАМПАНИИ!
+
+## CampaignSettings это сетевой struct (Client.cs:239 MissionRewardMultiplier etc):
+  - MissionRewardMultiplier (0.5..2.0 preset, но сеттер без клампа?)
+  - ExperienceRewardMultiplier
+  - StartingBalanceAmount (high = 10000 стартовых)
+  - CrewVitalityMultiplier, NonCrewVitalityMultiplier
+  - OxygenMultiplier, FuelMultiplier (меньше топло-расход)
+  - ShopPriceMultiplier, ShipyardPriceMultiplier
+  - RepairFailMultiplier
+  - LevelDifficultyMultiplier, WorldHostility, PatdownProbability
+  - MaxMissionCount
+  - RadiationEnabled
+
+## ЗАПУСК НОВОЙ КАМПАНИИ с этими настройками:
+ServerSettings.CampaignSettings = settings;
+ServerSettings.SaveSettings();
+MultiPlayerCampaign.StartNewCampaign(...);
+
+## ВАЖНО:
+- СТАРАЯ КАМПАНИЯ ЗАМЕНЯЕТСЯ НОВОЙ (friend's campaign сгорает!)
+- Требуется server restart? НЕТ — SaveSettings() пишет сразу
+- Если сервер крашнул через DescriptionTag (693) → хост выходит → ты
+  сам запускаешь кампанию со своими множителями (x10 наград и т.д.)
+- MultiplierSettings Min/Max — это только UI-клампы, сетевой пакет может нести
+  любые значения если INetSerializableStruct.Read не клампит
+  => ПРОВЕРИТЬ: читает ли Read директно float или клампит по MultiplierSettings
+
+## ИСПОЛЬЗОВАНИЕ:
+1. Краш через DescriptionTag (в самом сейве friendly outpost 2 раза сохранён)
+2. Друг заходит в лобби → у него кампания на краю смерти
+3. Ты запускаешь CAMPAIGN_SETUP_INFO isNew=true со своими настройками
+   → его сейв затирается твоим с x100 наградой
+4. Играете с x100 наградой => тот же эффект что принтер но легальнее
