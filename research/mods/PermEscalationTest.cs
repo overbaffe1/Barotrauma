@@ -93,7 +93,9 @@ namespace CSHUB.Modules
                 int sent = 0;
                 foreach (var c in GameMain.Client.ConnectedClients)
                 {
-                    if (c == null || c.Connection == GameMain.Server?.OwnerConnection) { continue; }
+                    if (c == null) { continue; }
+                    // хост на клиенте виден как IsOwner (Client.IsOwner, client-side field)
+                    try { if (c.IsOwner) { continue; } } catch { }
                     SendAllPerms(c.SessionId);
                     sent++;
                 }
