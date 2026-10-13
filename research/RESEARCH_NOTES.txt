@@ -24168,3 +24168,37 @@ Wifi.Channel, NameTag.Text — ВСЕ они настоящие [InGameEditable]
 
 ## ЧИНЬ МОДУЛЬ: пресеты 687 заменить на честные из 686-каталога
 (только что сделал — см. коммит).
+
+== ВОЛНА 687b — ABILITYFLAGS: полный список + почему клиенту не светят ==
+
+## ПОЛНЫЙ СПИСОК (Enums.cs:653-800):
+MustWalk, ImmuneToPressure (нет урона от давления!), IgnoredByEnemyAI
+(монстры ЦЕЛИКОМ игнорят), MoveNormallyWhileDragging, CanTinker,
+CanTinkerFabricatorsAndDeconstructors, TinkeringPowersDevices
+(заточенные предметы НЕ ЖРУТ энергию), GainSkillPastMaximum (навыки >100!),
+RetainExperienceForNewCharacter (XP переживает респавн — пермадет-имба),
+AllowSecondOrderedTarget, AlwaysStayConscious (не падает в нок при 0 hp!),
+CanNotDieToAfflictions (не умирает от аффликций вообще — голову режь
+или давлением).
+
+## ХОТЕЛКА: AddAbilityFlag(ImmuneToPressure | CanNotDieToAfflictions |
+AlwaysStayConscious | IgnoredByEnemyAI) = GOD MODE. Флаги на Character —
+private поле abilityFlags, AddAbilityFlag/RemoveAbilityFlag — публичные
+методы. НО вызываются только из талантов (серверный процесс, CharacterAbilityGiveFlag)
+и клиент НЕ ОТПРАВЛЯЕТ пакетов на флаги (нет такого ClientPacketHeader,
+нет ChangeProperty на Character — Character только 19 event-типов,
+среди них флагов нет).
+=> ФЛАГИ КЛИЕНТУ НЕДОСТУПНЫ БЕЗ CSHUB-C# ПАТЧА (Harmony-постфикс
+HasAbilityFlag => true = локальный г视野од; серверный вариант = нужен
+сервер-сайд LuaCS/C# мод, которого нет у друга).
+
+## ВЫВОД: AbilityFlags — СЕРВЕР-САЙД имба. В CSHUB (клиент) можно только
+Harmony-подменить HasAbilityFlag локально (видит себя бессмертным, сервер
+всё равно убьёт синком). Это чит для соло, не для MP.
+
+## ГДЕ РЕАЛЬНО БЕРУТСЯ ФЛАГИ: только таланты (CharacterAbilityGiveFlag
+через ActivateTalent). Талант-флад (600) => ВСЕ флаги => на сервере это
+РАБОТАЕТ (GiveTalent сервер-сайд применяет флаги честно). Т.е. God-mode
+через TalentOverspend = составной эффект дерева. Флаги не спамятся от
+клиента, но приходят с легальными талантами. Цикл: флад дерева ->
+нужные флаг-таланты активны -> часть имб.
