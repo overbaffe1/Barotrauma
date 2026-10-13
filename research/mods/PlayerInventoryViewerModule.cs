@@ -73,7 +73,7 @@ namespace CSHUB.Modules
                 if (!string.IsNullOrEmpty(_search))
                 {
                     string n = "";
-                    try { n = c.DisplayName?.Value ?? c.Name ?? ""; } catch { }
+                    try { n = c.DisplayName ?? c.Name ?? ""; } catch { }
                     if (n.IndexOf(_search, StringComparison.OrdinalIgnoreCase) < 0) { continue; }
                 }
                 yield return c;
@@ -141,7 +141,7 @@ namespace CSHUB.Modules
 
             var lf = new GUIFrame(
                 new RectTransform(new Vector2(1f, 0.86f), content.RectTransform, Anchor.BottomCenter), style: null);
-            _list = new GUIListBox(Vector2.One, lf.RectTransform);
+            _list = new GUIListBox(new RectTransform(Vector2.One, lf.RectTransform));
             _list.Color = new Color(18, 22, 32);
 
             _uiSession++;
@@ -195,7 +195,7 @@ namespace CSHUB.Modules
         private static void AddCharRow(Character c)
         {
             string name = "???";
-            try { name = c.DisplayName?.Value ?? c.Name ?? name; } catch { }
+            try { name = c.DisplayName ?? c.Name ?? name; } catch { }
             bool pl = false;
             try { pl = c.IsPlayer; } catch { }
 
