@@ -195,7 +195,6 @@ namespace CSHUB.Modules
                 return;
             }
 
-            // ChangeProperty требует SerializableProperty — берём reflection'ом
             var item = pc.Item;
             var capProp = FindProp(item, pc, "Capacity");
             var chargeProp = FindProp(item, pc, "Charge");
@@ -205,11 +204,14 @@ namespace CSHUB.Modules
                 return;
             }
 
+            // ЛОКАЛЬНО применяем всегда — у себя в клиентах увидим 1e9.
             SendChange(item, capProp, pc, 1_000_000_000f);
             SendChange(item, chargeProp, pc, 1_000_000_000f);
 
-            GUI.AddMessage("PropertyChanger+: ♾ батарея «" + item.Name + "» — Capacity/Charge = 1e9. Вечная энергия!",
-                Color.MediumSpringGreen);
+            GUI.AddMessage("PropertyChanger+: ⚠ Capacity/Charge — plain [Editable], сервер " +
+                "ChangeProperty их ОТКЛОНИТ (ReadPropertyChange inGameEditableOnly ищет только " +
+                "InGameEditable/ConditionallyEditable). Локально видно, по сети НЕ применится. " +
+                "Пресет оставлен для соло/локального троллинга себя.", Color.Orange);
         }
 
         private void ApplyKillBattery()
@@ -226,7 +228,7 @@ namespace CSHUB.Modules
             if (capProp == null) { GUI.AddMessage("Capacity property не найдена", Color.Red); return; }
 
             SendChange(item, capProp, pc, 1f);
-            GUI.AddMessage("PropertyChanger+: ☠ батарея «" + item.Name + "» — Capacity=1, разрядится мгновенно",
+            GUI.AddMessage("PropertyChanger+: ☠ локально Capacity=1 (⚠ по сети сервер отклонит — plain [Editable])",
                 Color.IndianRed);
         }
 
@@ -392,24 +394,30 @@ namespace CSHUB.Modules
                 if (comp == null) continue;
                 bool componentEditable = comp.AllowInGameEditing;
 
-                var editableProps = SerializableProperty
-                    .GetProperties<InGameEditable>(comp).ToList();
+                // ВАЖНО: Capacity/Charge у PowerContainer — plain [Editable] (НЕ InGameEditable).
+                // Показываем их с меткой [ed] — локально применится, по сети сервер
+                // inGameEditableOnly-ветка их отвергнет.
+                var allEditable = SerializableProperty.GetProperties<Editable>(comp).ToList();
+                var inGame = allEditable.Where(p => p.GetAttribute<InGameEditable>() != null).ToList();
+                var plain  = allEditable.Where(p => p.GetAttribute<InGameEditable>() == null).ToList();
                 var condProps = showAll
                     ? SerializableProperty.GetProperties<ConditionallyEditable>(comp).ToList()
                     : new List<SerializableProperty>();
 
-                if (!componentEditable && !_showNoEdit && editableProps.Count == 0 && condProps.Count == 0)
-                { continue; }
+                bool hasAny = inGame.Count > 0 || condProps.Count > 0 || (_showNoEdit && plain.Count > 0);
+                if (!componentEditable && !_showNoEdit && !hasAny) { continue; }
 
-                // метка-секция, чтобы видеть: свойства компонента начались
                 result.Add(new PropEntry(comp, null,
                     "— " + comp.Name + (componentEditable ? "" : " [noedit]") + " —", false, isHeader: true));
 
-                foreach (var p in editableProps)
+                foreach (var p in inGame)
                     result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name, false));
 
                 foreach (var p in condProps)
                     result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name, true));
+
+                foreach (var p in plain)
+                    result.Add(new PropEntry(comp, p, comp.Name + "." + p.Name + " [ed]", false));
             }
 
             return result;
