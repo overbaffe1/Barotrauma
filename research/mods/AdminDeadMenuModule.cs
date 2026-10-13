@@ -77,12 +77,12 @@ namespace CSHUB.Modules
         {
             if (GameMain.Client == null)
             {
-                GUI.AddMessage("Admin Dead Menu: только клиент MP", DangerColor);
+                GUI.AddMessage("Admin Dead Menu: только клиент MP", new Color(255, 100, 100));
                 return;
             }
             if (GameMain.GameSession?.Campaign is not MultiPlayerCampaign)
             {
-                GUI.AddMessage("Admin Dead Menu: нужна MultiPlayerCampaign", DangerColor);
+                GUI.AddMessage("Admin Dead Menu: нужна MultiPlayerCampaign", new Color(255, 100, 100));
                 return;
             }
 
@@ -227,8 +227,14 @@ namespace CSHUB.Modules
                 byte missionCount = 0;
                 try
                 {
-                    var missions = GameMain.NetLobbyScreen?.MissionTypes;
-                    if (missions != null) { missionCount = (byte)Math.Min(missions.Count(), 255); }
+                    // IEnumerable<Identifier> — без Linq Count(), считаем foreach
+                    int n = 0;
+                    foreach (var _mt in GameMain.NetLobbyScreen?.MissionTypes ?? System.Linq.Enumerable.Empty<Identifier>())
+                    {
+                        n++;
+                        if (n >= 255) { break; }
+                    }
+                    missionCount = (byte)n;
                 }
                 catch { }
                 msg.WriteByte(missionCount);
@@ -296,7 +302,7 @@ namespace CSHUB.Modules
                     var holders = new List<string>();
                     foreach (var c in net.ConnectedClients)
                     {
-                        bool holder = c.IsServerOwner || c.HasPermission(ClientPermissions.ManageCampaign);
+                        bool holder = c.IsOwner || c.HasPermission(ClientPermissions.ManageCampaign);
                         if (!holder) { continue; }
 
                         string state;
