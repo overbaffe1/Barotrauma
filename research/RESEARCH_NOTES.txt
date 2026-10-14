@@ -24507,3 +24507,59 @@ MultiPlayerCampaign.StartNewCampaign(...);
 3. Ты запускаешь CAMPAIGN_SETUP_INFO isNew=true со своими настройками
    → его сейв затирается твоим с x100 наградой
 4. Играете с x100 наградой => тот же эффект что принтер но легальнее
+
+== ВОЛНА 697 — МАКСИМАЛЬНЫЙ УРОН ПРИ МЁРТВОМ АДМИНЕ: ПОЛНЫЙ ИНВЕНТАРЬ ==
+
+## ПРОВЕРЕНО: AllowedToManageCampaign-фоллбэк открывает ВСЕ каналы,
+## которые грузятся через CampaignMode.* (обзор кода 686-692):
+
+## ДЕЙСТВИЯ (все легит-пакетами через SERVER_COMMAND с фоллбэком):
+### Управление кампанией
+- Запустить/закончить/перезагрузить раунд (TryStartGame/EndRound)
+- Сохранить кампанию (fixация порчи)
+- QuitCampaign — выбросить кампанию на сервере
+- LoadCampaign — откатить к прошлому сейву
+- CAMPAIGN_SETUP_INFO isNew=true — создать новую кампанию со своими
+  множителями (696b): MissionReward x2, Shop x0.5, Crew HP x2, Radiation off
+- Выбрать следующую локацию (ManageMap)
+- SelectSub / SelectShuttle — сменить субу/шаттл через ManageCampaign perm
+
+### Магазин и торговля
+- Продать ЛЮБЫЙ предмет (SellItems по ID) — включая несуществующие ID = фантом-принтер
+- Покупать в магазинах из ЛЮБОЙ точки (CampaignSetup HasCampaignInteractionAvailable проверяет дистанцию, НО при AllowedToManageCampaign=true использует store.Balance кампании — ловушка балансом)
+- Затирать buyCrate/subSellCrate содержимое
+- BuyBackSoldItems — выкуп проданных предметов обратно в сабу
+- Опустошить баланс магазина — блокировать дальнейшую торговлю команды
+
+### Найм и экипаж
+- Найм ботов (HireManager + PendingHires списком)
+- Увольнение ботов (FireCharacter) — по ID
+- Перевод на ReserveBench — за/против
+- Переименовать персонажа бота (RenameCharacter)
+- TakeOverBot — забрать бота себе (пермадет-воскресение если твой чар мёртв)
+
+### Апгрейды/свапы
+- PurchaseItemSwap — замена орудий/реактора субы
+- CancelItemSwap — отменить свап чужой субы (гриф)
+- TryPurchaseUpgrade — применить апгрейд-префаб (мощь/броня/сонар)
+- PurchaseUpgrade level 255 — багованный уровень (byte, не клампится на сервере?)
+
+### Ремонт и транспорт
+- Разблокировать маршрут кампании (UnlockPathAction)
+- NotifyMissionsUnlockedThisRound — показать миссии на карте
+- DockingPort.OutpostAutoDocking — сменить автоматический докинг аутпоста
+- Hull/item repairs — платно, списывается с кампании
+
+### Мелочи
+- ReadHiddenSubs — скрыть/показать субы в списке
+- TakeOverBot с права ManageHires
+- UpdateClientPermissions (ManagePermissions ветка) — ДА, требует перма на входе
+  (695 закрыл). Но ManageCampaign-фоллбэк НЕ даёт ManagePermissions.
+- PermittedConsoleCommands — только через ManagePermissions (закрыто)
+
+## НЕ ДОСТУПНО (нужны реальные пермы):
+- ConsoleCommands (DebugConsole.ServerRead — HasPermission проверка)
+- Kick/Ban/Unban других игроков (только воты)
+- ManagePermissions (выдача пермов) — 695 закрыл
+- Изменение ServerSettings вне кампании (свойства сервера: name, password)
+- FileSender: доступ к файлам сервера
