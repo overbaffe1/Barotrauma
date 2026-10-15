@@ -24722,3 +24722,24 @@ ContentPackage грузятся. Если есть пак типа "Unstable rod
 5. Не забудь про MultiPlayerCampaign.ServerRead формат пакета (692/696b)
 
 ## CVE-КЛАСС: CWE-284 (improper access control) — arbitrary state transition.
+
+== ВОЛНА 705 — STEAM ACHIEVEMENT SPOOF: сервер раздаёт ачивки без проверки ==
+
+## МЕХАНИКА (GameServer.cs:4251-4273):
+GiveAchievement(Client client, Identifier id):
+  - НИКАКОЙ проверки (ни перм, ни достижения в Steam)
+  - client.GivenAchievements.Add(id) — локальный трекинг
+  - Отправляет ACHIEVEMENT пакет клиенту
+  - Клиентский GameClient.ReadAchievement вызывает Steamworks активацию
+
+## ЧТО ЭТО ЗНАЧИТ:
+- Злой СЕРВЕР может раздать ВСЕ Steam-ачивки Barotrauma любому игроку
+- Ачивки перманентны в Steam профиле (Steamworks.SetAchievement)
+- Также IncrementStat для статистики
+- Аналогично UnlockRecipe — сервер открывает рецепты кампании
+
+## НЕМОЖНО ИСПОЛЬЗОВАТЬ КАК КЛИЕНТ (это сервер→клиент only пакеты)
+## НО: если у тебя свой сервер (self-host) — это фича, не баг
+
+## CVE-КЛАСС: CWE-20 (improper input validation) — клиентское доверие к серверу
+## если бы Barotrauma имел клиент-сайд проверку достижений, это бы работало
