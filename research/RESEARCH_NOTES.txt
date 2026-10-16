@@ -24907,3 +24907,99 @@ Flood дерева => ВСЕ 46 классов активны => у персон
 Все СЕРВЕР→КЛИЕНТ каналы контролируются ХОСТОМ, не клиентом.
 Клиент СВОИМ пакетом НЕ МОЖЕТ туда попасть (SERVER→CLIENT only).
 Дальнейший коп = только для EVIL HOST scenario (не подходит юзеру).
+
+================================================================================
+WAVE 713 — ПЕРКОВАЯ БОМБА: ReadPerks unbounded allocation (NEW CVE-CLASS)
+================================================================================
+
+## ГЛАВНАЯ НАХОДКА
+Shared/Networking/ServerSettings.cs:1436-1463 — ReadPerks(IReadMessage msg):
+    uint coalitionCount = msg.ReadVariableUInt32();          // голый varint, до 4.29e9
+    Identifier[] newCoalitionPerks = new Identifier[coalitionCount];  // АЛЛОКАЦИЯ ДО ЧТЕНИЙ
+    for (...) { uint id = msg.ReadUInt32(); Prefabs.Find(...); }      // reads die at buffer end
+    // то же для separatistsCount — 2 аллокации на пакет
+Счётчик НЕ клампится. Универсальный INetSerializableStruct.ReadArray клампит
+через bitField.ReadInteger(0, ArrayMaxSize=65535) — ReadPerks его НЕ использует.
+
+## ПУТЬ (GameServer.cs:980-981)
+case ClientPacketHeader.SERVER_SETTINGS_PERKS (== 3) → ServerSettings.ReadPerks(inc, connectedClient)
+Перм-гейт HasPermissionToChangePerks (ServerSettings.cs(server):133-165):
+  - HasPermission(ManageSettings) → ok
+  - НЕ PvP: НИ У ОДНОГО другого клиента нет ManageSettings → ok  ← дедикатед без админов = ОТКРЫТО
+  - PvP: в СВОЕЙ команде нет держателей ManageSettings → ok
+Owner-коннект всегда имеет все пермы → на P2P-хосте с хозяином онлайн закрыто.
+
+## ПОЧЕМУ НЕ КИКАЕТ
+- Аллокация происходит ДО любых чтений. Чтения умирают на физическом конце
+  буфера (ReadOnlyMessage копирует точный размер пакета; MsgReader→NetBitWriter
+  без bounds-check → IndexOutOfRangeException).
+- IndexOutOfRange/OOM ≠ NetStructReadException → ветка "kick malformed data"
+  в LidgrenServerPeer.cs:285 / P2PServerPeer.cs:84 НЕ срабатывает.
+  Ловится только внешним catch-all в Update() (строка ошибки, сервер жив).
+- DoSProtection: зануление ~1GB > 100мс = strike; 6 strikes = кик (если включен)
+  → реконнект и повтор. EnableDoSProtection=false → безлимит.
+
+## ЭФФЕКТЫ
+1. CHURN: count=200,000,000 (5 байт varint!) → сервер аллоцирует ~0.8-1.6GB
+   (Identifier ~4-8B), зануляет (физическая запись RAM), потом exception.
+   Повтор в темпе кликов = GC-шторм → фриз сервера для всех.
+2. OOM-СПАМ: count≥2^28/2^31 граница → new Identifier[4.29e9] мгновенный
+   OutOfMemoryException — дешёвый спам ошибок, кика нет.
+3. ЛЕГИТ-ПЕЙЛОАД: валидный список UintIdentifier перков → сервер ПРИМЕНЯЕТ
+   SelectedCoalitionPerks/SelectedSeparatistsPerks и SaveSettings() пишет
+   В КОНФИГ НА ДИСК → ПЕРЕЖИВАЕТ РЕСТАРТ СЕРВЕРА. Смена перков высадки
+   без пермов (на безадминных серверах) — серверный геймплей-эффект.
+4. ВАЙП: count=0/0 — очистка обоих списков, тоже persists.
+
+## МОДУЛЬ
+research/mods/PerkBombModule.cs — 4 кнопки (CHURN / OOM x20 / SET ALL / WIPE).
+Пакет: byte 3 (SERVER_SETTINGS_PERKS), varuint32 n, [n×u32], varuint32 m, [m×u32].
+Отправка: GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable).
+
+## СИСТЕМНЫЙ СКАН alloc-from-count (negative results)
+Все остальные ServerEventRead/ServerRead хендлеры — чистые:
+- INetSerializableStruct.ReadArray → ReadInteger(0, ArrayMaxSize) — кламп
+- ConnectionPanel: byte connectionCount, loop ≤ Connections.Count
+- UpdateTalents (CharacterNetworking): ReadUInt16 + per-item read, без upfront alloc
+- VoipQueue.Read: byte len × BUFFER_COUNT (≤255B каждый) — кламп
+- ServerReadInput: memInput.Insert(i) i<60 + RemoveRange — кламп
+- ReadHiddenSubs (shared ServerSettings:1481): count до 4e9, но 2Б/итерацию →
+  быстрый exception; ВЫЗОВ ТОЛЬКО из ServerRead (админ-гейт) — скип
+
+## ПОПОЛНЕНИЕ ТАБЛИЦЫ ГЕЙТОВ (692)
+| Канал | Гейт | Статус |
+|-------|------|--------|
+| SERVER_SETTINGS (весь) | HasPermission(ManageSettings) на входе | ЗАКРЫТ |
+| SERVER_SETTINGS_PERKS | HasPermissionToChangePerks: фоллбэк "нет держателей ManageSettings онлайн" | ОТКРЫТ на безадминных + БАГ АЛЛОКАЦИИ |
+| TRANSFER_MONEY | Amount>0, sender==CharacterID (или AllowedToManageWallets), TryDeduct | ЗАКРЫТ |
+| REWARD_DISTRIBUTION | AllowedToManageWallets + NetworkSerialize clamp 0-100 | ЗАКРЫТ |
+| TAKEOVERBOT | ReplaceCostPercentage<=0 ИЛИ AllowedToManageCampaign(Money/Hires); existing-bot ветка → TryTakeOverBot требует Permadeath+PermanentlyDead | ЗАКРЫТ (бай-дизайн) |
+| UPDATE_CHARACTERINFO | SanitizeName+IsNameValid+rate limiter; цвета по whitelist; campaign data блокирует; скиллов в пакете НЕТ | ЗАКРЫТ |
+| CREW | ServerReadCrew — идёт через CrewManager, резерв/найм | закрыт (бай-дизайн) |
+| UPDATE_LOBBY | ReadClientNameChange: cooldown NameChangeCoolDown + IsNameValid | ЗАКРЫТ |
+| ENDROUND_SELF | флаги себе (InGame=false) | безвредно |
+| ERROR (HandleClientError) | errorStr из клиентских строк → ServerLog (лог-инъекция возможна, MaxSubNameLength clamp) | низкий |
+| REQUEST_STARTGAMEFINALIZE / PING / RESPONSE_* | тривиальные | безвредно |
+| FILE_REQUEST | имя+MD5 матч по SavedSubmarines/AllPackages/к campaigns save; traversal НЕТ | ЗАКРЫТ (DoS: ReadAllBytes блокирует main thread до 1с — 4 ретрая × 250мс) |
+| READY_TO_SPAWN | 2 bool себе | безвредно |
+
+## ДОПОЛНИТЕЛЬНЫЕ МЕЛКИЕ НАХОДКИ (без эксплойт-ценности, задокументировано)
+1. ConnectionPanel.ServerEventRead (server): wires[i] = null при
+   connectionCount < Connections.Count → NRE в "go through existing wire links"
+   (wires[i].Contains) ПОСЛЕ частичного применения дисконнектов
+   → half-applied state + exception в catch-all. Требует CanClientAccess
+   + CheckCharacterSuccess — гриф-класс, не привилегии.
+2. BanList.ServerAdminRead:345: incMsg.BitPosition += (int)removeCount * 4 * 8 —
+   unchecked int overflow при removeCount ≥ 0x20000000 → BitPosition уезжает
+   назад → ре-парсинг уже прочитанных байтов. АДМИН-ГЕЙТ (ServerRead) — скип.
+3. DoSProtection.clients: OffenseData удаляется ТОЛЬКО при кике; при обычном
+   дисконнекте Client+OffenseData остаются в словаре (slow leak, minor).
+4. Inventory.ServerEventRead: receivedItemIds[client] живёт до полного пакета;
+   при недосылке — остаётся (minor leak per inventory per client).
+5. Хендлеры Pump/Engine/Reactor/Holdable: клампы + CanClientAccess — чисто
+   (Pump/Engine шлют CreateServerEvent ВСЕМ даже без доступа — мини-амплификация).
+
+## ВЕРДИКТ
+ReadPerks = 713-я находка: CVE-класс "unbounded allocation from network count",
+клиент-сайд, без пермов на безадминных серверах, оба транспорта, 6-байтовый
+пакет против ~1-2GB серверной памяти. Плюс персистентная смена перков сервера.
