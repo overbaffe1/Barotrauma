@@ -25281,3 +25281,49 @@ DisconnectClient синхронно удаляет из connectedClients, сле
   убрана строка «Повторов» (бесполезна после первого пакета),
   статус честно говорит «всех увидят в чате как причину кика».
 - Шапка файла переписана: 5 эффектов одного пакета.
+
+================================================================================
+WAVE 721 — КИК ДРУГОГО БЕЗ ПЕРМОВ: вотчина = единственный путь (+модуль)
+================================================================================
+
+## ВОПРОС ЮЗЕРА: «а кикнуть другого?» — ПОЛНЫЙ РАЗБОР
+
+### ЕДИНСТВЕННЫЙ безпермовый путь: VoteType.Kick (== 4, internal enum)
+GameServer.UpdateVoteStatus (при каждом голосе):
+    minimumKickVotes = Math.Max(2.0, eligibleCount * KickVoteRequiredRatio)
+    eligible = клиенты с JoinTime > DisallowKickVoteTime (дефолты 120с/0.6)
+    цель: !OwnerConnection && !HasPermission(Kick|Ban|Unban) && KickVoteCount >= min
+    → BanClient(c, "ServerMessage.KickedByVoteAutoBan", AutoBanTime = 3600с)
+ИТОГ = НЕ просто кик, а АВТОБАН НА 1 ЧАС.
+Математика голосов: 2-3 игрока = 2 голоса, 4 = 3 (2.4), 6 = 4 (3.6), 10 = 6.
+
+### ГЕЙТЫ ГОЛОСУЮЩЕГО (Voting.ServerRead case Kick)
+- AllowVoteKick = true (ДЕФОЛТ!)
+- (Now - sender.JoinTime) > 120с
+- 1 голос на цель (HasKickVoteFrom), OwnerConnection иммунитет цели
+
+### ФАКТЫ
+- ГОЛОСА ЦЕЛИ ПЕРСИСТЯТ через её релогин: previousPlayer.KickVoters
+  восстанавливаются при реконнекте (GameServer:319-322) — анти-эвейд
+- цель с KickVoteCount>0 не может сменить ник (GameServer:3542)
+- САМОГОЛОСОВАНИЕ разрешено: проверки sender != kicked НЕТ —
+  цель может забанить себя сама на час
+- трансляция всем: "X banned. Reason: KickedByVoteAutoBan" — ФИКС-ЛОКАЛЬ,
+  инъекции текста в ЭТОМ канале нет (инъекция — отдельный ERROR-канал 718)
+- прочие кик-пути (DoS, спам-фильтр, malformed, ERROR) кикают ТОЛЬКО
+  отправителя; карма не инъектируется (587); EventManager-крашер (584)
+  валит ВЕСЬ сервер (нужен статус TargetClient скриптового события)
+
+### ПАКЕТ
+UPDATE_LOBBY(0) + SegmentTable + Vote-сегмент(ClientNetSegment.Vote=2):
+byte 4 (VoteType.Kick) + byte targetSessionId.
+VoteType/ClientNetSegment internal → литерал 4 + рефлексия сегмента.
+
+### МОДУЛЬ
+research/mods/VoteKickModule.cs — список игроков (имя + ОУНЕР/АДМИН бейджи),
+кнопка ГОЛОСОВАТЬ на каждого, самоголосование как прикол. Математика в шапке GUI.
+
+### ВЕРДИКТ
+Это ваниль-фича (кик-вотчина), не 0day — мод автоматизирует и документирует.
+Эксплойт-ценность: средняя (на серверах без AllowVoteKick=false мертво;
+2 голоса = час бана цели; админы иммунны).
