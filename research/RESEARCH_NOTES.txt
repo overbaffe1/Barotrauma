@@ -24743,3 +24743,25 @@ GiveAchievement(Client client, Identifier id):
 
 ## CVE-КЛАСС: CWE-20 (improper input validation) — клиентское доверие к серверу
 ## если бы Barotrauma имел клиент-сайд проверку достижений, это бы работало
+
+== ВОЛНА 706 — STEERING TELEPORT: рулевой input без IsValid на position ==
+
+## ServerEventRead (Steering сервер, 40-85):
+bool autoPilot, bool dockingBtn
+если autoPilot:
+  bool maintainPos → если true: Vector2 newPosToMaintain = (ReadSingle, ReadSingle)
+  НЕТ IsValid! НЕТ Clamp! posToMaintain = ЛЮБАЯ точка карты.
+
+## Steering.PosToMaintain — где используется:
+AIController автопилот двигает сабу К ТОЧКЕ через pathing. Если точка
+за пределами уровня или в стене — бот попробует туда плыть, иногда
+успешно через clipping (map edge bugs).
+
+## ИМБА-ВОЗМОЖНОСТЬ: autoPilot + maintainPos=(1000000, 1000000)
+= вся саба (с экипажем) отправляется за границы уровня. Выжившие
+должны использовать console или перезапуск. СИЛЬНЕЕ чем SetLocation.
+
+## ТРЕБУЕТ: CanClientAccess на рулевой (занять руль — селнуться,
+подойти, нажать). НЕ МОЖНО сделать удалённо. Нужно БЫТЬ на руле.
+=> ОДНАКО: если тебе дал перм ManageMap хост, ИЛИ фоллбэк 60с
+=> ты можешь сесть за руль легит и отправить сабу в поле.
