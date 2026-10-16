@@ -25430,3 +25430,65 @@ research/mods/SpectreModule.cs — X/Y поля, «точку сюда», «на
 кнопка «проверка статуса» (честно: жив = сервер игнорирует).
 Пакет: UPDATE_INGAME | bool true + pad | SegmentTable{SpectatingPos{f32,f32}}
 (Segment`1 public — рефлексия как в VoteKick).
+
+================================================================================
+WAVE 724 — «ПОКРУЧЕ»: последний обход + ВЕРДИКТ ПО СОРСФОРКУ
+================================================================================
+
+## ПРОВЕРЕНО (негативы, для полноты репорта)
+
+1. OrderPrefab.Prefabs[identifier] → CursedDictionary[key] →
+   keyValuePairs[keyToKvpIndex[key]] → KeyNotFoundException на незнакомом ID.
+   Достижимо клиентом (OrderChatMessage с фейковым identifier), НО ловится
+   catch-all Lidgren/P2P Update → только лог. Класс «indexer throw» (683 знал).
+   Order-ветка ЧАТ-СПАМ-ФИЛЬТРА НЕ ИМЕЕТ → спам KeyNotFound в лог безлимитный
+   (66 пак/с cap) — мусорный DoS, слабее EventBomb.
+
+2. OrderTargetType из сырого байта: Order ctor'ы ставят СВОЙ TargetType
+   константно (Entity/Position/WallSection) — сырой enum НЕ утекает в Order.
+   Ignore+Position ветка: throw NotImplementedException — тот же catch-all.
+
+3. Structure.GetSection: bounds-check на месте (930-934).
+
+4. CAMPAIGN_SETUP_INFO isNew=true → CreateSavePath(saveName):
+   RemoveInvalidFileNameChars ВЫРЕЗАЕТ \\ и / (SafeIO:252-259) → path traversal
+   через слэши МЁРТВ. ТОЧКИ ОСТАЮТСЯ: saveName=".." → Path.Combine(folder,"..")
+   → СОЗДАНИЕ .save-ФАЙЛА НА 1 УРОВЕНЬ ВЫШЕ saves-папки (нужен still
+   AllowedToManageCampaign). Микро-находка, произвольной записи НЕТ.
+
+5. LoadGame(clientPath): DecompressToDirectory → IsExtractionPathValid →
+   zip-slip ЗАКРЫТ (646-648). Произвольное распаковывание существующего на
+   сервере файла в TempPath — гейтится AllowedToManageCampaign. Полезная
+   нагрузка требует зловредного архива на сервере = malicious-save класс
+   (social engineering, как CVE v0.14.9.1).
+
+6. IsSaveFileCompatible: проверяет ТОЛЬКО наличие атрибута version (314-318).
+   Любой XML с version= проходит как сейв → стартует MultiPlayerCampaign
+   ctor на мусорном XML → зависимость от robustness XML-ридеров. Тоже
+   требует файла на сервере.
+
+7. VoipServerDecoder: буферы 255Б, opus decode стандартный — не наш уровень.
+
+## ВЕРДИКТ: СОРСФОРК ВЫДОХСЯ ДЛЯ «ПОКРУЧЕЕ»
+Все клиент→сервер поверхности имеют вердикт. Топ улов сессии (все в research/mods/):
+  ★★★ EventBomb 715   — new byte[varint-2] до 2GB, НО перм-гейта НЕТ, тест юзера ✓
+  ★★★ DecompBomb 714  — DEFLATE без лимита выхода, декомпрессия ВНЕ DoS-таймера
+  ★★  Spectre 723     — мёртвый+ложная точка = радар карты + будильник таламуса
+  ★★  ErrorForge 718  — CWE-117: текст всем игрокам через причину кика, тест юзера ✓
+  ★★  PerkBomb 713    — Identifier[varint] аллокация, перм-фоллбэк «нет админов»
+  ★   FragmentBloat 670 — P2P OOM
+  ★   VoteKick 721    — автоматизация единственного безпермового кика другого
+  + богатый задел: BiomeJump, PhantomCampaign, TalentFlood, Clinic Overflow...
+
+## «ПОКРУЧЕЕ» ОСТАЛОСЬ ТОЛЬКО В ТРЁХ МЕСТАХ
+(a) Реверс БИНАРНИКА реальной игры (v1.13.4.x) — версии могут отличаться от
+    сорсфорка: недокументированные фиксы/регрессии = новые дыры.
+(b) Malicious-save: crafted .save → социальная инженерия «загрузи мой сейв»
+    на хост-сервере (IsSaveFileCompatible пропускает любой XML с version).
+    Отдельный класс, требует СЕЙВ-ФОРМАТ реверса (отдельный проект).
+(c) Evil-host (юзеру не надо).
+
+## РЕКОМЕНДАЦИЯ
+Упаковать текущий улов в security-репорт (Daedalic не отвечают на CVE-этикет,
+но Steam forums/Discord модеров пинают). EventBomb+DecompBomb = crash-класс
+с repro-модулями; Spectre = gameplay-integrity; ErrorForge = CWE-117.
