@@ -25003,3 +25003,68 @@ research/mods/PerkBombModule.cs — 4 кнопки (CHURN / OOM x20 / SET ALL / 
 ReadPerks = 713-я находка: CVE-класс "unbounded allocation from network count",
 клиент-сайд, без пермов на безадминных серверах, оба транспорта, 6-байтовый
 пакет против ~1-2GB серверной памяти. Плюс персистентная смена перков сервера.
+
+================================================================================
+WAVE 714 — ДЕКОМПРЕССИОННАЯ БОМБА: unbounded DEFLATE decompression (NEW CVE-CLASS)
+================================================================================
+
+## ГЛАВНАЯ НАХОДКА
+ReadOnlyMessage ctor (Shared/Networking/Primitives/Message/Message.cs:654-680):
+    if (isCompressed) { ... DeflateStream(input).CopyTo(output); ... }
+РАЗМЕР ВЫХОДА НЕ ПРОВЕРЯЕТСЯ НИГДЕ. Выход = что зашито в deflate-поток.
+
+## ЦЕПОЧКА
+Клиент: PeerPacketHeaders.PacketHeader |= PacketHeader.IsCompressed (0x1,
+Libraries/BarotraumaLibs/BarotraumaCore/Networking/Primitives/NetworkEnums.cs:28)
++ PeerPacketMessage{Buffer = crafted deflate stream} (NetworkPeerStructs.cs:75).
+Сервер: LidgrenServerPeer.cs:282 / P2PServerPeer.cs:214 →
+    packet.GetReadMessage(packetHeader.IsCompressed(), conn) → ReadOnlyMessage(Buffer, true, ...)
+
+## МАТЕМАТИКА
+- Вход (wire): Buffer ≤ 65535 (PeerPacketMessage ArrayMaxSize=ushort.MaxValue —
+  кламп через ReadArray, ЕДИНСТВЕННЫЙ существующий кап, и тот на ВХОД, не выход)
+- DEFLATE max ratio ~1032:1 → 64KB crafted stream (DeflateStream.Fastest на 60MB
+  нулей даёт ~59KB) → 60MB распакованных данных
+- Пик на сервере ×2-3: MemoryStream internal doubling + ToArray() + Array.Copy в
+  Buffer → ~150-200MB ПИКА с одного 60KB пакета
+
+## ПОЧЕМУ НЕ КИКАЕТ (точно по коду)
+- Декомпрессия происходит ВНУТРИ HandleDataMessage ДО callbacks.OnMessageReceived
+  (= GameServer.ReadDataMessage, где using dosProtection.Start:826) →
+  ВРЕМЯ РАЗЖАТИЯ ВООБЩЕ НЕ ПОПАДАЕТ В DoS-ТАЙМЕР. Страйков за скорость НЕТ.
+- Парсинг после разжатия: 1 байт → <100мс → нет strikes.
+- Единственный лимит: MaxPacketAmount PacketLimitDefault=4000/мин (~66/с,
+  PacketLimitMin=1200), наш темп 15/с. PacketCount-кик не зависит от
+  EnableDoSProtection, но 15/с << 66/с.
+- Распакованный контент НЕ malformed: byte 0x07 = ClientPacketHeader.PING_RESPONSE,
+  сервер: responseLen(0) != lastPingData.Length(64) → return. Чисто, без кика.
+
+## ГДЕ РАБОТАЕТ
+- ОБА транспорта (Lidgren дедик + P2P). Lidgren конфиг без лимита на собранное
+  сообщение (LidgrenServerPeer ctor:26-34 — дефолты).
+- ИЗ ЛОББИ (не нужен персонаж/раунд) — ReadDataMessage работает всегда.
+
+## СОДЕРЖИМОЕ ПОСЛЕ РАЗЖАТИЯ (альтернативы)
+- 0x07 PING_RESPONSE + нули (наш выбор, чистый ранний return)
+- 0x0D ENDROUND_SELF (0 чтений, но выкидывает в лобби — плохо для спама)
+- мусорный байт 0x7F (switch default → ничего) — тоже чисто
+
+## МОДУЛЬ
+research/mods/DecompBombModule.cs — кнопки CHURN x20 (~4GB churn) / SIEGE 66
+(минутный рейт целиком, ~8GB) / Stop. Бомба строится ОДИН РАЗ: 60MB нулей →
+DeflateStream → ~59KB, кэшируется. Отправка через рефлексию SendMsgInternal
+(headers.IsCompressed + PeerPacketMessage) — механика FragmentBloatModule.
+CSHUB-апдейт: вызывать DecompBombEngine.Update() (как FragmentBloatEngine).
+
+## КЛИЕНТСКИЙ АВТОСЖИМАТЕЛЬ (для понимания, почему рефлексия)
+PrepareForSending (Message.cs:564): сжимает только если LengthBytes >
+CompressionThreshold=1000 (MsgConstants) и compressed < original. Мы шлём 59KB
+поток как данные — клиент НЕ пометит его сжатым (он уже сжат). Поэтому
+обход через SendMsgInternal с ручным флагом IsCompressed.
+
+## ОЦЕНКА УРОНА
+- Слабый хост (4GB, P2P-лендхост): SIEGE 66 = ~8GB аллокаций за 66с + пики
+  200MB → своп/OOM. Дедик 8-16GB: GC-фризы всех игроков на пиках.
+- Это CHURN (не утечка): после return память GC-съедобна. Урон = allocation
+  rate → GC pressure → фризы. На совместимости с Fragment Bloat (670):
+  там УТЕЧКА до дисконнекта, тут кратковременные пики — комбинировать.
