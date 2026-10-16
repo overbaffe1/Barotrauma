@@ -25327,3 +25327,47 @@ research/mods/VoteKickModule.cs — список игроков (имя + ОУН
 Это ваниль-фича (кик-вотчина), не 0day — мод автоматизирует и документирует.
 Эксплойт-ценность: средняя (на серверах без AllowVoteKick=false мертво;
 2 голоса = час бана цели; админы иммунны).
+
+================================================================================
+WAVE 722 — ВСЕЛЕНИЕ В МОНСТРА БЕЗ ПЕРМОВ: приговор + фантом-модуль
+================================================================================
+
+## ВОПРОС ЮЗЕРА: «можно ли вселиться в монстра без прав и enablecheats?»
+
+## ПРИГОВОР: НАСТОЯЩЕЕ (сервер-авторитетное) — НЕТ. Три несущих гейта:
+
+1. TAKEOVERBOT: botId ищется ТОЛЬКО в
+   campaign.CurrentLocation.GetHireableCharacters() (аутпост-найм, люди) ИЛИ
+   CrewManager.GetCharacterInfos(includeReserveBench) (ростер экипажа).
+   Монстры там ОТСУТСТВУЮТ → "Could not find a bot with the id".
+2. ★ IsBot (Character.cs:175):
+       public bool IsBot => !IsPlayer && AIController is HumanAIController { Enabled: true };
+   МОНСТРЫ И ПЕТЫ (EnemyAIController) = IsBot FALSE. Даже при утечке ID
+   TryTakeOverBot отверг бы их. Type-check красивый и глухой.
+3. Инпут-роутинг: ServerReadInput применяется ТОЛЬКО к c.Character —
+   сервер назначает его сам при спавне (SetClientCharacter из спавн-пайплайна
+   и TryTakeOverBot). Клиентского пакета «сменить моего персонажа» НЕ СУЩЕСТВУЕТ.
+4. Не-кампейн: TAKEOVERBOT ретёрнится (GameMode is not MultiPlayerCampaign).
+
+Дополнительные мёртвые пути: SetOwnerClient — только спавн-пайплайн;
+консольные takeover/spawnmonster — ConsoleCommands double-gate (696);
+серверный LuaCS — не наш инструмент на чужом сервере.
+
+## ЧТО РАБОТАЕТ: ФАНТОМ (клиент-сайд, из мода)
+Character.Controlled = монстр (AllowCharacterSwitch=true, гейт только
+ConversationAction.IsDialogOpen). Клиент симулирует ВСЕХ честно —
+управление монстром у тебя на экране. Сервер рулит настоящим AI →
+позиции прилетают → резина. Другие видят: AI-монстра + твоё АФК-тело.
+(У юзера уже был control_any.lua — это CSHUB-версия с меню.)
+
+## ⚠ АФК-КИК И АНТИДОТ (важно для фантома)
+GameServer:666: не-оунеры без All-пермов тикают KickAFKTimer;
+KickAFKTime (настройка) → автокик. АНТИДОТ: KickAFKTimer = 0 сбрасывается
+в ChatMessage.ServerRead (ЛЮБОЙ чат-пакет, даже пустышка) и ServerReadInput.
+=> раз в пару минут писать в чат = никогда не выкинет.
+
+## МОДУЛЬ
+research/mods/PossessModule.cs — «под курсором» (FocusedCharacter),
+«ближайший монстр» (CharacterList + EnemyAIController), список монстров
+в радиусе синка (до 8), «вернуться в тело». Клиент-сайд, сети НЕТ.
+Фикс: EnemyAIController в namespace Barotrauma (не Barotrauma.Characters).
