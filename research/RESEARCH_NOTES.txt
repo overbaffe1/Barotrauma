@@ -24842,3 +24842,40 @@ if dist² > 500² → Vector2.Normalize(targetSpeed) * 100
 
 ## УРОВЕНЬ СКИЛЛА — КЛАМП НЕТ, но серверная память. Не эксплойт для MP
 без прав. Показано для понимания механики.
+
+== ВОЛНА 711 — TALENT ABILITIES КАТАЛОГ: 46 Ability классов ==
+
+## Полный список (BarotraumaShared/Characters/Talents/Abilities/):
+ХАЛЯВА-КЛАССЫ (активируются при фладе дерева):
+- CharacterAbilityGiveMoney — даёт деньги по интервалу (passive income!)
+- CharacterAbilityGiveExperience — пассивный XP
+- CharacterAbilityGiveTalentPoints / ToAllies — очки талантов И СОЮЗНИКАМ
+- CharacterAbilityGiveReputation — репутация фракции
+- CharacterAbilityPutItem — СПАВН ПРЕДМЕТА в инвентарь по itemIdentifier!
+- CharacterAbilitySpawnItemsToContainer — спавн предметов в ОТКРЫТЫЙ контейнер
+- CharacterAbilityGiveAffliction — дать аффликцию (в т.ч. врагам)
+- CharacterAbilityGiveFlag / ModifyFlag — AbilityFlags (давление/иммунитет/т.д.)
+- CharacterAbilityGivePermanentStat / ResetPermanentStat — перманентные статы
+- CharacterAbilityGiveResistance / ModifyResistance — резисты к урону/аффликциям
+- CharacterAbilityGiveStat / ModifyStat / ModifyStatToFlooding/ToLevel/ToSkill
+- CharacterAbilityUpgradeSubmarine — АПГРЕЙД САБЫ талантом!
+- CharacterAbilityGiveItemStat / ToTags — бафы предметов
+- CharacterAbilityModifyAttackData — модификация урона оружия
+- CharacterAbilityModifyValue — универсальный modify
+- CharacterAbilityMarkAsLooted — mark looted
+- CharacterAbilitySetMetadataInt — метаданные кампании
+- CharacterAbilityRemoveRandomIngredient — удалить случайный ингредиент (гриф крафта)
+- CharacterAbilityReplaceAffliction — заменить аффликцию
+- CharacterAbilityReduceAffliction — снять аффликцию
+
+## ЗАМЕТКА О СИЛЕ:
+Flood дерева => ВСЕ 46 классов активны => у персонажа есть passive:
+- спавн предметов (itemIdentifier по таланту)
+- passive money income
+- passive reputation
+- permanent stats
+- апгрейд субы талантом
+- модификация аффликций
+ОДИН TalentOverspend = активирует ВСЕ 46 способность классов одновременно.
+Это И ДАЁТ ту имбу которую юзер видит как "все дерево талант" —
+не просто очки, а ПОЛНЫЙ Ability Engine.
