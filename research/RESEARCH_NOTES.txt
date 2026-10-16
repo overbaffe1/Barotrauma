@@ -25240,3 +25240,44 @@ WAVE 719 — ERRORFORGE v2: GUI с полем ввода (текст юзера 
 
 ## ФАЙЛ
 research/mods/ErrorForgeModule.cs — v2 готов к копипасте в CSHUB.
+
+================================================================================
+WAVE 720 — ERRORFORGE v3: КИК = ФИЧА (текст всем в чат как причина кика)
+================================================================================
+
+## ПОЛЕВОЙ ТЕСТ ЮЗЕРА (скрин): «Соединение разорвано. Вас исключили...
+   Причина: Received an update for an entity that isn't exist (event id 32466,
+   entity id 0). Loaded submarines don't match (client: хм, server: Typhon, Nythra...)»
+ИНЪЕКЦИЯ ПОДТВЕРЖДЕНА ЖИВОМУ — «хм» долетело и в errorStr, и на экран юзера.
+
+## ДОЧИТАННЫЙ ХВОСТ HandleClientError (GameServer.cs:1128-1152) — я недоглядел:
+    Log(...)                                  ← лог (работает)
+    WriteEventErrorData(c, errorStr)          ← ЕЩЁ и файл event_error_log_server_
+                                                {name}_{HH:mm}.log НА СЕРВЕРЕ
+    if (OwnerConnection) { MessageBox; EndGame(wasSaved:false); }  ← оунер = конец раунда БЕЗ сейва
+    else { KickClient(c, errorStr); }         ← ВСЕГДА кик с НАШИМ текстом в причине
+
+## ГЛАВНОЕ ОТКРЫТИЕ ХВОСТА
+DisconnectClient(...) → SendChatMessage(peerDisconnectPacket.ChatMessage(name),
+ChatMessageType.Server) → PeerDisconnectPacket.ChatMessage (NetworkPeerStructs:118):
+Kicked → "ServerMessage.KickedFromServer [client]" + "banreason" +
+TextManager.GetServerMessage(AdditionalInformation) ← НАШ errorStr.
+= ТЕКСТ БРОАДКАСТИТСЯ ВСЕМ ИГРОКАМ В ОБЩИЙ ЧАТ как причина кика.
+ЭКСПЛОЙТ-ЦЕННОСТЬ ПЕРЕОСМЫСЛЕНА: это не "инъекция в лог", это
+★ BROADCAST ARBITRARY TEXT TO ALL PLAYERS ★ (единственный такой канал без пермов).
+Цена: свой дисконнект (безусловный хвост; multiple-шоты невозможны —
+DisconnectClient синхронно удаляет из connectedClients, следующие пакеты
+получают connectedClient=null → NRE в catch-all).
+
+## БОНУС-ФАКТЫ
+- ERROR от ОУНЕРСКОГО соединения → EndGame(wasSaved:false) — раунд умирает
+  без сейва (недостижимо для нас на чужом сервере; юзер на своём host-from-game
+  = сам оунер → может убить свой раунд, тривиально).
+- event_error_log_server_*.log — имя файла содержит client.Name (санитизирован
+  RemoveInvalidFileNameChars) → произвольного пути нет.
+
+## ИЗМЕНЕНИЯ v3 (research/mods/ErrorForgeModule.cs)
+- GUI: предупреждение «Тебя кикнет — перезайди» прямо в боксе,
+  убрана строка «Повторов» (бесполезна после первого пакета),
+  статус честно говорит «всех увидят в чате как причину кика».
+- Шапка файла переписана: 5 эффектов одного пакета.

