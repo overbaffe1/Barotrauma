@@ -25164,3 +25164,59 @@ WAVE 716 — EVENTBOMB v2: почему «нажал и ничего» + фик�
 - FireBurst: entity = Character (труп ок) ?? первый Item из Item.ItemList;
   3 кандидата ID циклом по burst; сообщения кнопок с диагностикой.
 - Шапка модуля переписана: условия (раунд обязателен, живость НЕ нужна).
+
+================================================================================
+WAVE 717 — ЗАКРЫТИЕ ОСТАВШИХСЯ ПОВЕРХНОСТЕЙ (негативы + 1 мягкая находка)
+================================================================================
+
+## ПРОВЕРЕНО И ЗАКРЫТО (для репорта: negative results)
+
+1. CharacterInfo / RecreateHead (UPDATE_CHARACTERINFO):
+   - headPreset fallback GetRandomUnsynced → head ВСЕГДА не-null
+   - HeadInfo ctor НЕ клампит индексы (HairIndex 0-255 из пакета), НО
+     HairElement/BeardElement = ElementAtOrDefault → out-of-range = null →
+     LoadHeadAttachments сбрасывает в 0. Клиентский рендер через те же
+     свойства = null-safe. Скиновые цвета — validateColor whitelist.
+   VERDICT: закрыт. (Крашни-всех через битые головы НЕ работает.)
+
+2. CircuitBox.ServerRead (CIRCUITBOX пакет): ТОЛЬКО relay курсора
+   (NetCircuitBoxCursorInfo.Length==10, broadcast держателям того же item,
+   CharacterID = sender.CharacterID — спуф чужого курсора невозможен).
+   VERDICT: закрыт.
+
+3. REQUEST_BACKUP_INDICES → SaveUtil.GetIndexData(fullPath):
+   - GetFiles(path, ".{base}.backup*") — enumeration oracle (640 знал)
+   - ExtractGameSessionRootElementFromSaveFile: arbitrary read НЕ работает —
+     не-сейвы не парсятся (null → skip). Возвращаются ТОЛЬКО атрибуты
+     валидных баротраума-сейвов (savetime/location/leveltype).
+   VERDICT: 640 остаётся потолком.
+
+4. Voting.ServerRead остальные типы:
+   - Sub/Mode/SetVote: безвредные лобби-голоса
+   - EndRound: HasSpawned гейт
+   - Kick: AllowVoteKick + JoinTime + OwnerConnection иммунитет + 1 голос/цель
+   - StartRound: bool себе
+   - PurchaseSub/PurchaseAndSwitchSub/SwitchSub: старт вотчины БЕЗ перм-гейта
+     (CanPurchaseSub = CanAfford + саба в списке) — НО на ФИНИШЕ
+     TryPurchaseSubmarine → Campaign.TryPurchase(client, price) —
+     RE-CHECK денег есть, овердрафта нет.
+   - Traitor: радио-троллинг с именем жертвы, HandleSpamFilter режет
+   VERDICT: TransferVote (585) остаётся единственной жирной вотчиной.
+
+5. ChatMessage.ServerRead: type/chatMode ranged-клампы enum'ов, SanitizeText,
+   MaxLength кламп, спам-фильтр с киком (>3). Radio-гейт (584). Ордера — 568/584.
+   VERDICT: закрыт.
+
+## МЯГКАЯ НАХОДКА — CAMPAIGN BANK DRAIN VIA LEGIT VOTE
+Гейт покупки сабы = только вотчина. Любой клиент (без пермов) может
+запустить вотчину PurchaseAndSwitchSub на САМУЮ ДОРОГУЮ сабу из списка
+кампании (subName из OwnedList ∪ SavedSubmarines). 2/2 голосов = проходит,
+банк кампании → 0. ВИДНО ВСЕМ (не стелс), требует голосов = социальная
+атака/сообщник. На сервере друга: если админ АФК в лобби и 1 союзник —
+банк слит легально. Формат: UPDATE_LOBBY + Vote-сегмент + byte VoteType.
+Харизма ниже 585 (там деньги ПЕРЕКАТЫВАЮТСЯ тайно), тут -公開-vote.
+
+## STATUS БОЛЬШИХ ПОВЕРХНОСТЕЙ
+Все клиент→сервер хендлеры в репо теперь имеют статус. Незакрытых НЕ осталось.
+Мёртвые зоны = server→client only (712). Дальнейший коп = реверс БИНАРНИКА
+(версии могут отличаться от сорсфорка) или evil-host сектор (юзеру не надо).
