@@ -25068,3 +25068,65 @@ CompressionThreshold=1000 (MsgConstants) и compressed < original. Мы шлём
 - Это CHURN (не утечка): после return память GC-съедобна. Урон = allocation
   rate → GC pressure → фризы. На совместимости с Fragment Bloat (670):
   там УТЕЧКА до дисконнекта, тут кратковременные пики — комбинировать.
+
+================================================================================
+WAVE 715 — СОБЫТИЙНАЯ БОМБА: unbounded alloc в ENVELOPE энти-событий (NEW CVE-CLASS)
+================================================================================
+
+## ГЛАВНАЯ НАХОДКА — ЛУЧШЕ ПЕРКОВОЙ БОМБЫ (713): НЕТ ПЕРМ-ГЕЙТА ВООБЩЕ
+ServerEntityEventManager.cs:475 Read(IReadMessage msg, Client sender):
+    msg.ReadPadBits(); u16 firstEventID; byte eventCount;
+    per event: u16 entityID;
+        int msgLength = (int)msg.ReadVariableUInt32();     // СЫРОЙ varint
+        ... (sequence/entity checks)
+    processed: u16 characterStateID; byte[] temp = msg.ReadBytes(msgLength - 2);
+MsgReader.ReadBytes (Message.cs:427): byte[] retval = new byte[numberOfBytes];
+    ← АЛЛОКАЦИЯ ДО ВСЯКИХ ПРОВЕРОК. NetBitWriter.ReadBytes: byte-aligned →
+    Buffer.BlockCopy → ArgumentException (источник ~100B, копируем N) — ПОСЛЕ аллокации.
+msgLength 5 байт varint = до 2GB. ReadArray (INetSerializableStruct) клампит
+ReadInteger(0, ArrayMaxSize) — энти-конверт его НЕ использует.
+
+## ПУТЬ
+UPDATE_INGAME (header 1) → ClientReadIngame → SegmentTable → EntityState сегмент →
+entityEventManager.Read(inc, c). Работает ВСЕГДА (клиент в раунде, живой персонаж
+для entityID; RequireCharacter гейт — на ОБРАБОТКЕ, аллокация на ПАРСЕ до него).
+
+## ПОЧЕМУ НЕ КИКАЕТ И БЕЗ СТРАЙКОВ
+- ArgumentException/OOM ≠ NetStructReadException → kick-malformed ветка пиров молчит,
+  ловит catch-all LidgrenServerPeer.Update (строка в лог, клиент жив).
+- new byte[201MB] зануление ≈ 10-20мс < 100мс порога DoSProtection → 0 страйков.
+- Исключение кидается ДО sender.LastSentEntityEventID++ → счётчик не двигается →
+  ВЕСЬ burst с ОДНИМ event ID проходит (иначе только 1-я бомба сработает).
+- Пакет ~20 байт, темп 20/с << MaxPacketAmount 4000/мин.
+- firstEventID = GameMain.Client.LastSentEntityEventID+1 (public, сервер сам шлёт
+  своё значение в GameClient.cs:2360) → выравнивание гарантировано.
+
+## ЭКОНОМИКА
+CHURN x20: 20 пакетов × ~201MB = ~4GB занулённых LOH-аллокаций за секунду.
+SHOT x5: new byte[0x7FFFF000-2] ≈ 2GB требование за пакет (слабый хост = OOM).
+Compare 713 (PerkBomb): там был перм-гейт HasPermissionToChangePerks и гигабайты
+со страйками; тут 4GB/с без единого страйка на самом обычном игровом пути.
+
+## ФОРМАТ ПАКЕТА (ручной SegmentTableWriter, у игры internal ref struct)
+byte 1 (UPDATE_INGAME) | bool false + pad | int32 tablePointer placeholder |
+payload: pad | u16 firstEventID | byte count=1 | u16 entityID | varuint32 msgLength |
+u16 characterStateID=0 | table: u16 count=1 + Segment<ClientNetSegment>{EntityState, ptr}
+Segment<T> — PUBLIC record struct (Barotrauma.Networking.Segment`1) → ctor(T,int) +
+INetSerializableStruct.Write через рефлексию (сам пишет bitfield-префикс + ranged enum).
+
+## МОДУЛЬ
+research/mods/EventBombModule.cs — CHURN x20 (~4GB/s) / SHOT x5 (2GB) / Close.
+Без Harmony и без памп-цикла: burst синхронно в OnClick (пакеты крошечные).
+
+## БОНУС-БАГ
+Skip-путь: msg.BitPosition += msgLength * 8 — int overflow при msgLength ≥ 2^29 →
+BitPosition уезжает НАЗАД → ре-парсинг своих байтов следующей итерацией (replay-примитив).
+
+## КЛИЕНТ-САЙД (для сравнения)
+ClientEntityEventManager.Read имеет bounds-check (msg.BitPosition+16+8 > LengthBits
+→ error report) — серверная сторона его НЕ имеет. Классическая асимметрия trust boundary.
+
+## НОЛЛ-ДЕЙТИ: SegmentReadMsg.Check()
+SegmentTableReader оборачивает сегмент в SegmentReadMsg с Check() ПОСЛЕ каждого
+чтения — но порядок `Check(underlyingMsg.ReadBytes(N))` = сначала ЧТЕНИЕ (аллокация),
+потом проверка. Проверка не спасает от того, что она проверяет.

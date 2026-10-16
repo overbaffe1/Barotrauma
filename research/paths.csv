@@ -1105,7 +1105,7 @@ Barotrauma/BarotraumaShared/SharedSource/Networking/INetSerializableStruct.cs,87
 Barotrauma/BarotraumaShared/SharedSource/Networking/KarmaManager.cs,215,done,215
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetConfig.cs,110,done,110
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetEntityEvent/NetEntityEvent.cs,38,done,38
-Barotrauma/BarotraumaShared/SharedSource/Networking/NetEntityEvent/NetEntityEventManager.cs,107,done,107
+Barotrauma/BarotraumaShared/SharedSource/Networking/NetEntityEvent/NetEntityEventManager.cs,107,done,120
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetIdUtils.cs,104,done,104
 Barotrauma/BarotraumaShared/SharedSource/Networking/NetworkMember.cs,265,done,265
 Barotrauma/BarotraumaShared/SharedSource/Networking/OrderChatMessage.cs,228,done,240
