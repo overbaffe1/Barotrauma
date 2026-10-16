@@ -24807,3 +24807,38 @@ if dist² > 500² → Vector2.Normalize(targetSpeed) * 100
 Это ОПЕРАТИВНОЕ управление позицией сабы. Держи экипаж в курсе.
 Для транспорта на дальние дистанции — открой Level: end с эндгейм-переходом
 (Campaign transition).
+
+== ВОЛНА 709 — НАВЫКИ > 100: NetworkSerialize UpdateSkills EventData ==
+
+## СОБЫТИЕ UpdateSkills (CharacterNetworking.cs:496 + Client:414):
+Сервер шлёт клиенту: Identifier skillIdentifier + bool forceNotification + float skillLevel
+Клиент вызывает info.SetSkillLevel(skillIdentifier, skillLevel).
+
+## SetSkillLevel — НЕ КЛАМПИРУЕТ (проверено):
+  public void SetSkillLevel(Identifier id, float level, bool forceNotification) {
+      Job?.SetSkillLevel(id, level);  // просто присваивает
+  }
+То есть сервер может послать ЛЮБОЙ уровень навыка клиенту.
+
+## КТО шлёт это событие? Сервер вызывает CreateEntityEvent
+  (UpdateSkillsEventData) из:
+- CharacterInfo.cs:33 SetSkillLevel — после ApplySkillGain
+- DebugConsole: 2607/2615 — команды сервера
+- CharacterAbilityGiveExperience — через GiveExperience
+
+## ПРАКТИЧЕСКИЙ ВЕКТОР (консоль, но не для нас):
+- Консоль "setskill" может выставить Level > 100 (до 200 через Talent cap)
+- Skill.Level сеттер не клампит, HighestLevelDuringRound тоже не клампит
+
+## ЧТО ЭТО ДАЁТ (если есть сереверный мод/консоль):
+- Skill Level = 200 → навыки выше максиума — медицин, механика, рулевой
+- Если level = 100000 → все крафты автоматом успех, рулевое идеальное,
+  мед лечение полное, оружие снайперское
+- Но это требует сервера. Клиенту не получить (нет ChangeProperty на skill).
+
+## ДЛЯ КЛИЕНТА:
+- Через свой мод на своём клиенте МОЖНО занизить навыки врагам? НЕТ —
+  синк сервера перекроет. Это только локальный фантом.
+
+## УРОВЕНЬ СКИЛЛА — КЛАМП НЕТ, но серверная память. Не эксплойт для MP
+без прав. Показано для понимания механики.
