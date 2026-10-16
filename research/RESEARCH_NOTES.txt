@@ -24879,3 +24879,31 @@ Flood дерева => ВСЕ 46 классов активны => у персон
 ОДИН TalentOverspend = активирует ВСЕ 46 способность классов одновременно.
 Это И ДАЁТ ту имбу которую юзер видит как "все дерево талант" —
 не просто очки, а ПОЛНЫЙ Ability Engine.
+
+== ВОЛНА 712 — НЕИССЛЕДОВАННОЕ ОСТАЛОСЬ: финальный обзор незакрытых каналов ==
+
+## EventManager.ClientApplyNetworkMessage (сервер→клиент):
+- STATUSEFFECT: сервер прислал actionIndex + targets. Клиент LOcalXML apply.
+  Злой сервер может применить ЛЮБОЙ StatusEffect из XML префаба на ЛЮБОГО
+  entity на клиенте (включая spawnCharacters! StatusEffect.cs:1220).
+  CharacterSpawnInfo позволяет спавнить ПРОИЗВОЛЬНЫХ монстров через
+  XML модификацию. Клиентский эффект, но это может быть что угодно.
+- CONVERSATION: сервер может открыть диалоговое окно с любым текстом.
+  Fake admin messages в lobby.
+- CONVERSATION_SELECTED_OPTION: может FORCИТЬ выбор опции в диалоге жертве.
+- MISSION: сервер может ЗАПУСТИТЬ миссию с произвольным ID и location.
+- UNLOCKPATH: сервер может разблокировать маршрут (визуально).
+- EVENTLOG: фейк-лог сообщения.
+- EVENTOBJECTIVE: фейк-объективы (цели для UI).
+
+## NOT YET EXPLORED:
+- RespawnManager.ServerRead / ClientRead — кампейн-специфик
+- ChatMessage приватные сообщения (Private) — ReadString arbitrary
+- AchievementManager.OnRoundEnded — спавн ачивок при конце раунда
+- HandleSaveAndQuit — сохранение кампании под контролем
+- Level.ObjectManager.ServerEventWrite — объекты уровня
+
+## VERDICT:
+Все СЕРВЕР→КЛИЕНТ каналы контролируются ХОСТОМ, не клиентом.
+Клиент СВОИМ пакетом НЕ МОЖЕТ туда попасть (SERVER→CLIENT only).
+Дальнейший коп = только для EVIL HOST scenario (не подходит юзеру).
