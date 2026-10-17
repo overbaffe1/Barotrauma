@@ -8,12 +8,12 @@ Barotrauma/BarotraumaClient/ClientSource/Characters/AI/HumanAIController.cs,149,
 Barotrauma/BarotraumaClient/ClientSource/Characters/AI/Objectives/AIObjective.cs,36,done,36
 Barotrauma/BarotraumaClient/ClientSource/Characters/AI/Wreck/WreckAI.cs,62,done,62
 Barotrauma/BarotraumaClient/ClientSource/Characters/AICharacter.cs,11,done,11
-Barotrauma/BarotraumaClient/ClientSource/Characters/Animation/Ragdoll.cs,771,done,771
+Barotrauma/BarotraumaClient/ClientSource/Characters/Animation/Ragdoll.cs,771,done,818
 Barotrauma/BarotraumaClient/ClientSource/Characters/Attack.cs,55,done,55
 Barotrauma/BarotraumaClient/ClientSource/Characters/Character.cs,1474,done,1474
 Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterHUD.cs,967,done,967
 Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterInfo.cs,1023,done,1023
-Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterNetworking.cs,879,done,879
+Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterNetworking.cs,879,done,890
 Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterSound.cs,30,done,30
 Barotrauma/BarotraumaClient/ClientSource/Characters/HUDProgressBar.cs,114,done,114
 Barotrauma/BarotraumaClient/ClientSource/Characters/Health/AfflictionPsychosis.cs,201,done,201
@@ -285,7 +285,7 @@ Barotrauma/BarotraumaClient/ClientSource/Particles/Particle.cs,613,done,613
 Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleEmitter.cs,319,done,319
 Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs,276,done,276
 Barotrauma/BarotraumaClient/ClientSource/Particles/ParticlePrefab.cs,313,done,313
-Barotrauma/BarotraumaClient/ClientSource/Physics/PhysicsBody.cs,187,done,187
+Barotrauma/BarotraumaClient/ClientSource/Physics/PhysicsBody.cs,187,done,200
 Barotrauma/BarotraumaClient/ClientSource/PlayerInput.cs,560,done,560
 Barotrauma/BarotraumaClient/ClientSource/Program.cs,354,done,354
 Barotrauma/BarotraumaClient/ClientSource/Screens/BlurEffect.cs,93,done,93
@@ -422,7 +422,7 @@ Barotrauma/BarotraumaServer/ServerSource/Events/Missions/PirateMission.cs,32,don
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/SalvageMission.cs,84,done,98
 Barotrauma/BarotraumaServer/ServerSource/Events/Missions/ScanMission.cs,39,done,39
 Barotrauma/BarotraumaServer/ServerSource/GameMain.cs,436,done,436
-Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs,88,done,110
+Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs,88,done,125
 Barotrauma/BarotraumaServer/ServerSource/GameSession/CrewManager.cs,177,done,193
 Barotrauma/BarotraumaServer/ServerSource/GameSession/Data/Wallet.cs,54,done,54
 Barotrauma/BarotraumaServer/ServerSource/GameSession/GameModes/CampaignMode.cs,52,done,52

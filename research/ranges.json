@@ -178,7 +178,7 @@
   "Barotrauma/BarotraumaServer/ServerSource/GameSession/CargoManager.cs": [
     [
       1,
-      110
+      125
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Networking/FileTransfer/FileSender.cs": [
@@ -1072,7 +1072,7 @@
   "Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterNetworking.cs": [
     [
       1,
-      879
+      890
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Networking/NetEntityEvent/ClientEntityEventManager.cs": [
@@ -2035,6 +2035,10 @@
     [
       1,
       771
+    ],
+    [
+      884,
+      930
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Characters/CharacterHUD.cs": [
@@ -3162,7 +3166,7 @@
   "Barotrauma/BarotraumaClient/ClientSource/Physics/PhysicsBody.cs": [
     [
       1,
-      187
+      200
     ]
   ],
   "Barotrauma/BarotraumaClient/ClientSource/Sounds/SoundPlayer.cs": [

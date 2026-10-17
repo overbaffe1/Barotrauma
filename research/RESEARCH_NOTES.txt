@@ -25669,3 +25669,156 @@ WAVE 728 — ФИНАЛЬНЫЙ ДАЙДЖЕСТ СОБРАН (Part 2: волн�
   Lidgren disconnect-инъекция "}Separator[" невозможна (base64+TryParse),
   BarotraumaCore.dll прогнан strings'ом — 734 строки метаданных, нулевая поверхность
   (PacketHeader enums + NetworkMagicStrings{LidgrenDisconnectSeparator} + threading).
+
+================================================================================
+WAVE 729 — ПЕРЕОТКРЫТИЕ: сервер→клиент каналы (Character/Item/Submarine Position)
+================================================================================
+
+## ЧТО ПРОВЕРЕНО (это сервер→клиент = для evil-host, юзеру не надо, но для репорта)
+
+1. ClientReadPosition (Character, Item, Submarine) — позиции с сервера:
+   PhysicsBody.ClientRead: IsValid-чек ПОЛНЫЙ (NaN режется, ErrorEvent).
+   Ranged-клампы скоростей (±64, ±16 rad/s). Rotation 0-2π. ПУСТО.
+
+2. ReadStatus (клиент читает смерть/здоровье):
+   CauseOfDeath ranged, killer u16, severedLimbCount byte c bounds-check,
+   CharacterHealth.ClientRead: afflictionCount byte ≤255, limbIndex ranged,
+   периодики ≤256×Affliction — БЕЗ клампа на количество (255×256×2Б = 
+   ~130KB парс на пакет максимум — не аллокация-бомба). SetStun isNetworkMessage
+   гейт: клиент НЕ может станить сам себя чужим пакетом. Revive() сервер-доверие.
+   ПУСТО (для клиентского ревертинга).
+
+3. Ragdoll interpolation: MemState[0].Selected* → SelectCharacter —
+   сервер говорит КЛИЕНТУ кого он «выбрал». Чисто клиентский стейт.
+
+4. EntitySpawner.ServerEventWrite: WriteSpawnData полон серверных данных
+   (IdCard owner-поля, tags, quality) — это evil-host материал (452-я уже покрыла
+   spoofed item spawns через мод-хост).
+
+5. EntityPositionHeader (IsItem+PrefabUint+ID): клиент проверяет тип+префаб
+   матч перед применением — spoof-prefab защита на месте.
+
+## ПОЧЕМУ ЭТО НЕ КЛИЕНТСКИЕ CVE
+Все эти ридеры — чтение ТОГО, ЧТО СЕРВЕР ПРИСЛАЛ. Чтобы злоупотребить,
+нужно быть сервером (= evil host, юзеру не надо). Для CVE-репорта это
+«client trusts server» секция — Daedalic тоже интересна, но отдельно.
+
+## НО: 2 НАХОДКИ ДЛЯ EVIL-HOST СЕКТОРА (в дайджест как отсылка)
+- CharacterHealth.ClientRead: 255 аффликтов × SetStrength = клиентский
+  CPU/спам-грифф без капа на pereodicEffects (256×2Б×255).
+- Ragdoll.MemState → SelectCharacter: сервер телепатией выбирает ЗА клиента
+  его SelectedItem (клиентская UI-гос). Трик для evil-host-троллинга.
+
+## ВЕРДИКТ
+Сервер→клиент каналы для юзера мертвы (не он сервер). Клиент→сервер уже
+вылизан (727). Сетевые CVE больше не берутся из репо грепом — нужен fuzzing.
+
+================================================================================
+WAVE 729b — SERVER_COMMAND (kick/ban/unban) полный аудит + сamые глубокие каналы
+================================================================================
+
+## SERVER_COMMAND (983) → ClientReadServerCommand (1720) — КОМАНД ПО ПЕРМАМ:
+switch(command) — command = raw u16 кастомный в ClientPermissions.
+Гейт: `!sender.HasPermission(command)` — НО ManageRound/ManageCampaign ПРОПУСКАЮТСЯ
+(проверяются ниже). Kick/Ban/Unban/SelectSub/SelectMode/ConsoleCommands/ManagePermissions —
+требуют перм. ManagePermissions: targetClient.ReadPermissions → SetPermissions.
+Owner иммунен (kick/ban/unban/ManagePermissions — targetClient.Connection != OwnerConnection).
+ЗАКРЫТО (подтверждено ещё 692).
+
+## pvp-team-flow: ReadClientNameChange (UPDATE_LOBBY) меняет PreferredTeam БЕЗ перм-гейта
+(только cooldown 1с на имя). newTeam = сырой byte (каст в enum, 0=None/1/2/3...).
+RefreshPvpTeamAssignments вызывается при КАЖДОЙ смене — преф команды любой валид.
+ЭТО НЕ CVE (выбор команды должен быть свободным), но: byte → CharacterTeamType с
+значениями >2 не попадает в assignTeam (только Team1/Team2 матч) — safe.
+
+## SERVER→КЛИЕНТ каналы (для evil-host сектора, юзеру не надо — 729):
+1. EntityPosition (UPDATE_INGAME сегмент): сервер-авторитет, клиент проверяет IsValid
+   (PhysicsBody.ClientRead). NaN режется. ЧИСТО.
+2. Character ReadStatus: isDead/killer/severedLimbCount — bounds-check на jointIndex,
+   kill/revive вызываются с isNetworkMessage=true. ЧИСТО.
+3. CharacterHealth.ClientRead: byte counts (afflictionCount/limbAfflictionCount/
+   periodicAfflictionCount) — лимит byte=255 на каждом уровне. Parcинг ≤ 130KB/пакет
+   worst case. Без SetStun-гейта, но isNetworkMessage=true при ClientRead. ЧИСТО.
+4. Ragdoll.MemState[0].Selected* — сервер ДИКТУЕТ клиенту его SelectedCharacter/Item
+   (SelectCharacter вызывается на клиенте). Evil-host может дёргать UI выбора
+   клиентом. Для репорта (evil-host section).
+5. EntitySpawner.ServerEventWrite (spawn data): кастомные IdCard owner-поля, tags,
+   quality — spoof-item данные. Evil-host материал.
+6. Item.ClientReadPosition: body null-check, projectile-stuck skip, IsValid через
+   PhysicsBody.ClientRead. ЧИСТО.
+
+## P2P Owner-side (host-from-game, только для зловредного ВЛАДЕЛЬЦА):
+7. P2POwnerDoSProtection: пакет-каунт на owner-стороне, kickCount>3 = shouldBan=true
+   → сервер BanPendingClient(null duration). Оwner может ДОБРОВОЛЬНО бранить
+   любого P2P-игрока CraftedPackets — это фича, но следует помнить.
+8. DoSProtectionPacket от owner → сервер бранит/кикает endpoint БЕЗ валидации что
+   тот реально спамил (доверие owner-процессу). Owner-only.
+
+## ПОСЛЕДНИЙ ГОРИЗОНТ: fuzzing (не греп), т.к. каждый ServerRead имеет:
+- если CanClientAccess до парсинга → обойти нельзя
+- если клампы на чтении → OOB нельзя
+- если BufferedEvent try → лог-спам максимум
+
+================================================================================
+WAVE 729c — ПЕРЕОТКРЫТИЕ: Map/Biome jump полная цепочка (проверка 703-704)
+================================================================================
+
+## Полный путь BiomeJump верифицирован:
+SERVER_COMMAND(ManageMap фоллбэк) → MultiPlayerCampaign.ServerRead :946
+→ гейт AllowedToManageCampaign(sender, ManageMap) → Map.SelectLocation(selIdx)
+→ SelectedConnection = Connections.Find(содержит CurrentLocation И SelectedLocation)
+→ **Locked-коннект: только ThrowError (не блок!)** — выбор сохраняется даже
+   при locked-коннекте.
+→ OnLocationSelected → IncrementLastUpdateIdForFlag (NetFlags.MapAndMissions)
+→ при следующем LoadNewLevel: NextLevel = SelectedConnection.LevelData.
+
+## НОВОЕ (мелочь, добавка к 703):
+1. **Locked-connection bypass**: выбор ЗАБЛОКИРОВАННОГО коннекта логирует
+   ошибку, НО НЕ ОТМЕНЯЕТ выбор (SelectedLocation уже установлен). Радиация
+   / эндгейм-биом доступны даже если коннект locked. Это подтверждение 703,
+   но с уточнением: locked — не барьер.
+2. selectedMissionCount=byte → List<int> ≤255 миссий, CheckTooManyMissions
+   clamp`ит. selectedMissionIndices byte (0-255) — сервер не валидирует
+   против Locations[i].AvailableMissions до SelectMission — надо смотреть
+   SelectMission (не успел, minor).
+3. currentLocIndex (SetLocation) — за AllowDebugTeleport гейтом (подтверждено).
+4. Собственно прыжок требует ОДНОГО пакета при ManageMap-фоллбэке
+   (мёртвый админ / соло / нет пермщиков). Всё как в 703-704.
+
+## ВЕРДИКТ
+BiomeJump работает как описано + Locked-connection не спасает. Радиационные
+и endgame биомы достижимы. Модуль BiomeJumpModule актуален.
+
+================================================================================
+WAVE 729d — MISSION-SELECT при BiomeJump (дополнение 729c)
+================================================================================
+Map.SelectMission(missionIndices):
+1. SetSelectedMissionIndices: bounds-check на каждый индекс + break → безопасно.
+2. Миссии с Locations[1] != SelectedLocation принудительно снимаются → нельзя
+   выбрать миссию не туда.
+3. CheckTooManyMissions: TotalMaxMissionCount clamp по соединениям.
+ВЕРДИКТ: мissions-часть чистая, только BiomeJump (selectedLocIndex) без гейта.
+
+================================================================================
+WAVE 729 финал — сводка переоткрытия
+================================================================================
+1. SERVER_COMMAND полный switch: Kick/Ban/Unban/SelectSub/SelectMode/Console/
+   ManagePermissions — все за sender.HasPermission(command) (подтверждено 692).
+2. ManagePermissions: target != sender && target != Owner — ЧИСТО (795-я).
+3. BiomeJump: LOCKED-коннект НЕ блокирует выбор SelectedLocation —
+   подтверждение 703, радиация/эндгейм достижимы. Миссии: bounds+max-count
+   клампы на месте. RefreshPvpTeam: смена PreferredTeam без перма (это фича).
+4. RespawnManager/CharacterHealth/PhysicsBody/Item/Submarine позиционные ридеры:
+   все сервер→клиент, IsValid/ranged на месте. evil-host только.
+5. P2P owner-side: DoSProtectionPacket доверяется owner-процессу (баном
+   endpoint). Evil-host only.
+6. CargoManager: SellItems/BuyBack/Purchase — логика соответствует 683-685,
+   новых дыр нет. UpgradeManager: HasPermissionToManageUpgrades = фоллбэк
+   AllowedToManageCampaign(ManageCampaign) — соло/мёртвый админ = апгрейды
+   бесплатно... нет, TryPurchaseUpgrade берёт деньги ПЕРЕД применением. ЧИСТО.
+7. Wallet.ClampBalance 0..MaxMoney — перелив через overflow невозможен.
+8. RateLimiter: 3 экземпляра (console 50/5s, clinic 20/5s, charInfo 5/10s с киком
+   на doubled). IsExempt = перм SpamImmunity/owner. ЧИСТО.
+9. XXE: DtdProcessing.Prohibit + XmlResolver null. МЁРТВ.
+10. Lidgren disconnect: "}Separator[" парсится Enum.TryParse + base64 — спуф
+    отключения через crafted disconnect string НЕВОЗМОЖЕН. МЁРТВ.
