@@ -87,3 +87,167 @@ Concentus `OpusDecoder.Decode`: `ret<0 → throw` (catch пере-кидывае
 7. **Фреймворк-клампы существуют** (`[NetworkSerialize(MinValueInt..)]`, NetIdUtils.Clamp) — применены точечно; забыли на NetAffliction.Price и ReadPropertyChange.
 
 *Сформировано волной 462. Полные разборы: research/RESEARCH_NOTES.txt (волны 2-462), формат пакета каждого вектора — в соответствующем блоке.*
+
+---
+---
+
+# PART 2 — ВОЛНЫ 463-727 (сессия продолжения)
+### Мод-хост CSHUB (39 модулей), верификация бинарника 1.13.4.0, живые тесты
+
+---
+
+## ★★★★★ КРИТ — crash/OOM-класс (6-байтовые пакеты против гигабайт)
+
+### E1. EventBomb [715-716] — **МОДУЛЬ: EventBombModule.cs, ПОДТВЕРЖДЁН ЖИВЫМ ТЕСТОМ**
+Конверт энти-событий: `msgLength = ReadVariableUInt32()` (сырой varint) →
+`msg.ReadBytes(msgLength - 2)` → `new byte[N]` **АЛЛОКАЦИЯ ДО ПРОВЕРОК**
+(ServerEntityEventManager.Read:475, MsgReader.ReadBytes:427). BlockCopy кидает
+ArgumentException ПОСЛЕ аллокации. **Перм-гейта НЕТ** (обычный путь каждого клика).
+**0 киков** (≠NetStructReadException), **0 страйков** (memset 200MB ≈ 15мс < 100мс).
+Exception ДО `LastSentEntityEventID++` → счётчик замирает → burst с одним ID.
+**Формат**: UPDATE_INGAME(1) | bool true+pad | int32 ptr-ph | [pad | u16 firstEventID
+(mirror+1..+3) | byte 1 | u16 entityID (труп/любой Item) | varuint32 len | u16 0] |
+table{u16 1 + Segment<ClientNetSegment>{EntityState,ptr}} (Segment`1 public → рефлексия).
+CHURN x20 = 4GB/с. Лобби дропает пакет (GameStarted-гейт!). Бонус: skip-путь
+`BitPosition += msgLength*8` — int overflow при ≥2^29 → rewind (replay).
+
+### E2. DecompBomb [714] — **МОДУЛЬ: DecompBombModule.cs**
+`ReadOnlyMessage` ctor: `DeflateStream.CopyTo` **БЕЗ лимита выхода** (Message.cs:654).
+Заголовок `PacketHeader.IsCompressed` ставим руками через рефлексию SendMsgInternal
+(автосжиматель клиента порог 1000B не сработает). 60MB нулей → 59KB wire → пик ×2-3.
+★★★ **Разжатие идёт ДО `dosProtection.Start` → время декомпрессии НЕ ТАЙМЕРИТСЯ:
+SIEGE 66/с (весь минутный рейт) НЕ КИКАЕТ за замедление — пулемёт ~4GB/с.**
+Контент после разжатия: 0x07 PING_RESPONSE (len 0≠64 → чистый return). Оба транспорта, из лобби.
+
+### E3. PerkBomb [713] — **МОДУЛЬ: PerkBombModule.cs**
+`ServerSettings.ReadPerks`: `new Identifier[ReadVariableUInt32()]` без клампа
+(ReadArray-кламп этот путь обходит). Гейт `HasPermissionToChangePerks`:
+открыт, если **ни у кого онлайн нет ManageSettings** (дедик без админов; PvP — своя команда).
+Identifier ~4-8B → 200M count = 0.8-1.6GB зануления с 6-байтового пакета.
+**ЛЕГИТ-пейлоад**: валидный список перков → применится + SaveSettings() = **пишет в конфиг на диск**.
+KIК за страйки после ~6 → реконнект.
+
+### E4. FragmentBloat [670] — **МОДУЛЬ: FragmentBloatModule.cs** (P2P-only)
+MessageDefragmenter: `partialMessages[id] = new MessageFragment[FragmentCount]`
+(FragmentCount ushort ≤65535 ≈ 1MB), чистка только при полном сборе, таймаутов нет.
+Только против host-from-game (Lidgren-фрагментация библиотечная).
+
+---
+
+## ★★★★ ВЫСОКИЙ — gameplay-целостность без пермов
+
+### E5. CircuitAmplifier [726] — **МОДУЛЬ: CircuitAmplifierModule.cs (ИЗОБРЕТЁН)**
+CircuitBox RenameConnections (опкод 15, энти-событие ComponentState):
+сервер бродкастит твой NetDictionary **всем игрокам**. 65535 пар ≈ 256KB → ×N.
+★ DoSProtection считает ПАКЕТЫ, не байты: 66/мин × 256KB = 17MB/s вход при легальном рейте.
+Каждый клиент жжёт ToDictionary(65535). Гейт: доступ к схембоксу (не Locked).
+Дубликаты ключей = ArgumentException ДО бродкаста (защита сервера убила N-вариант).
+Попутно: Fabricator indexer-throw, Select* O(n²) 65535 ID, MoveComponent NaN.
+
+### E6. Spectre [723] — **МОДУЛЬ: SpectreModule.cs**
+Геттер `SpectatePos` отдаёт значение серверу **только мёртвым/бестелесным**
+(Client.cs:115). Мёртвый шлёт ЛОЖНУЮ точку (2 float, 0 валидации) →
+1) радар: персонажи в 1000u от точки стримятся клиенту каждый тик (GetPositionUpdateInterval);
+2) hull-синк чужих отсеков; 3) **WreckAI-будильник**: isSomeoneNearby проверяет SpectatePos
+всех клиентов → врек активен (турели+спавн клеток) пока камера «никого не видит».
+Сервер не верифицирует, что камера реально в точке (CWE-602-класс).
+
+### E7. ErrorForge [718-720] — **МОДУЛЬ: ErrorForgeModule.cs, ПОДТВЕРЖДЁН ЖИВЫМ ТЕСТОМ**
+ERROR(15) → HandleClientError → MISSING_ENTITY: u16 evId, u16 entId, byte ≤5, 5×string≤16
+(сырые строки в errorStr БЕЗ санитизации, CWE-117). Один пакет = текст **ВСЕМ ИГРОКАМ
+В ЧАТ** (KickClient → DisconnectClient → SendChatMessage с reason) + консоль сервера
++ файл лога + окна админов (ServerLog perm) + event_error_log_server_*.log.
+Кик отправителя безусловен (дизайн) = цена трансляции. Owner-ветка: EndGame(false)!
+≤16 симв = чисто; >16 в строке = честный кик malformed. GameStarted обязателен.
+
+### E8. BiomeJump [703-704] — **МОДУЛЬ: BiomeJumpModule.cs**
+`Map.SelectLocation(selectedLocIndex)` — БЕЗ AllowDebugTeleport/соседности/репутации
+(только bounds). Прыжок в эндгейм-биом/радиацию/враждебный аутпост одним пакетом.
+`SetLocation` (curIdx) — гейтнут, не трогаем.
+
+### E9. PhantomCampaign [696b-699] — **МОДУЛЬ: PhantomCampaignModule.cs**
+CAMPAIGN_SETUP_INFO isNew=true через фоллбэк ManageRound → `StartNewCampaign`
+**перезаписывает GameSession**, множители raw float персистятся в новый сейв
+(CampaignSettings: клампы только UI). Формат и поля — в notes 696b/699.
+
+### E10. TalentFlood / TalentOverspend [579-580, 600-603] — **МОДУЛИ: TalentFloodModule.cs, TalentOverspendModule.cs**
+UpdateTalents: CanManageTalents = owner-only-check, очки НЕ проверяются → все таланты
+бесплатно (порядок prerequisites). Клиника: NetAffliction.Price клиентский (int overflow →
+лечение за отрицательную цену), HealAllPending. Respec-цикл FLOOD→REFUND→FLOOD.
+46 CharacterAbility классов = полный Ability Engine (GiveMoney/PutItem/SpawnItems...).
+
+### E11. SellByID [683-685] — **МОДУЛЬ: SellByIdModule.cs (3 способа)**
+SellItems: оплата при `FindEntityByID=null` (skip удаления, Give выполняется) =
+фантом-принтер; itemId чужого предмета = кража; лимит store.Balance; partial purchase.
+
+---
+
+## ★★★ СРЕДНИЙ
+
+12. **[721] VoteKick** — **МОДУЛЬ: VoteKickModule.cs**: единственный безпермовый кик ДРУГОГО:
+min(2, eligible×0.6) голосов = **автобан 1ч**; голоса персистят через релогин цели;
+self-vote разрешён (проверки нет); оунер/Kick/Ban-пермы иммунны; голосующему 120с+ на сервере.
+13. **[722] Possess** — **МОДУЛЬ: PossessModule.cs**: настоящее вселение в монстра НЕВОЗМОЖНО
+(IsBot = HumanAIController only, ID монстров вне crew-лукапа, инпут locked к c.Character);
+фантом (Character.Controlled) работает; **антидот АФК-кика: любой чат-пакет сбрасывает KickAFKTimer**.
+14. **[727] Reactor framing**: blameOnBroken не чистится — последний «виновный» платит
+-0.5/с и -30 при meltdown; KickBanThreshold=1 → автокик→бан; карма<20 = принудительный Herpes 100.
+15. **[584/646] ConversationAction**: SelectedOption = сырой байт, Options[255] throw КАЖДЫЙ ТИК
+вне try → **смерть процесса дедика** (не catch-all!). Гейт: быть TargetClient диалога.
+16. **[640] REQUEST_BACKUP_INDICES**: клиентский path → GetFiles + N×декомпрессий синхронно;
+на Windows UNC → **NTLM-hash capture**; enumeration oracle. XXE мёртв (DtdProcessing.Prohibit,
+XmlResolver null — проверено 728); zip-slip мёртв; CreateSavePath: слэши режутся, точки остаются (1 dir up).
+17. **[637] Radio Piracy**: wifi LinkToChat → SendDirectChatMessage, имя источника = имя предмета,
+без спам-фильтра (1с cooldown).
+18. **[686/688] PropertyChanger** — **МОДУЛЬ: PropertyChangerPlus.cs**: полный каталог InGameEditable
+(свет-альфа=невидимый свет, MotionSensor 1000, Delay NaN, Memory, RegEx, Terminal, Wifi, NameTag 32);
+plain [Editable] сервер отвергает (OfType<InGameEditable> не матчит наследование — 727 подтвердил
+для ButtonTerminal.Signals string[]: **new string[ReadInt32()] жив, но недостижим**).
+19. **[688] Admin Dead Menu** — **МОДУЛЬ: AdminDeadMenuModule.cs**: статус-панель фоллбэка
++ SellByID launcher + флаг-пакеты кампании.
+20. **[691] PlayerInventoryViewer** — **МОДУЛЬ: PlayerInventoryViewerModule.cs** (рентген экипажа).
+21. **[677-680] SelfSpawn** — **МОДУЛЬ: SelfSpawnModule.cs**: второй клиент; один акк = фантом
+(Steam auth-сессия); -multiclienttestmode.
+22. **[451/449] бюджет EventBomb-предков**: VOIP TOC-дроп батча, Order indexer, BackupIndices oracle —
+см. Part 1 (11-13), действуют.
+23. **[709] Skill>100**: UpdateSkillsEventData float без клампа — только сервер-сайд, клиенту недостижимо.
+
+---
+
+## ✅ ДОП. ПРОВЕРЕНО ЧИСТЫМ (463-727, негативы для репорта)
+XXE (Prohibit+null resolver — 728), zip-slip (IsExtractionPathValid), Lidgren disconnect
+base64+enum-parse (инъекция "}Separator[" невозможна — 728), BarotraumaCore.dll (734 строки
+метаданных = PacketHeader enums + NetworkMagicStrings + threading — нулевая поверхность),
+TransferMoney/REWARD_DISTRIBUTION (кламп 0-100 на проводе), UPDATE_CHARACTERINFO (whitelist
+цветов, лимиты), TAKEOVERBOT (Permadeath+PermanentlyDead+crew-scope), FILE_REQUEST (имя+MD5),
+READ порогов чата/логов, ServerReadInput (memInput≤60), VoIP (len≤255×BUFFER_COUNT),
+Auth-handshake (соль/гомоглифы/баны), BanList (админ-гейт, но int-overflow BitPosition
+задокументирован), ConnectionPanel NRE (connectionCount<Count → half-apply),
+DoSProtection.clients leak при дисконнекте, Inventory receivedItemIds leak.
+
+## 🧬 КОРНЕВЫЕ ПАТТЕРНЫ (дополнение к Part 1)
+8. **«Аллокация до валидации»** (713/714/715): ReadArray клампит — ручные ридеры нет.
+   Универсальный fix-класс для Daedalic: clamp ВСЕХ счётчиков ≤65535 + лимит inflate-выхода.
+9. **«Декомпрессия/парсинг вне DoS-таймера»** (714): таймер стартует после чтения заголовков.
+10. **«Сервер ретранслирует клиентский контент без квоты»** (726): broadcast-примитивы
+    нуждаются в байтовой квоте на отправителя.
+11. **«Геттеры как ACL»** (723): SpectatePos-щит — правильная идея, но данные все равно
+    принимаются и хранятся; доступ мёртвым = дизайн-дыра радара.
+12. **«Exception вне buffered-try = смерть процесса»** (584/646): единственный найденный
+    путь к SIGKILL дедика — персистентный индекс в событийном объекте.
+
+## 📦 КАТАЛОГ МОДУЛЕЙ (research/mods/, 39 файлов, цель CSHUB)
+Готовые к копипасте: EventBomb, DecompBomb, PerkBomb, ErrorForge, Spectre, CircuitAmplifier,
+FragmentBloat, VoteKick, Possess, BiomeJump, PhantomCampaign, SellById, TalentFlood,
+TalentOverspend(×2), Respec, PaidMedicalClinic, FreeHeal, PropertyChangerPlus,
+PlayerInventoryViewer, AdminDeadMenu, SelfSpawn, ServerCrashMenu, OrderSpammer v8,
+MoneyTransfer, NegTransfer, CampaignHijack, LagBubble, ItemSwap, PermEscalationTest(закрыт)...
+
+## 🔬 ВЕРИФИКАЦИЯ БИНАРНИКА [725]
+Декомпил юзера (github.com/overbaffe1/BarotraumaMod, SERVER/DedicatedServer):
+**1.13.4.0+0d380afc** — ВСЕ 6 топ-находок 1:1 (токены: ReadPerks 0x060035FB,
+ServerEntityEventManager.Read 0x06003475, ReadOnlyMessage 0x0600371D, Client.SpectatePos:415,
+HandleClientError:1147→KickClient:1325). 27/27 ServerRead-классов = сорсфорку.
+Клиентский dll юзера = LuaCS-модифицированный (не ваниль). BarotraumaCore.dll = enums+threading.
+
+*Part 2 сформирован волной 728. Полные разборы: research/RESEARCH_NOTES.txt (до 25000+ строк).*
