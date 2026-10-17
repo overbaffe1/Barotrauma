@@ -445,7 +445,7 @@ Barotrauma/BarotraumaServer/ServerSource/Items/Components/LightComponent.cs,45,d
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Controller.cs,13,done,13
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Deconstructor.cs,26,done,26
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Engine.cs,34,done,34
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Fabricator.cs,78,done,78
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Fabricator.cs,78,done,124
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Pump.cs,66,done,66
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Reactor.cs,59,done,59
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Steering.cs,135,done,135
@@ -1214,7 +1214,7 @@ Barotrauma/BarotraumaShared/SharedSource/Utils/ListDictionary.cs,55,done,55
 Barotrauma/BarotraumaShared/SharedSource/Utils/MTRandom.cs,149,done,149
 Barotrauma/BarotraumaShared/SharedSource/Utils/Md5Hash.cs,174,done,174
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs,17,done,17
-Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs,42,done,42
+Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs,42,done,45
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetLimitedString.cs,22,done,30
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs,6,done,6
 Barotrauma/BarotraumaShared/SharedSource/Utils/Rand.cs,138,done,138

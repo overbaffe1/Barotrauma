@@ -25549,3 +25549,54 @@ AssemblyInformationalVersion: 1.13.4.0+0d380afcd1feeb842c0c86290d46bcaf198cd5e4
 2. Дифф серверного dll с сорсфорком метод-в-метод (dnSpy vs git) на предмет
    hotfix'ов, не попавших в гитхаб-форк — точечный анализ по токенам
 3. Malicious-save: реверс SaveUtil сериализации в бинарнике + crafting
+
+================================================================================
+WAVE 726 — ПОЛНЫЙ АУДИТ CIRCUITBOX + ИЗОБРЕТЁННЫЙ CVE: АМПЛИФИКАЦИЯ
+================================================================================
+
+## КОНТЕКСТ
+По требованию «изобретай новые» — полный проход по CircuitBox (схембокс,
+1.13 фича) через энти-события (CIRCUITBOX-пакет только для курсора).
+
+## ДИСПЕТЧЕРИЗАЦИЯ (уточнение 717!)
+Item.EventType.ComponentState(0) + componentIndex → CircuitBox.ServerEventRead
+→ switch по CircuitBoxOpcode (15 опкодов). Гейты: CanClientAccess (дистанция)
+и CanAccessAndUnlocked (не Locked) на мутирующих опкодах.
+
+## НАХОДКИ
+1. ★★★ ИЗОБРЕТЁН: BANDWIDTH AMPLIFICATION через RenameConnections (опкод 15)
+   CircuitBoxRenameConnectionLabelsEvent{Type, NetDictionary<string,string>}
+   NetDictionary = ImmutableArray<NetPair> — кламп ArrayMaxSize=65535 пар.
+   Сервер: ToDictionary → RenameConnectionLabelsInternal → CreateServerEvent(data)
+   = БРОДКАСТ ТЕХ ЖЕ 65535 ПАР ВСЕМ ИГРОКАМ.
+   1 пакет ≈ 256KB → ×N игроков (16p = 4MB исходящего).
+   ★ РЕЙТ-КАП НЕ ЛИМИТИРУЕТ ОБЪЁМ: DoSProtection считает ПАКЕТЫ (66/мин...),
+   66 × 256KB = 17MB/s входного трафика на капе — серверный upstream плавится,
+   плюс каждый клиент жжёт CPU на ToDictionary 65535 строк.
+   УНИКАЛЬНЫЕ ключи ОБЯЗАТЕЛЬНЫ: дубликаты = ArgumentException ДО бродкаста.
+   Гейт: доступ к схембоксу (рядом/держишь, не Locked).
+2. RenameConnections с дубликатами ключей: ToDictionary throw (Enumerable.ToDictionary
+   на dup key) — безлимитный лог-спам (энти-события БЕЗ спам-фильтра).
+3. Fabricator.ServerEventRead: fabricationRecipes[recipeHash] — ImmutableDictionary
+   indexer → KeyNotFoundException на левом хэше. Тот же indexer-throw класс.
+   StartFabricating чист (ингредиенты через MoveIngredients, контейнеры локатся).
+4. SelectWires/SelectComponents: TargetIDs до 65535 × Contains O(n) = O(n²) CPU
+   у сервера (13M+ операций ~ 10-30мс/пакет — под порогом страйка, но на 66/с
+   = 0.66-2 ядра сервера). Гейт: CanClientAccess.
+5. MoveComponent: MoveAmount raw Vector2 без клампа → NaN двигает узлы в NaN
+   (UI-глюки у всех открывших). Soft.
+6. Repairable.ServerEventRead: QTESuccess — клиент САМ заявляет успех QTE
+   ремонта (by-design trust) → авто-ремонт максимальной скоростью без мини-игры.
+   Читерский QoL, не CVE. Sabotage гейт IsTraitor на месте.
+7. Deconstructor чист (bool + CanClientAccess).
+8. ItemAssembly: клиент-сайд только, сети НЕТ.
+
+## ХЕНДЛЕР-СВЕРКА БИНАРНИКА (юзерский декомпил DedicatedServer)
+27 ServerRead/ServerEventRead классов — ВСЕ есть в сорсфорке, новых 0.
+Сорсфорк == бинарник 1.13.4.0 по атак-поверхности (повтор 725).
+
+## МОДУЛЬ
+research/mods/CircuitAmplifierModule.cs — ищет схембокс по ItemList (рефлексия
+CircuitBoxComponent), строит энти-конверт как EventBomb (temp-буфер для точной
+длины — плейсхолдер-varuint портит соседние байты, в 719-стиле нельзя),
+3 кандидата ID против гонки. Кнопка: N пакетов × 65535 пар.
