@@ -25600,3 +25600,61 @@ research/mods/CircuitAmplifierModule.cs — ищет схембокс по ItemL
 CircuitBoxComponent), строит энти-конверт как EventBomb (temp-буфер для точной
 длины — плейсхолдер-varuint портит соседние байты, в 719-стиле нельзя),
 3 кандидата ID против гонки. Кнопка: N пакетов × 65535 пар.
+
+================================================================================
+WAVE 727 — ПОЛНЫЙ ОБХОД ОСТАВШИХСЯ ServerEventRead (в основном НЕГАТИВЫ)
+================================================================================
+
+## ЧЕСТНО: пачка команд без записи = ошибка. Исправляюсь. Итоги:
+
+1. REACTOR — karma-framing через blameOnBroken (ПОЛУ-НАХОДКА):
+   ServerEventRead ставит blameOnBroken = c при «плохом» изменении
+   (autoTemp off / turbine↓ / fission↑ / powerOn). При перегреве
+   OnReactorOverHeating = -0.5 кармы/с (deltaTime), при meltdown -30.
+   KickBanThreshold = 1.0 → карма < 1 → автокик → KicksBeforeBan → бан 1ч.
+   КТО ПОСЛЕДНИЙ ТРОНУЛ РЕАКТОР — тот и виноват, навсегда (поле не чистится).
+   Гриф: испортил настройки → ушёл → карма капает на тебя. Frame-вектор
+   требует доступа к реактору = среднее. Owner иммунен (Connection check).
+   Бонус: карма < 20 → сервер вешает Herpes 100 (KarmaManager UpdateClient).
+
+2. STEERING — steeringInput NaN (СЛАБО): `steeringInput = newSteeringInput`
+   — ЗАПИСЬ В ПОЛЕ, минуя свойство с IsValid-чеком! NaN-инпут → поле NaN,
+   но TargetVelocity-сеттер режет NaN → суба просто игнорит руль до
+   следующего валидного пакета. posToMaintain NaN → GetSteeringVelocity
+   NaN → сеттер режет. Никакого краша/залипания. НЕ ЭКСПЛОЙТ.
+
+3. POWERDISTRIBUTOR — ReadString null → ArgumentNullException (СЛАБО):
+   string.Concat(msg.ReadString().Take(32)) — ReadString возвращает null
+   при обрезке данных → .Take(null) → throw → ловится BufferedEvent
+   try/catch → лог-спам класс. Маргинально.
+
+4. WIRE nodes — lastNodePos NaN без валидации → nodes[] NaN → клиентский
+   рендер провода. Визуальный мусор. НЕ ЭКСПЛОЙТ.
+
+5. DOCKING PORT — (AllowOutpostAutoDocking)byte без валидации enum, но
+   присвоение за двойным гейтом (promptShown + ManageMap). МЕРТВО.
+
+6. WIFI — networkReceivedChannelMemory пишется ДО access-check, но все
+   значения ranged-клампнуты 0-10000. ЧИСТО.
+
+7. TERMINAL — MaxMessageLength=200 clamp, история 60, SyncHistory сплит
+   корректен (do-while с break). ClientEventRead → SendOutput → SendSignal
+   ЛОКАЛЬНО (по дизайну: терминал дёргает свою проводку у каждого клиента).
+   ЧИСТО.
+
+8. CUSTOMINTERFACE — значения читаются до access-check, но количество = 
+   server-defined, память = размер пакета. ЧИСТО.
+
+9. SONAR MINERAL SCANNER (долго копал — ТУПИК): UseMineralScanner
+   принимается от клиента, НО рендер маркеров требует HasMineralScanner,
+   который [Editable, Serialize(false)] из XML субмарины и на ванильных
+   сонарах false. UseMineralScanner=true без сканера = пусто. ТУПИК.
+
+10. KARMA-СИСТЕМА общая (для отчёта): клиент НЕ МОЖЕТ инъектировать карму
+    — все On* хуки из серверного пайплайна (OnAttacked → DamageLimb,
+    структура, ремонт, спам, кража у стуннутых тиммейтов, кислород в
+    сварку). Clown-костюм режет штрафы ×0.5. Owner иммунен к кик-порогу.
+
+## ВЕРДИКТ
+Топ из этой пачки: Reactor karma-framing (механика, не 0day). Остальное
+закрыто/слабо. Сорсфорк по компонентам вылизан.

@@ -447,8 +447,8 @@ Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Deconstructor
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Engine.cs,34,done,34
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Fabricator.cs,78,done,124
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Pump.cs,66,done,66
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Reactor.cs,59,done,59
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Steering.cs,135,done,135
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Reactor.cs,59,done,106
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Machines/Steering.cs,135,done,257
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerContainer.cs,31,done,34
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerDistributor.cs,33,done,40
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Projectile.cs,87,done,90
@@ -461,8 +461,8 @@ Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/ConnectionPanel
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/ConnectionSelectorComponent.cs,48,done,48
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/CustomInterface.cs,93,done,93
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/MemoryComponent.cs,45,done,45
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Terminal.cs,114,done,137
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/WifiComponent.cs,35,done,45
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Terminal.cs,114,done,142
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/WifiComponent.cs,35,done,80
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Wire.cs,78,done,78
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/TriggerComponent.cs,12,done,12
 Barotrauma/BarotraumaServer/ServerSource/Items/Inventory.cs,298,done,298
@@ -482,7 +482,7 @@ Barotrauma/BarotraumaServer/ServerSource/Networking/EntitySpawner.cs,60,done,60
 Barotrauma/BarotraumaServer/ServerSource/Networking/FileTransfer/FileSender.cs,439,done,440
 Barotrauma/BarotraumaServer/ServerSource/Networking/FileTransfer/ModSender.cs,67,done,67
 Barotrauma/BarotraumaServer/ServerSource/Networking/GameServer.cs,5010,done,5010
-Barotrauma/BarotraumaServer/ServerSource/Networking/KarmaManager.cs,634,done,634
+Barotrauma/BarotraumaServer/ServerSource/Networking/KarmaManager.cs,634,done,650
 Barotrauma/BarotraumaServer/ServerSource/Networking/NetEntityEvent/ServerEntityEventManager.cs,579,done,579
 Barotrauma/BarotraumaServer/ServerSource/Networking/NetworkMember.cs,10,done,10
 Barotrauma/BarotraumaServer/ServerSource/Networking/OrderChatMessage.cs,30,done,30

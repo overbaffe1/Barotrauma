@@ -233,6 +233,18 @@
     [
       1,
       135
+    ],
+    [
+      316,
+      380
+    ],
+    [
+      415,
+      445
+    ],
+    [
+      720,
+      745
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Networking/OrderChatMessage.cs": [
@@ -305,6 +317,14 @@
     [
       1,
       59
+    ],
+    [
+      560,
+      590
+    ],
+    [
+      670,
+      685
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Items/Components/Power/PowerContainer.cs": [
@@ -329,6 +349,10 @@
     [
       1,
       45
+    ],
+    [
+      326,
+      360
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Wire.cs": [
@@ -347,6 +371,10 @@
     [
       1,
       137
+    ],
+    [
+      179,
+      183
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/CustomInterface.cs": [
@@ -466,7 +494,7 @@
   "Barotrauma/BarotraumaServer/ServerSource/Networking/KarmaManager.cs": [
     [
       1,
-      634
+      650
     ]
   ],
   "Barotrauma/BarotraumaServer/ServerSource/Utils/DoSProtection.cs": [
