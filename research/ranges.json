@@ -821,6 +821,10 @@
     [
       1,
       65
+    ],
+    [
+      242,
+      300
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Networking/FileTransfer/FileTransfer.cs": [
@@ -1872,7 +1876,7 @@
   "Barotrauma/BarotraumaClient/ClientSource/GameSession/MedicalClinic.cs": [
     [
       1,
-      415
+      460
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Traitors/TraitorEvent.cs": [
@@ -7540,7 +7544,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Map/OrderTarget.cs": [
     [
       1,
-      22
+      35
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Map/Outposts/NPCSet.cs": [
@@ -7630,7 +7634,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs": [
     [
       1,
-      17
+      20
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs": [
@@ -7648,7 +7652,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs": [
     [
       1,
-      6
+      10
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Utils/ReadOnlyListExtensions.cs": [

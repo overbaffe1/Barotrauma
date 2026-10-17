@@ -139,7 +139,7 @@ Barotrauma/BarotraumaClient/ClientSource/GameSession/GameModes/Tutorials/Tutoria
 Barotrauma/BarotraumaClient/ClientSource/GameSession/GameModes/Tutorials/TutorialMode.cs,30,done,30
 Barotrauma/BarotraumaClient/ClientSource/GameSession/GameSession.cs,361,done,361
 Barotrauma/BarotraumaClient/ClientSource/GameSession/HintManager.cs,835,done,835
-Barotrauma/BarotraumaClient/ClientSource/GameSession/MedicalClinic.cs,415,done,415
+Barotrauma/BarotraumaClient/ClientSource/GameSession/MedicalClinic.cs,415,done,460
 Barotrauma/BarotraumaClient/ClientSource/GameSession/ObjectiveManager.cs,632,done,632
 Barotrauma/BarotraumaClient/ClientSource/GameSession/PvPMode.cs,84,done,84
 Barotrauma/BarotraumaClient/ClientSource/GameSession/ReadyCheck.cs,310,done,310
@@ -1077,7 +1077,7 @@ Barotrauma/BarotraumaShared/SharedSource/Map/Map/Radiation.cs,178,done,178
 Barotrauma/BarotraumaShared/SharedSource/Map/Map/RadiationParams.cs,53,done,53
 Barotrauma/BarotraumaShared/SharedSource/Map/MapEntity.cs,993,done,994
 Barotrauma/BarotraumaShared/SharedSource/Map/MapEntityPrefab.cs,328,done,328
-Barotrauma/BarotraumaShared/SharedSource/Map/OrderTarget.cs,22,done,22
+Barotrauma/BarotraumaShared/SharedSource/Map/OrderTarget.cs,22,done,35
 Barotrauma/BarotraumaShared/SharedSource/Map/Outposts/ExtraSubmarineInfo.cs,168,done,168
 Barotrauma/BarotraumaShared/SharedSource/Map/Outposts/NPCSet.cs,35,done,35
 Barotrauma/BarotraumaShared/SharedSource/Map/Outposts/OutpostGenerationParams.cs,447,done,447
@@ -1140,7 +1140,7 @@ Barotrauma/BarotraumaShared/SharedSource/Networking/ServerLog.cs,188,done,188
 Barotrauma/BarotraumaShared/SharedSource/Networking/ServerSettings.cs,1577,done,1577
 Barotrauma/BarotraumaShared/SharedSource/Networking/Voip/VoipConfig.cs,23,done,23
 Barotrauma/BarotraumaShared/SharedSource/Networking/Voip/VoipQueue.cs,173,done,175
-Barotrauma/BarotraumaShared/SharedSource/Networking/Voting.cs,65,done,65
+Barotrauma/BarotraumaShared/SharedSource/Networking/Voting.cs,65,done,124
 Barotrauma/BarotraumaShared/SharedSource/PerformanceCounter.cs,128,done,128
 Barotrauma/BarotraumaShared/SharedSource/Physics/Physics.cs,73,done,73
 Barotrauma/BarotraumaShared/SharedSource/Physics/PhysicsBody.cs,1040,done,1040
@@ -1213,10 +1213,10 @@ Barotrauma/BarotraumaShared/SharedSource/Utils/LinkedPairSet.cs,79,done,79
 Barotrauma/BarotraumaShared/SharedSource/Utils/ListDictionary.cs,55,done,55
 Barotrauma/BarotraumaShared/SharedSource/Utils/MTRandom.cs,149,done,149
 Barotrauma/BarotraumaShared/SharedSource/Utils/Md5Hash.cs,174,done,174
-Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs,17,done,17
+Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetCollection.cs,17,done,20
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetDictionary.cs,42,done,45
 Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetLimitedString.cs,22,done,30
-Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs,6,done,6
+Barotrauma/BarotraumaShared/SharedSource/Utils/NetStructs/NetPair.cs,6,done,10
 Barotrauma/BarotraumaShared/SharedSource/Utils/Rand.cs,138,done,138
 Barotrauma/BarotraumaShared/SharedSource/Utils/ReadOnlyListExtensions.cs,26,done,26
 Barotrauma/BarotraumaShared/SharedSource/Utils/RestFactory.cs,35,done,35

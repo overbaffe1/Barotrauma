@@ -25892,3 +25892,199 @@ WAVE 732 — ПЕРЕОТКРЫТИЕ: сетевые WRITER-ы сервера (
 Греп-поверхность ПОЛНОСТЬЮ вычищена повторно. Ни одной новой крит-дыры.
 Все ServerRead-файлы имеют отмеченные диапазоны в ranges.json.
 Дальнейшие CVE только через динамический анализ (фаззинг пакетов).
+
+================================================================================
+WAVE 733 — МАЛФОРМ-ФУНКД: что можно пихнуть не туда (главный запрос юзера)
+================================================================================
+## МЕСТА ГДЕ МАЛФОРМ ДАЁТ ЗАБАВНЫЙ РЕЗУЛЬТАТ (перепроверено глубоким проходом)
+
+### 1. MEDICAL ADD_PENDING — цена = ЧТО УГОДНО [УЖЕ 453/600, дополнено]
+NetAffliction: Identifier ЛЮБОЙ аффликции (не только healable!), Strength 0-65535,
+Price 0-65535 КЛИЕНТСКИЙ, VitalityDecrease игнорируется. HealAllPending делает
+ReduceAfflictionOnAllLimbs(identifier, MaxStrength) — identifier резолвится
+AfflictionPrefab — т.е. МОЖНО ЛЕЧИТЬ/СНИМАТЬ ЛЮБУЮ аффликцию в игре, включая
+husk-инфекцию (не healable в ванили!), негат-эффекты талантов и т.д. Price
+клиентский → цена = int-overflow: 65535 × N аффликтов... Aggregate(0, +) int,
+при 65535×65535×N — int wrap. TryPurchase(price<=0) = БЕСПЛАТНО (price==0 true).
+ЭТО УЖЕ БЫЛО, но вот уточнение 733: исцеляются ЛЮБЫЕ аффликции, а не только
+healable, потому что HealAllPending НЕ ПРОВЕРЯЕТ IsHealable при применении!
+
+### 2. Битфилд-инъекция (INetSerializableStruct) [NEW]
+ReadOnlyBitField ctor: байты читаются до байта с битом 7 == 1. Если послать
+ASCII-текст (все байты <128), битфилд жрёт весь остаток пакета и кидает
+NetStructReadException (меседж "end of the message reached") → чистый kick
+через malformed-ветку. Зато: ОДИН битовый байт 0xFF в начале = битфилд
+из 1 байта, ВСЕ bool = true, все Option = Some, все count-поля = их
+битовое значение! 255 = все флаги включены. Это ПРЯМОЙ путь кастомизировать
+Option-поля (например Option<ushort> персонажей) без легит клиента.
+Комбинируется с EventBomb и CircuitAmplifier (там битфилд Segment-а).
+
+### 3. NetCollection/ImmutableArray — ArrayMaxSize кламп [ПРОВЕРЕНО, ЧИСТО]
+NetCrewMember.Afflictions: NetCollection<NetAffliction> — ReadArray через
+ReadInteger(0, ArrayMaxSize=65535 default). 65535 × NetAffliction(11-14Б) ≈
+900KB аллокация на пакет... лимитировано размером читаемого пакета —读完
+пакет цикл падает. НЕБОМБА (не как ReadBytes(msgLength-2), где length НЕ
+из буфера, а целиком наш varint). ЧИСТО но близко.
+
+### 4. Wallet.Balance сеттер клампит 0..MaxMoney [ПРОВЕРЕНО]
+ClientReadMoney → wallet.Balance = info.Balance — set клампит через
+ClampBalance → int overflow/минус-деньги невозможны ЧЕРЕЗ клиент.
+Но ServerWrite шлёт raw int → evil-host может послать отрицательный.
+
+### 5. transactions Queue / HashSet без лимита [СЛАБО]
+MultiPlayerCampaign.transactions (HashSet<NetWalletTransaction>) — добавляется
+в UpdateWallets, очищается при рассылке. Не клиент-контролируемый. ЧИСТО.
+
+### 6. Order.Position orderTarget — raw x/y float без IsValid [СЛАБО]
+ReadOrder: x=ReadSingle, y=ReadSingle, hullId u16. Позиция NaN в ордере «goto»
+→ боты стоят. Проверок IsValid НЕТ до передачи в OrderTarget. Боты-движение
+ломается для получателей ордера. Minor.
+
+================================================================================
+WAVE 733b — SEND_BACKUP_INDICES: file-oracle + брутфорс имён [ОБНОВЛЕНИЕ 640]
+================================================================================
+SendBackupIndices: savePath ← ReadString (сырое) → GetIndexData(fullPath):
+1. Path.GetDirectoryName + GetFileNameWithoutExtension — БЕЗ валидации.
+   savePath = "C:\\", "C:\\Users", "/home", UNC "\\...\x" — Directory.GetFiles
+   сканирует ДИСК по глобу `.{baseName}.backup*`. Win32-pattern.
+2. Каждый найденный .backup: DecompressFileToStream (дефлят) + XML парс
+   + 6 атрибутов извлечь. N файлов = N полных распаковок синхронно на тике.
+3. Результат отправляется КЛИЕНТУ: имя сейва, время сейва, currentlocation,
+   leveltype — оракл существования файлов + их содержимого по подстроке!
+   "C:\\Users\\...\\Saves\\.Multiplayer+.backup" — брутфорс имен файлов,
+   узнать ЕСТЬ ли файл по наличию ответа (не null/empty коллекция).
+4. Нет рейт-лимитера на REQUEST_BACKUP_INDICES.
+КОМБО с EventBomb-коннектом: 66/мин × (скан диска + M дефлят-распаковок).
+ОДИН пакет — любой путь на диске хоста. [Это усиление 449/640: явный
+файл-оракл + перечисление через glob-подсчёт найденных path.]
+
+================================================================================
+WAVE 733c — МАЛФОРМ-ПЕРЕКРЕСТОК: спуф голосов через SetVote-мисматч
+================================================================================
+Voting.ServerRead case Sub: SetVote(voteType, SubmarineInfo) — кладёт ОБЪЕКТ
+сабмарины в votes[]. case Kick: SetVote(Kick, bool) после AddKickVote...
+case StartRound: SetVote(StartRound, bool). GetVote<bool>(Kick) в Voting.cs —
+кастует к T через `is T t`. **КЛАССИЧЕСКИЙ Type Confusion через единый
+object[] votes!** Например VoteType.Sub положил SubmarineInfo — дальше
+GetVote<bool>(VoteType.Sub) вернёт default(bool)=false. GetVote<SubmarineInfo>
+для Kick вернёт null... но эти типы не пересекаются в GetVote-вызовах —
+типы не путаются в использовании. ЧИСТО, но 0царовая хрупкость.
+
+UpdateVoteStatus вызывается при каждом ServerRead в конце — троттлинг через
+using(dosProtection.Pause(sender)) — страйки НЕ растут от спама голосов.
+pendingVotes — очередь без лимита (729-730 уже отмечено). **РЕАЛЬНО:
+спам startVote TransferMoney/PurchaseSub с разными параметрами → очередь
+растёт без cap** — но каждый Update разруливает ActiveVote по одному,
+каждый должен пройти ShouldRejectVote (1 мин cooldown) → реальный темп
+1 голос/мин на игрока. МЁРТВО.
+
+================================================================================
+WAVE 733d — МАЛФОРМ: CREW-ответ сервера (ClientReadCrew) — evil-host только
+================================================================================
+ServerPacketHeader.CREW → ClientReadCrew → CharacterInfo.ClientRead (255 раз).
+Сырье: raw CharacterInfo (имя, jobPrefab по u32 hash, skillLevels словарь
+raw float БЕЗ КЛАМПА, ExperiencePoints i32, TalentRefundPoints i32,
+AdditionalTalentPoints ranged 0-200, PermanentlyDead bool).
+EVIL-HOST: может заспавнить crew-члена с skillLevel = 1e9 (OverrideSkills
+не клампит) или ExperiencePoints = int.MaxValue. Для юзера мертво (сервер
+всегда свой). Malformed здесь ловится requireJobPrefabFound-throw.
+
+## ПОПУТНО: ServerPacketHeader.MONEY (ClientReadMoney) — evil-host шлёт
+WalletInfo с любым int (нет ranged) → ClampBalance в сеттере режет 0..MaxMoney.
+Но BalanceChanged-евенты (tab-menu отображение) показывают МИНУС-балансы,
+которые клампнуты в хранилище но УЖЕ отображены. Cosmetic evil-host.
+
+## ИТОГ ПО МАЛФОРМ-ФУНДУ (главный запрос юзера «сунуть что не стоило»):
+1. ★★ NetAffliction: лечить НЕ-HEALABLE аффликции через клинику (453 углублён)
+2. ★★ ReadOnlyBitField инъекция: один байт 0xFF в начале пакета = все bool
+   true / все Option Some / count-поля = bit-value (733a)
+3. ★ SEND_BACKUP_INDICES: file-oracle + glob-scan любого пути диска (640 углублён)
+4. ★ Order.Position: raw float без IsValid → боты получают NaN-цели (733)
+5. ЧИСТО: NetCollection (кламп 65535 + reads-fail-fast), Wallet сеттер-кламп,
+   transactions queue (не клиент-контролируемый), votes[] type-mismatch
+   (не пересекается).
+
+================================================================================
+WAVE 733e — МАЛФОРМ: MedicalClinic.ServerRead — полное прохождение
+================================================================================
+Headers: ADD_EVERYTHING / UNSUBSCRIBE / REQUEST_AFFLICTIONS / REQUEST_PENDING /
+ADD_PENDING / REMOVE_PENDING / HEAL_PENDING / CLEAR_PENDING.
+Все Process* имеют rateLimiter.IsLimitReached(client) — 20 запросов / 5 сек.
+ProcessNewAddition: принимает NetCrewMember с CharacterInfoID (int — может быть
+отрицательным/не-своим!) и ПОЛНЫМ списком аффликтов (Identifier ЛЮБОЙ,
+Strength 0-65535, Price 0-65535 клинтом). InsertPendingCrewMember — кладёт.
+КЛЮЧЕВАЯ ЦЕПОЧКА (детализация 453/733a):
+ 1. Клиент A добавляет pending для ЧУЖОГО crew-member'а (любой CharacterInfoID):
+    InsertPendingCrewMember не проверяет владельца!
+ 2. Клиент A посылает HEAL_PENDING: HealAllPending(client: A).
+    GetTotalCost — СУММА Price от клиента A. TryPurchase(totalCost) спишет у A.
+    HealAllPending → targetCharacter?.Character — ЛЕЧИТ ЧУЖОГО ПЕРСОНАЖА
+    (ReduceAfflictionOnAllLimbs на чужом CharacterHealth!).
+    Это «лечить чужого командой без прав доктора» — не критично, это же лечит.
+3. Обратный вектор: Price = 0 в NetAffliction = бесплатное лечение. Уже 453.
+4. Identifier может быть ANY (даже не существующий — Reduce просто ничего
+   не найдёт, из-за пропуска). Только реальные аффликции применяются.
+
+## ГДЕ ЛОЖКА ДЁГТЯ: AppendLine DebugConsole.ThrowError с sb всех crew-имён
+при отсутствии найденного CharacterInfoID → ОРАКУЛ crew- roster через
+серверную консоль и лимитер: 20 запросов / 5 сек * size(crew list text).
+Минор: приватность ников ботов через консоль сервера.
+
+## МАЛФОРМ ItemIdentifier в MedicalClinic: если послать Identifier,
+у которого нет AfflictionPrefab — при чтении NetAffliction на сервере
+affliction.Prefab == null, вызов affliction.Prefab?.MaxStrength — нет NRE.
+Но дальше на клиента полетит этот Identifier и тот же путь — сервер
+просто хранит мусор в PendingHeals. При HealAllPending — пусто. ЧИСТО.
+
+================================================================================
+WAVE 733f — МАЛФОРМ: MultiPlayerCampaign.ClientRead (CAMPAIGN_UPDATE) evil-host
+================================================================================
+ClientRead (static, 538): NetFlags requiredFlags = u16 → до 16 блоков:
+- Locations: forceMapUI/allowDebugTeleport/curIdx/selIdx (после — SetLocation на
+  клиенте если allowDebugTeleport)
+- SubList: ownedSubIndices u16 с bounds-check (сабы за OOB → skip)
+- UpgradeManager: pendingUpgradeCount → PurchasedUpgrade list
+- Stores: ReadStores — byte storeCount, u16 баланс магазина на клиенте
+  (evil-host может поставить store.Balance любой 0-65535 на клиенте — клиентский
+  ветер, сервер не видит)
+Все evil-host-only. Мелкий минор: ShouldApply требует saveID-матч — без него
+игнорится (защита от рассинхрона).
+
+================================================================================
+WAVE 733g — EventManager.ClientApplyNetworkMessage (СЕРВЕР→КЛИЕНТ, evil-host)
+================================================================================
+1. STATUSEFFECT: eventIdentifier (Identifier) → EventSet.GetEventPrefab →
+   actionIndex u16 (линейный скан ConfigElement.Descendants!) → targetCount
+   u16 + IDs → StatusEffect.Load(xml) + Apply на КАЖДОГО target.
+   Evil-host может применить ЛЮБОЙ StatusEffect ЛЮБОГО event-префаба
+   к ЛЮБОЙ цели на клиенте (client trusts server). Спам: targetCount=65535
+   цели × StatusEffect.Load каждый раз (XML re-parse!) — CPU-гриф.
+
+2. CONVERSATION: CreateDialog(text, speaker, options, endings) —
+   опции = List<string> произвольные, endings int[]. GUIMessageBox
+   с любым текстом/опциями (evil-host может подделать диалог).
+   optionCount byte ≤255 × ReadString.
+
+3. CONVERSATION_SELECTED_OPTION: SelectOption(actionId, option-1):
+   если lastMessageBox.UserData == actionId → DisableButtons(btns,
+   btn.UserData == option). option = byte-1, может быть -1 при 0. Тупик —
+   не вылетает (DisableButtons просто ничего не найдёт). ЧИСТО.
+
+4. MISSION: префаб ищется, Discover(location, false) + UnlockMission.
+   bounds-check на locationIndex. ЧИСТО.
+
+5. UNLOCKPATH: bounds-check. ЧИСТО.
+
+ВСЁ ЭТО сервер→клиент. Для evil-host отчёта только.
+
+================================================================================
+WAVE 733h — STATUSEFFECT через EVENTMANAGER (evil-host): ТИПЫ ЦЕЛЕЙ
+================================================================================
+StatusEffect.Load(subElement) — цели определяются targetTypes элемента XML.
+В ClientApplyNetworkMessage effect.Apply(..., target, target as ISerializableEntity)
+передаёт target как «executing entity». Если XML эффекта описывает
+TargetType.NearbyCharacters → ВСЕ персонажи рядом с target — т.е. evil-host
+может применять событийные эффекты (например dmg от event-гранат) к БЛИЖНИМ
+игрокам рядом с указанной целью. Range задаётся XML (может быть огромным).
+TargetType.UseTarget/This/Parent — target становится «пользователем» эффекта.
+Это КОНТЕНТ-УРОВЕНЬ ивентов — для подбора эффекта надо реверсить event-prefabs.
