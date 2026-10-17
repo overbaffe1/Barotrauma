@@ -25822,3 +25822,73 @@ WAVE 729 финал — сводка переоткрытия
 9. XXE: DtdProcessing.Prohibit + XmlResolver null. МЁРТВ.
 10. Lidgren disconnect: "}Separator[" парсится Enum.TryParse + base64 — спуф
     отключения через crafted disconnect string НЕВОЗМОЖЕН. МЁРТВ.
+
+================================================================================
+WAVE 730 — ПЕРЕОТКРЫТИЕ: чат-ордера (ChatMessage.ServerRead) полная цепочка
+================================================================================
+
+## ПУТЬ (обновление 584/568)
+UPDATE_INGAME → сегмент ChatMessage → ChatMessage.ServerRead →
+OrderChatMessage.ReadOrder → CrewManager.AddOrder / Character.SetOrder /
+HumanAIController.ReportProblem.
+
+## ПОДТВЕРЖДЕНИЯ И УТОЧНЕНИЯ
+1. SendOrderChatMessage → OrderChatMessage.Write (для брода) — отдельный путь.
+2. targetSpatialEntity: (Structure)?.Sections[WallSectionIndex.Value] —
+   БЕЗ bounds-check (Order.cs:532)! GetSection (Structure.cs:930) чекает,
+   но Order.cs — нет. ЭКСПОЙТ: WallSectionIndex > Sections.Length →
+   IndexOutOfRange. Но: 584 зафиксировал тротуар — ошибка ловится BufferedEvent
+   try → лог-спам. Гейт CanHearCharacter (речь) + SpeechImpediment <100.
+3. SetOrder (targeted): CanHearCharacter(orderGiver) → радио/дистанция.
+   Означает: адресные ордера только на слышимых. TargetAllCharacters
+   (deconstructthis etc.) БЕЗ CanHear — серверный флаг TargetAllCharacters
+   добавляется OrderPrefab-ом, не клиентом. Не спуфится.
+4. ReportProblem(reporter, order): CallHull safety refresh — ничего опасного.
+5. AddOrder: DeconstructItems.Add — 568/566 всё покрыли.
+6. OrderTarget(x, y, hull, creatingFromExistingData: true) — позиция raw float,
+   hull по ID. Используется только в Position-ордерах (управление ботами).
+   Позиция ордера влияет на AI-путевые цели ботов. Влияние минорное.
+
+## ВЕРДИКТ
+Чат-ордера: новых векторов нет (только подтверждение лог-спама через
+неиспользуемый NotImplementedException в Position+ignore-case — unreachable:
+Position не попадает в IsIgnoreOrder-ветку т.к. ignore-ордера не Position).
+
+================================================================================
+WAVE 731 — ПЕРЕОТКРЫТИЕ: SERVER_SETTINGS netProperties (админ-канал, 92+32 пропов)
+================================================================================
+Гейт: c.HasPermission(ManageSettings) на входе (ServerSettings.ServerRead:169).
+Без перма ничего не читается — значит для юзера канал мёртв, НО:
+
+## ДЛЯ РЕПОРТА (если админ компрометирован / своя сессия с пермом):
+1. netProperties — ~92 ServerSettings + 32 KarmaManager props, все [Serialize]
+   БЕЗ DoNotSyncOverNetwork. Любой можно поменять по uint-хэшу имени:
+   MaxPlayers, EnableDoSProtection, KickBanThreshold, KarmaDecrease*,
+   MaxPacketAmount, AllowLinkingWifiToChat, TraitorDangerLevel, LevelSeed...
+2. ReadPropertyData.Read: size-проверка switch (float=4, v2=8...), default
+   ветка читает string с BitPosition reset. ОГРАНИЧЕНИЙ ЗНАЧЕНИЙ НЕТ —
+   админ может поставить MaxPlayers=0 / KickBanThreshold=100000 / KarmaDecay=999.
+3. ExtraCargo: MaxExtraCargoItemTypes=20, MaxExtraCargoItemsOfType=10 — клампы.
+4. ReadMonsterEnabled: count-мисматч → BitPosition skip. ЧИСТО.
+5. HiddenSubs: count до 4e9 varint, но 2Б/итер → быстрая смерть цикла. ЧИСТО.
+6. TraitorDangerLevel: raw byte ±1, кламп в сеттере Min/Max. ЧИСТО.
+7. LevelSeed: string без клампа → длинная строка в NetLobbyScreen.LevelSeed.
+   Мелкий спам-вектор (админ-гейт).
+
+## ЧИТАТ-ЦЕННОСТЬ ДЛЯ СВОЕГО СЕРВЕРА: админ может слать настройки, но это фича.
+## CVE-ЦЕННОСТЬ: нет (перм-гейт сплошной).
+
+================================================================================
+WAVE 732 — ПЕРЕОТКРЫТИЕ: сетевые WRITER-ы сервера (evil-host материал)
+================================================================================
+1. PhysicsBody.ServerWrite: SimPosition raw f32 (без клампа!), velocity ranged.
+   == Сервер шлёт свою физику как есть; если серверная физика сломана (NaN),
+   клиентский IsValid режет. ЧИСТО.
+2. Item.ServerEventWrite: switch по IEventData; throw на неизвестном — ловится
+   WriteEvent try в NetEntityEventManager. ЧИСТО.
+3. НЕТ клиентских CVE в writer-ах (это серверный исходящий поток).
+
+## ФИНАЛЬНЫЙ ВЕРДИКТ ПЕРЕОТКРЫТИЯ (729-732)
+Греп-поверхность ПОЛНОСТЬЮ вычищена повторно. Ни одной новой крит-дыры.
+Все ServerRead-файлы имеют отмеченные диапазоны в ranges.json.
+Дальнейшие CVE только через динамический анализ (фаззинг пакетов).
