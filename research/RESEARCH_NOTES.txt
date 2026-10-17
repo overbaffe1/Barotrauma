@@ -26187,3 +26187,83 @@ RechargeSpeed сеттер. ЧИСТО.
                    Fabricator/Deconstructor
   уже используемые: EventBomb (envelope), DecompBomb (Lidgren wrapper),
                     PerkBomb (ServerSettings), FragmentBloat (P2P only)
+
+================================================================================
+WAVE 735 — ПЕРЕОТКРЫТИЕ ГЛУБОКОЕ: CampaignSettings множители + karma-спуф
+================================================================================
+
+## CAMPAIGN_SETTINGS (NEW MALFORM-VARIANT, не просто PhantomCampaign!)
+### Канал 1: CAMPAIGN_SETUP_INFO isNew=true → ServerSettings.CampaignSettings
+Клиент шлёт ПОЛНЫЙ CampaignSettings (16 [NetworkSerialize] полей). Из них:
+- RadiationEnabled — bool
+- MaxMissionCount — [NetworkSerialize(MinValueInt=1, MaxValueInt=10)] ← КЛАМП В
+  АТРИБУТЕ, but сеттер ещё клампит (double-clamp). ЧИСТО.
+- WorldHostility — enum byte
+- StartItemSet — Identifier (может быть несуществующий → fallback)
+- StartingBalanceAmount — enum
+- 9 МНОЖИТЕЛЕЙ raw float: CrewVitality, NonCrewVitality, Oxygen, Fuel,
+  MissionReward, ExperienceReward, ShopPrice, ShipyardPrice, RepairFail
+  **БЕЗ КЛАМПОВ**. Клампы есть только в CampaignSetupUI слайдерах.
+- ShowHuskWarning bool, PatdownProbability enum
+
+### АТАКА 1 (деньги-принтер): MissionRewardMultiplier = 1000000
+→ Mission.GetReward() = base_reward × 1e6 → (int)Math.Round
+→ каждая миссия даёт миллиарды mk. ОДИН раз настроил, персистится.
+
+### АТАКА 2 (гриф): CrewVitalityMultiplier = -1
+→ health -1 = мгновенная смерть всей команды. Не семи-гриф, но вспышка.
+
+### АТАКА 3 (sub-freeze): OxygenMultiplier = 0
+→ экипаж на кислородном голодании с начала раунда. Однако это
+  САМ ОУНЕР ставит себе же — если это на чужом сервере, нужен
+  AllowedToManageCampaign фоллбэк (мёртвый админ).
+
+### АТАКА 4 (bitfield + CAMPAIGN_SETUP): весь CampaignSettings 16 полей
+  читается через один NetSerializableStruct — сначала битфилд (~3 байта
+  на 15+ флагов). Битфилд-инъекция `0xFF 0xFF 0xFF` ставит все bool/enum
+  в true/Max, но сеттеры клампят (MaxMissionCount). Float множители БЕЗ
+  КЛАМПА читаются как есть после битфилда.
+
+## VERDICT
+Combined с DeadAdmin: CRITICAL (полный контроль над экономикой сервера).
+Полное evil-admin: CRITICAL. Без фоллбэка: недостижимо.
+
+## KarmaManager.SaveCustomPreset()
+Admin канал, не клиент. Просто метод сохранения. Не экспл.
+
+================================================================================
+WAVE 735b — Sonar "mineral scanner" — clarify 734 note
+================================================================================
+UseMineralScanner клиентский читается в ServerEventRead, сеттер свободный.
+НО HasMineralScanner — это [Editable, Serialize(false)] — врубается ТОЛЬКО
+через XML субмарины (т.е. хост). Standard sonar без сканера = не рендерит.
+Нужен хост, который даст тебе суб со сканером. Не эксплойт, UI-gate.
+
+================================================================================
+WAVE 735b — SendChatMessage radio-chain (735b) — уcilenie 637
+================================================================================
+Radio chain (GameServer.SendChatMessage):
+1. type Radio/Order требует CanUseRadio(senderCharacter) — у ботов нет перм
+   Но если senderCharacter умер mid-msg — senderRadio null → TransmitSignal
+   падает NRE. Мало.
+2. Radio message идёт в senderRadio.TransmitSignal (wifi) + отдельно бродкаст
+   через WriteMessage всем. ApplyDistanceEffect с garble по дистанции —
+   INDEPENDENTLY от radio range! То есть радиослушатель слышит garbled текст
+   как обычный чат поблизости даже без radio.
+3. GetChatMessageCommand: "@playername text" → Private message. type = Private.
+   Если receiver dead → pass. senderCharacter.IsDead → force Dead. No spoof.
+4. CanUseRadio требует wifi-компонент в руках/инвентаре + в канале = jammed
+   при jamTimer>0. EMP-канал блокирует. ЧИСТО.
+
+Radio chain безопасен на отправку. Только Radio Piracy (637) остаётся —
+это про чтение через LinkToChat на вражеском терминале.
+
+================================================================================
+WAVE 735c — MemoryComponent / ChangeProperty ContentProperty — in-game editor
+================================================================================
+MemoryComponent.Value имеет [InGameEditable] + Serialize. ChangeProperty-канал
+→ клиент в раунде может менять Memory.Value на ЛЮБУЮ строку (лимит
+MaxValueLength через сеттер, default 0? проверь). При Writeable=true сигнал
+перезаписывается. При max ValueLength = 0 substring не режет → any length
+string payload → обычная сигнальная инъекция, только не через Terminal а
+через Property-канал. Уже задокументировано (686 InGameEditable каталог).
