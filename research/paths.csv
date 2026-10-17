@@ -463,7 +463,7 @@ Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/CustomInterface
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/MemoryComponent.cs,45,done,45
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Terminal.cs,114,done,142
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/WifiComponent.cs,35,done,80
-Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Wire.cs,78,done,78
+Barotrauma/BarotraumaServer/ServerSource/Items/Components/Signal/Wire.cs,78,done,80
 Barotrauma/BarotraumaServer/ServerSource/Items/Components/TriggerComponent.cs,12,done,12
 Barotrauma/BarotraumaServer/ServerSource/Items/Inventory.cs,298,done,298
 Barotrauma/BarotraumaServer/ServerSource/Items/Item.cs,454,done,454

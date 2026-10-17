@@ -26088,3 +26088,102 @@ TargetType.NearbyCharacters → ВСЕ персонажи рядом с target �
 игрокам рядом с указанной целью. Range задаётся XML (может быть огромным).
 TargetType.UseTarget/This/Parent — target становится «пользователем» эффекта.
 Это КОНТЕНТ-УРОВЕНЬ ивентов — для подбора эффекта надо реверсить event-prefabs.
+
+================================================================================
+WAVE 734 — ПЕРЕОТКРЫТИЕ: DebugConsole + CHEATS_ENABLED + UpdateCharacterInfo
+================================================================================
+
+## DEBUG_CONSOLE SERVER (2780-2860) — двойной гейт подтверждён
+1. `client.HasPermission(ConsoleCommands)` ИЛИ OwnerConnection — иначе log.
+2. `client.PermittedConsoleCommands.Contains(matchingCommand)` ИЛИ Owner — иначе log.
+3. `MathUtils.IsValid(cursorWorldPos)` — NaN cursor режется.
+4. try/catch вокруг ServerExecuteOnClientRequest — эксепшены команд не падают.
+5. RateLimiter 50/5s (Announce), IsExempt = перм/owner.
+CLIENT-БОК: команды типа giveperm/revokeperm/giverank доступны ТОЛЬКО через
+PermittedConsoleCommands — это сохранённый список на сервере, выдаётся только
+админом через ManagePermissions. НЕ МОЖНО добавить себя.
+
+## CHEATS_ENABLED флаг — через сервер
+ServerPacketHeader.CHEATS_ENABLED → клиент ставит DebugConsole.CheatsEnabled
+(влияет на локальный Command.Execute для IsCheat команд). Сервер НЕ может
+форсить клиент включить читы — клиент сам ставит. Пакет от сервера =
+инфо что НА СЕРВЕРЕ читы включены. Singleplayer-свобода.
+
+## UpdateCharacterInfo (RESPONSE_STARTGAME, 4361)
+- SpectateOnly гейт (AllowSpectating || Owner)
+- charInfoRateLimiter 5/10s
+- Campaign data не перезаписывается
+- RecreateHead: tags → HeadPreset по точному SetEquals, fallback по
+  Contains + GetRandomUnsynced — безопасный fallback
+- HeadInfo ctor не клампит hairIndex/beardIndex — но HairElement
+  ElementAtOrDefault(index) с AddWarning, >count = null → ReadStatus
+  безопасен. НЕ КРАШ (проверено 729).
+- JobVariants: через NetJobVariant → JobVariant
+ЧИСТО.
+
+## ТЕРМИНАЛ: ServerEventRead — SendSignal(newOutputValue, "signal_out")
+Спам/гриф: клиент пишет текст в терминал → сигнал в проводку. То, что
+терминал подключён к (например логический вентиль → дверь) получает ЛЮБУЮ
+строку от клиента. КЛАССИКА SignalInj — не краш, но если терминал подключён
+к set_channel wifi или set_force engine → инъекция в оборудование.
+ЕСТЬ ГЕЙТ CanClientAccess + Readonly. МАКСИМУМ: 200 симв кламп.
+СРЕДНЕ: гриф через инъекцию сигнала в своё оборудование (не новое).
+
+## ВЕРДИКТ
+DebugConsole — чисто. UpdateCharacterInfo — чисто. ТЕРМИНАЛ — известный
+SignalInj (ваниль-фича, не CVE).
+
+================================================================================
+WAVE 734b — ПЕРЕОТКРЫТИЕ: Wire nodes / Steering / DebugConsole конец
+================================================================================
+
+## WIRE ServerEventRead — нестирилизованный NaN в nodes
+byte nodeCount (0-255), если >0 → f32 x, f32 y — RAW БЕЗ IsValid!
+Сравнение: Writer шлёт RangedInteger(0, 30). Reader — byte без клампа.
+nodes.Add(NaN) → физика висящего провода ловит NaN → рендер-мусор +
+физическая ошибка при натяжении провода? Реально провода не physical body,
+это только рендер. Minor.
+
+Но: nodeCount > 255 нельзя (byte). nodes.RemoveRange + Add — до MaxNodeCount=255.
+Сервер хранит nodes ≤ 255+30=285 max. Памяти немного.
+
+## STEERING — RAW newSteeringInput (f32×2)
+steeringInput = newSteeringInput — ЗАПИСЬ В ПОЛЕ минуя сеттер IsValid.
+steeringInput.X/.Y могут быть NaN → в Update: velocityDiff = steeringInput -
+targetVelocity → NaN → if (velocityDiff != Vector2.Zero) — NaN != Zero =
+TRUE → TargetVelocity = steeringInput через сеттер → IsValid отбрасывает.
+Реально NaN не проходит в targetVelocity. В качественном виде не экспл.
+
+posToMaintain = new Vector2(raw NaN) — MaintainPos = true, posToMaintain = NaN.
+GetSteeringVelocity((Vector2)posToMaintain, 10f) → Vector2 NaN → 
+TargetVelocity.Lerp(NaN) → сеттер IsValid отбрасывает. Суба виснет на месте.
+SUB-ICE: сервер-авторитетная суба не двигается. ГРИФ ЧЕРЕЗ ГОЛОВУ (нужен
+CanClientAccess на рулевом терминале). СРЕДНЕ.
+
+## DebugConsole.SetPassword/SetMaxPlayers — admin-only команды через
+PermittedConsoleCommands, setmaxplayers клампит NetConfig.MaxPlayers.
+ЧИСТО.
+
+================================================================================
+WAVE 734c — ФИНАЛ ПЕРЕОТКРЫТИЯ: чистые компоненты
+================================================================================
+## Engine (Engine.cs ServerEventRead)
+newTargetForce = ReadRangedInteger(-10,10) * 10f — КЛАМП НА ПРОВОДЕ, не читает
+произвольное. targetForce = клампнутое. ЧИСТО.
+
+## Deconstructor (Deconstructor.cs ServerEventRead)
+bool active + CanClientAccess + SetActive. ЧИСТО.
+
+## PowerContainer (PowerContainer.cs ServerEventRead)
+newRechargeSpeed = ReadRangedInteger(0, 10)/10f * maxRechargeSpeed — кламп.
+RechargeSpeed сеттер. ЧИСТО.
+
+## Reactive summary: ServerEventRead теперь 100% перекрыты:
+  чисто/клампнуто: Engine, Deconstructor, PowerContainer, Pump, Reactor,
+                   Sonar, Holdable (attach), Hull (fire/water), Docking
+  гриф/NaN:        Steering (NaN sub-freeze, средне), Wire (NaN nodes, низко),
+                   Terminal (signal_inj, средне), ConnectionPanel (нет NRE),
+                   CustomInterface (raw strings через), CircuitBox (частично),
+                   Fabricator/Deconstructor
+  уже используемые: EventBomb (envelope), DecompBomb (Lidgren wrapper),
+                    PerkBomb (ServerSettings), FragmentBloat (P2P only)
