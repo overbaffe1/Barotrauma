@@ -2474,7 +2474,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TeleportAction.cs": [
     [
       1,
-      51
+      55
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/RNGAction.cs": [
@@ -2486,7 +2486,7 @@
   "Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/GoTo.cs": [
     [
       1,
-      43
+      45
     ]
   ],
   "Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/Label.cs": [

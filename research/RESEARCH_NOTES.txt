@@ -26267,3 +26267,33 @@ MaxValueLength через сеттер, default 0? проверь). При Write
 перезаписывается. При max ValueLength = 0 substring не режет → any length
 string payload → обычная сигнальная инъекция, только не через Terminal а
 через Property-канал. Уже задокументировано (686 InGameEditable каталог).
+
+================================================================================
+WAVE 736 — EventAction каталог (68 actions) — РЕЛЕВАНТНО ДЛЯ EVIL-HOST
+================================================================================
+Все EventAction — XML-based, активируются ТОЛЬКО сервером (ServerRead только
+для ConversationAction/Response). Клиентский EventManager.ClientApplyNetworkMessage
+покрывает STATUSEFFECT/CONVERSATION/CONVERSATION_SELECTED_OPTION/MISSION/
+UNLOCKPATH/EVENTLOG/EVENTOBJECTIVE (см. 712).
+
+## RELEVANT для evil-host (сам производит spawn/score/teleport на сервере):
+- GodModeAction: character.GodMode = true / Unkillable = true
+- TeleportAction: target teleports to MainSub/Outpost spawnpoint
+- SpawnAction: спавнит entity по SpawnLocationType (AbyssCave/Wreck/etc)
+- MoneyAction / AddScoreAction: дает/забирает деньги и репутацию
+- NPCChangeTeamAction: меняет TeamID NPC (можно сделать hostile friendly!)
+- DamageBeaconStationAction: дамажит бикон
+- SetPriceMultiplierAction: меняет цены магазина
+- ModifyLocationAction: модифицирует локацию
+
+Плюс TriggerEventAction: событие триггерит ДРУГОЕ событие (evility chain).
+
+## ДЛЯ КЛИЕНТА (юзера) ЭТО НЕДОСТИЖИМО: всё Server-side-only.
+Всё это — evil-host только. Но полезно как CWE-611-список для security report.
+
+## ФИНАЛ ПЕРЕОТКРЫТИЯ 729-736:
+Пройдено ServerEventRead × 23 файла, ServerRead × 15 сетевых хендлеров,
+EventManager.ClientApply × 7 типов, весь EventActions каталог × 68,
+Все INetSerializableStruct consumers, BitField/NetCollection/NetDictionary
+reader internals, Wallet/Karma/Traitor/Store/StoreBalance.
+НОВЫХ CVE классов выше "средних" НЕ НАЙДЕНО.

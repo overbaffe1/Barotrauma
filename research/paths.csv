@@ -836,7 +836,7 @@ Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/FireAction.cs,49,do
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/ForceSayAction.cs,62,done,62
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/GiveExpAction.cs,53,done,53
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/GiveSkillExpAction.cs,56,done,56
-Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/GoTo.cs,43,done,43
+Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/GoTo.cs,43,done,45
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/GodModeAction.cs,66,done,66
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/HighlightAction.cs,46,done,46
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/InventoryHighlightAction.cs,36,done,36
@@ -862,7 +862,7 @@ Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/SkillCheckAction.cs
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/SpawnAction.cs,622,done,622
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/StatusEffectAction.cs,92,done,92
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TagAction.cs,462,done,462
-Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TeleportAction.cs,51,done,51
+Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TeleportAction.cs,51,done,55
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TriggerAction.cs,447,done,447
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TriggerEventAction.cs,62,done,62
 Barotrauma/BarotraumaShared/SharedSource/Events/EventActions/TutorialCompleteAction.cs,35,done,35
