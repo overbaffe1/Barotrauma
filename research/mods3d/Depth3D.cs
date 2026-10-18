@@ -1,31 +1,13 @@
 // ============================================================================
-//  Depth3D.cs — Switcher для интерпретации 2D-мира Barotrauma в 3D (v1.1)
+//  Depth3D.cs v1.2 — 3D-камера от первого лица с переключаемыми режимами
 //
-//  ОДИН .cs файл для CSHUB. Кидается в папку Modules/ — работает.
-//
-//  КЛАВИШИ:
-//    F5  — вкл/выкл 3D-камеру
-//    F9  — СЛЕДУЮЩИЙ РЕЖИМ ИНТЕРПРЕТАЦИИ МИРА (4 режима)
-//    F6  — стиль рендера (Normal / Full / Xray)
-//    F7  — перезагрузить BaroDepth.xml
-//    F8  — выгрузить IDs в CSV
-//    B   — стиль линии пола
-//    LMB — взаимодействие
-//
-//  РЕЖИМЫ (F9):
-//    BoxWorld      — предметы = полупрозрачные боксы
-//    WireFrame     — каркас боксов (видно сквозь)
-//    SlicedLayers  — оранжевые боксы (лучше виден параллакс)
-//    Xray          — всё фиолетовое и сквозное
-//
-//  ТРЕБОВАНИЯ: CSHUB (LuaCs). Клиент-only, сервер не нужен.
-//  Не грузи вместе с другими camera модами.
+//  CSHUB: Modules/Depth3D.cs
+//  F5=3D | F9=режим | F6=стиль | F7=XML | F8=export | B=пол | LMB=use
 // ============================================================================
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -41,181 +23,52 @@ namespace Depth3D
 {
     public sealed class Depth3DMod : ACsMod
     {
-        // ====================================================================
-        //  КОНСТАНТЫ
-        // ====================================================================
-
         private const float MouseSensitivity = 0.0027f;
-        private const float FieldOfViewDegrees = 78f;
         private const float ViewDistance = 2000f;
         private const string Prefix = "depth3d.v01.";
         private const string ConfigPath = "BaroDepth.xml";
 
-        // ====================================================================
-        //  ENUMS
-        // ====================================================================
-
-        public enum WorldInterpretation { BoxWorld = 0, WireFrame = 1, SlicedLayers = 2, Xray = 3, Count = 4 }
-        private enum RenderMode { Boxes, Contours, Slices }
-        private enum ViewMode { Normal, Full, Xray }
-
-        private static RenderMode ToRenderMode(WorldInterpretation w) => w switch
-        {
-            WorldInterpretation.WireFrame => RenderMode.Contours,
-            WorldInterpretation.SlicedLayers => RenderMode.Slices,
-            _ => RenderMode.Boxes
-        };
-
-        private static ViewMode ToViewMode(WorldInterpretation w) => w switch
-        {
-            WorldInterpretation.Xray => ViewMode.Xray,
-            _ => ViewMode.Full
-        };
-
-        private static string InterpName(WorldInterpretation w) => w switch
-        {
-            WorldInterpretation.BoxWorld => "BOX WORLD",
-            WorldInterpretation.WireFrame => "WIREFRAME",
-            WorldInterpretation.SlicedLayers => "SLICED LAYERS",
-            WorldInterpretation.Xray => "XRAY",
-            _ => "?"
-        };
-
-        // ====================================================================
-        //  ПОЛЯ
-        // ====================================================================
+        public enum WorldInterp { BoxWorld = 0, WireFrame = 1, SlicedLayers = 2, Xray = 3, Count = 4 }
+        private enum ViewStyle { Normal, Full, Xray }
 
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly List<HookRegistration> hooks = new List<HookRegistration>();
-
-        private WorldInterpretation interpretation = WorldInterpretation.BoxWorld;
-        private ViewMode viewMode = ViewMode.Full;
-        private Renderer renderer;
-        private bool enabled;
-        private bool stopped;
-        private bool ready;
-
-        private bool mouseCaptured;
-        private bool discardNextMouseDelta;
-        private Point savedMouse;
-        private ButtonState previousLeft;
-
+        private WorldInterp interp = WorldInterp.BoxWorld;
+        private ViewStyle style = ViewStyle.Full;
+        private bool enabled, stopped, ready;
+        private bool mouseCaptured, discardNextMouseDelta;
+        private bool showHints, clickPending, worldClickArmed, interactionHookAvailable, warnedAboutCursor, warmupQueued = true;
         private Character owner;
         private Vector2 savedCursor;
-        private float yaw;
-        private float pitch;
-
-        private KeyboardState previousKeyboard;
-        private bool showHints;
-        private bool clickPending;
-        private bool worldClickArmed;
+        private float yaw, pitch;
+        private Point savedMouse;
+        private ButtonState previousLeft;
         private Point clickPosition;
-        private bool interactionHookAvailable;
-        private bool warnedAboutCursor;
-        private bool warmupQueued = true;
-
+        private KeyboardState previousKeyboard;
         private int floorLine;
-        private Settings settings = new Settings();
-        private SpriteBatch spriteBatch;
+        private SpriteBatch sb;
+        private Texture2D whiteTex;
 
-        // ====================================================================
-        //  ВНУТРЕННИЕ КЛАССЫ
-        // ====================================================================
-
-        private sealed class HookRegistration { public string Id; public MethodInfo Method; }
-
-        private sealed class ObjectRule
+        private static string InterpName(WorldInterp w) => w switch
         {
-            public string Prefab, Submarine, Side;
-            public int? EntityId, EditorId;
-            public float? Offset, Depth, Scale;
-        }
+            WorldInterp.BoxWorld => "BOX WORLD",
+            WorldInterp.WireFrame => "WIREFRAME",
+            WorldInterp.SlicedLayers => "SLICED LAYERS",
+            WorldInterp.Xray => "XRAY",
+            _ => "?"
+        };
 
-        private sealed class Settings
+        private static string StyleName(ViewStyle s) => s switch
         {
-            public float DepthScale = 1.8f;
-            public float RoomHalfDepth = 155f;
-            public float LayerSpread = 17f;
-            public float SurfaceInset = 28f;
-            public bool ShowIds = true;
-            public bool WarmupAll = true;
-            public bool SurfaceTexture = true;
-            public List<ObjectRule> Objects = new List<ObjectRule>();
-        }
-
-        private static class SettingsStore
-        {
-            private const string StorePath = "barodepth/depth3d.settings.xml";
-            public static string Interpretation = "BoxWorld";
-            public static int FloorLine;
-
-            public static void Load()
-            {
-                try
-                {
-                    if (!File.Exists(StorePath)) return;
-                    var root = XDocument.Load(StorePath).Root;
-                    if (root == null) return;
-                    Interpretation = (string)root.Attribute("interpretation") ?? "BoxWorld";
-                    FloorLine = (int?)root.Attribute("floorLine") ?? 0;
-                }
-                catch { }
-            }
-
-            public static void Save(string interp, int floor)
-            {
-                try
-                {
-                    Directory.CreateDirectory("barodepth");
-                    new XDocument(new XElement("settings",
-                        new XAttribute("interpretation", interp),
-                        new XAttribute("floorLine", floor))).Save(StorePath);
-                }
-                catch { }
-            }
-        }
-
-        private static class PixelTex
-        {
-            private static Texture2D tex;
-            public static Texture2D Get
-            {
-                get
-                {
-                    if (tex != null) return tex;
-                    tex = new Texture2D(GameMain.Instance.GraphicsDevice, 1, 1);
-                    tex.SetData(new[] { Color.White });
-                    return tex;
-                }
-            }
-        }
-
-        private sealed class NativeInteraction
-        {
-            public void Commit(Item target, Character character)
-            {
-                if (target == null || character == null || target.Removed) return;
-                float dist = Vector2.Distance(character.WorldPosition, target.WorldPosition);
-                if (dist > 300f) return;
-
-                // Универсальное: item.Use() — игра сама разрулит дверь/пикап/контроллер
-                try { target.Use(1.0f / 60.0f, character); }
-                catch (Exception ex) { DebugConsole.ThrowError("[Depth3D] Use: " + ex.Message); }
-            }
-        }
-
-        private readonly NativeInteraction interaction = new NativeInteraction();
-
-        // ====================================================================
-        //  КОНСТРУКТОР
-        // ====================================================================
+            ViewStyle.Normal => "NORMAL",
+            ViewStyle.Full => "FULL",
+            ViewStyle.Xray => "XRAY",
+            _ => "?"
+        };
 
         public Depth3DMod()
         {
-            SettingsStore.Load();
-            if (Enum.TryParse(SettingsStore.Interpretation, out WorldInterpretation saved))
-                interpretation = saved;
-            floorLine = SettingsStore.FloorLine;
+            LoadPersist();
             previousKeyboard = Keyboard.GetState();
 
             try
@@ -225,181 +78,136 @@ namespace Depth3D
                 if (drawMap == null || draw == null)
                     throw new MissingMethodException("GameScreen.DrawMap/Draw not found.");
 
-                AddAfter("map", drawMap, (instance, args) =>
+                AddHook("map", drawMap, (inst, args) =>
                 {
                     if (stopped || !enabled) return null;
                     if (!HasContext()) { Disable(false); return null; }
-                    try
-                    {
-                        renderer ??= new Renderer(settings, ViewDistance);
-                        if (warmupQueued) { renderer.WarmupPending = true; warmupQueued = false; }
-                        renderer.Render(owner, ToRenderMode(interpretation), ToViewMode(interpretation),
-                            yaw, pitch, FieldOfViewDegrees, clock.Elapsed.TotalSeconds);
-                    }
-                    catch (Exception ex) { Fail("render", ex); }
+                    try { DoRender(); } catch (Exception ex) { Fail("render", ex); }
                     return null;
                 });
 
-                AddAfter("hud", draw, (instance, args) =>
+                AddHook("hud", draw, (inst, args) =>
                 {
-                    if (stopped || !enabled || renderer == null || !HasContext()) return null;
-                    try
-                    {
-                        renderer.DrawOverlay(ToRenderMode(interpretation), mouseCaptured, owner.InWater, showHints);
-                        DrawHud();
-                    }
-                    catch (Exception ex) { Fail("overlay", ex); }
+                    if (stopped || !enabled || !HasContext()) return null;
+                    try { DoOverlay(); } catch (Exception ex) { Fail("overlay", ex); }
                     return null;
                 });
 
-                MethodInfo cursorUpdate = FindMethod(typeof(Character), "UpdateLocalCursor", 1);
-                if (cursorUpdate != null)
+                MethodInfo cursorM = FindMethod(typeof(Character), "UpdateLocalCursor", 1);
+                if (cursorM != null)
                 {
-                    AddAfter("cursor", cursorUpdate, (instance, args) =>
+                    AddHook("cursor", cursorM, (inst, args) =>
                     {
-                        if (stopped || !enabled || !ReferenceEquals(instance, owner)) return null;
+                        if (stopped || !enabled || !ReferenceEquals(inst, owner)) return null;
                         try { UpdateAim(); } catch (Exception ex) { Fail("aim", ex); }
                         return null;
                     });
                 }
                 else warnedAboutCursor = true;
 
-                MethodInfo localControl = FindMethod(typeof(Character), "ControlLocalPlayer", 3);
-                if (localControl != null)
+                MethodInfo controlM = FindMethod(typeof(Character), "ControlLocalPlayer", 3);
+                if (controlM != null)
                 {
-                    AddAfter("interact", localControl, (instance, args) =>
+                    AddHook("interact", controlM, (inst, args) =>
                     {
-                        if (stopped || !enabled || !ReferenceEquals(instance, owner)) return null;
-                        try { CommitInteraction(); } catch (Exception ex) { Fail("interact", ex); }
+                        if (stopped || !enabled || !ReferenceEquals(inst, owner)) return null;
+                        try { CommitInteract(); } catch (Exception ex) { Fail("interact", ex); }
                         return null;
                     });
                     interactionHookAvailable = true;
                 }
-                else Log("Interaction hook unavailable.", Color.Orange);
 
                 GameMain.LuaCs.Hook.Add("think", Prefix + "update", (args) =>
                 {
                     if (stopped) return null;
-                    try { Update(); } catch (Exception ex) { Fail("update", ex); }
+                    try { Tick(); } catch (Exception ex) { Fail("tick", ex); }
                     return null;
                 });
 
                 ready = true;
-                Log($"Ready. F5:3D | F9:{InterpName(interpretation)} | F6:style | LMB:use", Color.Cyan);
+                Log($"Ready. F5=3D | F9={InterpName(interp)}", Color.Cyan);
             }
             catch (Exception ex)
             {
                 stopped = true;
                 RemoveHooks();
-                Log("Failed: " + ex.Message, Color.OrangeRed);
+                Log("Init fail: " + ex.Message, Color.OrangeRed);
             }
         }
 
-        // ====================================================================
-        //  ACsMod ОБЯЗАТЕЛЬНЫЕ МЕТОДЫ
-        // ====================================================================
-
-        public override void Stop()
-        {
-            Disable(false);
-            RemoveHooks();
-            base.Dispose();
-        }
-
-        public override void Dispose()
-        {
-            Disable(false);
-            RemoveHooks();
-            base.Dispose();
-        }
-
-        // ====================================================================
-        //  КОНТЕКСТ
-        // ====================================================================
+        public override void Stop() { Disable(false); RemoveHooks(); }
+        public override void Dispose() { Disable(false); RemoveHooks(); }
 
         private bool HasContext()
             => Screen.Selected is GameScreen && Character.Controlled is { IsDead: false, Removed: false };
 
-        private bool UiOwnsInput()
+        private bool UiOwns()
             => GUI.MouseOn is GUIComponent || GUI.KeyboardDispatcher?.Subscriber != null;
 
-        private bool PointerOnUi()
+        private bool OnUi()
             => GUI.MouseOn is GUIComponent;
 
-        private void EnsureSpriteBatch()
+        private bool ItemGuiOpen()
+            => Character.Controlled?.SelectedItem != null;
+
+        private void Tick()
         {
-            if (spriteBatch != null) return;
-            spriteBatch = new SpriteBatch(GameMain.Instance.GraphicsDevice);
-        }
+            var kb = Keyboard.GetState();
+            var ms = Mouse.GetState();
 
-        // ====================================================================
-        //  ГЛАВНЫЙ ЦИКЛ
-        // ====================================================================
-
-        private void Update()
-        {
-            KeyboardState keyboard = Keyboard.GetState();
-            MouseState mouse = Mouse.GetState();
-
-            bool toggle = keyboard.IsKeyDown(Keys.F5) && previousKeyboard.IsKeyUp(Keys.F5);
-            bool toggleStyle = keyboard.IsKeyDown(Keys.F6) && previousKeyboard.IsKeyUp(Keys.F6);
-            bool reload = keyboard.IsKeyDown(Keys.F7) && previousKeyboard.IsKeyUp(Keys.F7);
-            bool export = keyboard.IsKeyDown(Keys.F8) && previousKeyboard.IsKeyUp(Keys.F8);
-            bool nextMode = keyboard.IsKeyDown(Keys.F9) && previousKeyboard.IsKeyUp(Keys.F9);
-            bool pressed = mouse.LeftButton == ButtonState.Pressed && previousLeft == ButtonState.Released;
-            bool released = mouse.LeftButton == ButtonState.Released && previousLeft == ButtonState.Pressed;
-            previousKeyboard = keyboard; previousLeft = mouse.LeftButton;
+            bool f5 = kb.IsKeyDown(Keys.F5) && previousKeyboard.IsKeyUp(Keys.F5);
+            bool f6 = kb.IsKeyDown(Keys.F6) && previousKeyboard.IsKeyUp(Keys.F6);
+            bool f7 = kb.IsKeyDown(Keys.F7) && previousKeyboard.IsKeyUp(Keys.F7);
+            bool f8 = kb.IsKeyDown(Keys.F8) && previousKeyboard.IsKeyUp(Keys.F8);
+            bool f9 = kb.IsKeyDown(Keys.F9) && previousKeyboard.IsKeyUp(Keys.F9);
+            bool b = PlayerInput.KeyHit(Keys.B);
+            bool mPress = ms.LeftButton == ButtonState.Pressed && previousLeft == ButtonState.Released;
+            bool mRelease = ms.LeftButton == ButtonState.Released && previousLeft == ButtonState.Pressed;
+            previousKeyboard = kb; previousLeft = ms.LeftButton;
 
             if (enabled && !HasContext()) Disable(false);
             if (!GameMain.WindowActive)
             {
-                mouseCaptured = false; showHints = false; clickPending = false; worldClickArmed = false;
+                mouseCaptured = false; showHints = false;
+                clickPending = false; worldClickArmed = false;
                 discardNextMouseDelta = true; return;
             }
 
-            if (toggle && ready)
+            if (f5 && ready)
             {
                 if (enabled) Disable(true);
-                else if (!UiOwnsInput()) Enable();
+                else if (!UiOwns()) Enable();
             }
             if (!enabled) return;
 
-            if (nextMode && !UiOwnsInput())
+            if (f9 && !UiOwns())
             {
-                interpretation = (WorldInterpretation)(((int)interpretation + 1) % (int)WorldInterpretation.Count);
-                SettingsStore.Save(interpretation.ToString(), floorLine);
-                renderer?.InvalidateView();
-                warmupQueued = true;
-                Log("РЕЖИМ: " + InterpName(interpretation), Color.Cyan);
+                interp = (WorldInterp)(((int)interp + 1) % (int)WorldInterp.Count);
+                Persist();
+                Log("MODE: " + InterpName(interp), Color.Cyan);
             }
 
-            if (reload && !UiOwnsInput()) { LoadSettings(); warmupQueued = true; }
-            if (PlayerInput.KeyHit(Keys.B))
-            {
-                floorLine = (floorLine + 1) % 3;
-                SettingsStore.Save(interpretation.ToString(), floorLine);
-            }
-            if (export && !UiOwnsInput() && renderer != null) renderer.ExportObjects();
+            if (f7 && !UiOwns()) Log("XML reload: not implemented in v1.2.", Color.Orange);
+            if (f8 && !UiOwns()) ExportCSV();
+            if (b) { floorLine = (floorLine + 1) % 3; Persist(); }
 
-            bool ui = UiOwnsInput() || HasItemGui();
-            if (toggleStyle && !UiOwnsInput())
+            bool ui = UiOwns() || ItemGuiOpen();
+            if (f6 && !UiOwns())
             {
-                viewMode = (ViewMode)(((int)viewMode + 1) % 3);
-                renderer?.InvalidateView();
-                warmupQueued = true;
+                style = (ViewStyle)(((int)style + 1) % 3);
+                Log("STYLE: " + StyleName(style), Color.Cyan);
             }
-            showHints = keyboard.IsKeyDown(Keys.LeftAlt) && !ui;
+            showHints = kb.IsKeyDown(Keys.LeftAlt) && !ui;
             bool capture = !ui && !showHints;
             int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
-            Point pointer = capture ? new Point(cx, cy) : new Point(mouse.X, mouse.Y);
-            bool worldInput = !ui && !PointerOnUi() && (showHints || !PlayerInput.KeyDown(InputType.Aim));
-            if (!worldInput) { worldClickArmed = false; clickPending = false; }
-            if (pressed && worldInput && interactionHookAvailable && renderer != null)
-                worldClickArmed = renderer.TryPick(pointer, yaw, pitch, showHints, out _, out _);
-            if (released && worldClickArmed && worldInput)
-            {
-                clickPosition = pointer; clickPending = true; worldClickArmed = false;
-            }
+            var ptr = capture ? new Point(cx, cy) : new Point(ms.X, ms.Y);
+            bool worldIn = !ui && !OnUi() && (showHints || !PlayerInput.KeyDown(InputType.Aim));
+            if (!worldIn) { worldClickArmed = false; clickPending = false; }
+            if (mPress && worldIn && interactionHookAvailable)
+                worldClickArmed = TryPick(ptr, out _, out _);
+            if (mRelease && worldClickArmed && worldIn)
+            { clickPosition = ptr; clickPending = true; worldClickArmed = false; }
+
             if (!capture)
             {
                 mouseCaptured = false; discardNextMouseDelta = true;
@@ -413,38 +221,28 @@ namespace Depth3D
                 if (warnedAboutCursor) UpdateAim();
                 return;
             }
-            float dx = MathHelper.Clamp(mouse.X - cx, -250f, 250f);
-            float dy = MathHelper.Clamp(mouse.Y - cy, -250f, 250f);
+            float dx = MathHelper.Clamp(ms.X - cx, -250f, 250f);
+            float dy = MathHelper.Clamp(ms.Y - cy, -250f, 250f);
             yaw = MathHelper.WrapAngle(yaw + dx * MouseSensitivity);
             pitch = MathHelper.Clamp(pitch - dy * MouseSensitivity, -1.38f, 1.38f);
             Mouse.SetPosition(cx, cy);
             if (warnedAboutCursor) UpdateAim();
         }
 
-        // ====================================================================
-        //  ВКЛ/ВЫКЛ
-        // ====================================================================
-
         private void Enable()
         {
-            Character character = Character.Controlled;
-            if (!(Screen.Selected is GameScreen) || character == null || character.IsDead || character.Removed)
-            {
-                Log("Нужен живой персонаж в раунде.", Color.Orange);
-                return;
-            }
-            owner = character;
-            savedCursor = character.CursorPosition;
-            MouseState mouse = Mouse.GetState();
-            savedMouse = new Point(mouse.X, mouse.Y);
-            previousLeft = mouse.LeftButton;
+            var ch = Character.Controlled;
+            if (!(Screen.Selected is GameScreen) || ch == null || ch.IsDead || ch.Removed)
+            { Log("Need living character in round.", Color.Orange); return; }
+            owner = ch;
+            savedCursor = ch.CursorPosition;
+            var ms = Mouse.GetState();
+            savedMouse = new Point(ms.X, ms.Y);
+            previousLeft = ms.LeftButton;
             clickPending = false; showHints = false; worldClickArmed = false;
-            yaw = (character.AnimController?.Dir ?? 1f) >= 0f ? 0f : MathHelper.Pi;
-            pitch = 0f;
-            enabled = true;
-            warmupQueued = true;
-            discardNextMouseDelta = true;
-            Log("ON / " + InterpName(interpretation), Color.LimeGreen);
+            yaw = (ch.AnimController?.Dir ?? 1f) >= 0f ? 0f : MathHelper.Pi;
+            pitch = 0f; enabled = true; warmupQueued = true; discardNextMouseDelta = true;
+            Log("ON / " + InterpName(interp), Color.LimeGreen);
         }
 
         private void Disable(bool announce)
@@ -457,13 +255,8 @@ namespace Depth3D
                 owner.CursorPosition = savedCursor;
             owner = null;
             if (GameMain.WindowActive) Mouse.SetPosition(savedMouse.X, savedMouse.Y);
-            renderer?.ClearScene();
             if (announce) Log("OFF / 2D view.", Color.Orange);
         }
-
-        // ====================================================================
-        //  AIM + INTERACT
-        // ====================================================================
 
         private void UpdateAim()
         {
@@ -472,294 +265,239 @@ namespace Depth3D
             owner.CursorPosition = owner.WorldPosition + dir * 500f;
         }
 
-        private void CommitInteraction()
+        private void CommitInteract()
         {
-            if (!clickPending) return;
+            if (!clickPending || owner == null || owner.Removed) return;
             clickPending = false;
-            if (owner == null || owner.Removed) return;
-            if (renderer == null) return;
-            if (!renderer.TryPick(clickPosition, yaw, pitch, showHints, out Item target, out Vector2 worldPos)) return;
-            interaction.Commit(target, owner);
+            if (!TryPick(clickPosition, out Item target, out _)) return;
+            if (target == null || target.Removed) return;
+            float dist = Vector2.Distance(owner.WorldPosition, target.WorldPosition);
+            if (dist > 300f) return;
+            try { target.Use(1.0f / 60.0f, owner); }
+            catch (Exception ex) { DebugConsole.ThrowError("[D3D] Use: " + ex.Message); }
         }
 
-        // ====================================================================
-        //  HUD
-        // ====================================================================
-
-        private void DrawHud()
+        private bool TryPick(Point pixel, out Item target, out Vector2 worldPos)
         {
-            EnsureSpriteBatch();
-            if (spriteBatch == null) return;
-            var font = GUIStyle.Font;
-            if (font == null) return;
-            string text = $"[{InterpName(interpretation)}] {viewMode}";
-            Vector2 size = font.MeasureString(text);
-            var pos = new Vector2(GameMain.GraphicsWidth - size.X - 20f, 20f);
-            spriteBatch.Begin();
-            spriteBatch.DrawString(font, text, pos + Vector2.One, Color.Black);
-            spriteBatch.DrawString(font, text, pos, Color.Cyan);
-            spriteBatch.End();
+            target = null; worldPos = Vector2.Zero;
+            var ch = Character.Controlled;
+            if (ch == null) return false;
+            float best = float.MaxValue;
+            foreach (var item in Item.ItemList)
+            {
+                if (item == null || item.Removed || item.ParentInventory != null) continue;
+                var delta = item.WorldPosition - ch.WorldPosition;
+                float d = delta.Length();
+                if (d > ViewDistance || d > best) continue;
+                float angle = (float)Math.Atan2(delta.Y, delta.X);
+                if (Math.Abs(MathHelper.WrapAngle(angle - yaw)) < 0.35f)
+                { best = d; target = item; worldPos = item.WorldPosition; }
+            }
+            return target != null;
         }
 
-        // ====================================================================
-        //  НАСТРОЙКИ
-        // ====================================================================
+        private void DoRender()
+        {
+            if (owner == null) return;
+            EnsureSb();
+
+            sb.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied);
+            try
+            {
+                var origin = owner.WorldPosition;
+                float cos = (float)Math.Cos(yaw), sin = (float)Math.Sin(yaw);
+                var items = new List<(Item item, float dist, float lat)>();
+
+                foreach (var item in Item.ItemList)
+                {
+                    if (item == null || item.Removed || item.ParentInventory != null) continue;
+                    if (item.GetComponent<Holdable>() is { Attached: false }) continue;
+                    var delta = item.WorldPosition - origin;
+                    float fwd = delta.X * cos + delta.Y * sin;
+                    if (fwd < 10f || fwd > ViewDistance) continue;
+                    float lat = -delta.X * sin + delta.Y * cos;
+                    items.Add((item, fwd, lat));
+                }
+
+                items.Sort((a, b) => b.dist.CompareTo(a.dist));
+                int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
+                bool wire = interp == WorldInterp.WireFrame;
+                bool xray = interp == WorldInterp.Xray;
+                bool slice = interp == WorldInterp.SlicedLayers;
+
+                foreach (var (item, dist, lat) in items)
+                {
+                    var rect = item.Rect;
+                    if (rect.Width <= 0 || rect.Height <= 0) continue;
+                    float sc = 300f / Math.Max(dist, 50f);
+                    int w = (int)(rect.Width * sc);
+                    int h = (int)(rect.Height * sc);
+                    if (w < 2 || h < 2) continue;
+                    var pos = new Vector2(cx + lat * sc, cy);
+                    var r = new Rectangle((int)pos.X - w / 2, (int)pos.Y - h / 2, w, h);
+
+                    Color fill = slice ? Color.Orange * 0.35f : Color.CornflowerBlue * 0.3f;
+                    Color border = Color.White * 0.4f;
+                    if (xray) { fill = Color.Purple * 0.25f; border = Color.Magenta * 0.5f; }
+                    if (wire) fill = Color.Transparent;
+
+                    if (fill.A > 0) sb.Draw(GetTex(), r, fill);
+                    DrawBorder(sb, r, border);
+                }
+
+                Color fc = floorLine == 1 ? Color.White * 0.15f
+                         : floorLine == 2 ? Color.White * 0.06f
+                         : Color.White * 0.3f;
+                int fy = cy + (int)(140f * 300f / 200f);
+                if (fy > 0 && fy < GameMain.GraphicsHeight)
+                    sb.Draw(GetTex(), new Rectangle(0, fy, GameMain.GraphicsWidth, 1), fc);
+            }
+            finally { sb.End(); }
+        }
+
+        private void DoOverlay()
+        {
+            EnsureSb();
+            sb.Begin();
+            int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
+            sb.Draw(GetTex(), new Rectangle(cx - 5, cy - 1, 10, 2), Color.White * 0.7f);
+            sb.Draw(GetTex(), new Rectangle(cx - 1, cy - 5, 2, 10), Color.White * 0.7f);
+
+            var font = GUIStyle.Font;
+            if (font != null)
+            {
+                string txt = $"[{InterpName(interp)}] {StyleName(style)}";
+                var sz = font.MeasureString(txt);
+                var pos = new Vector2(GameMain.GraphicsWidth - sz.X - 20f, 20f);
+                font.DrawString(sb, txt, pos + Vector2.One, Color.Black, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                font.DrawString(sb, txt, pos, Color.Cyan, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            }
+            sb.End();
+        }
+
+        private void ExportCSV()
+        {
+            try
+            {
+                Directory.CreateDirectory("barodepth");
+                using var w = new StreamWriter("barodepth/objects.csv", append: false);
+                w.WriteLine("entityId;prefab;name");
+                foreach (var item in Item.ItemList)
+                {
+                    if (item == null || item.Removed) continue;
+                    string p = item.Prefab != null ? item.Prefab.Identifier.Value : "?";
+                    w.WriteLine($"{item.ID};{p};{item.Name}");
+                }
+                Log("CSV saved.", Color.Lime);
+            }
+            catch (Exception ex) { Log("CSV: " + ex.Message, Color.Red); }
+        }
+
+        private void LoadPersist()
+        {
+            try
+            {
+                string p = "barodepth/depth3d.settings.xml";
+                if (!File.Exists(p)) return;
+                var root = XDocument.Load(p).Root;
+                if (root == null) return;
+                string s = (string)root.Attribute("interp") ?? "BoxWorld";
+                if (Enum.TryParse(s, out WorldInterp parsed)) interp = parsed;
+                floorLine = (int?)root.Attribute("floor") ?? 0;
+            }
+            catch { }
+        }
+
+        private void Persist()
+        {
+            try
+            {
+                Directory.CreateDirectory("barodepth");
+                string p = "barodepth/depth3d.settings.xml";
+                new XDocument(new XElement("s",
+                    new XAttribute("interp", interp.ToString()),
+                    new XAttribute("floor", floorLine))).Save(p);
+            }
+            catch { }
+        }
 
         private void LoadSettings()
         {
             try
             {
                 if (!File.Exists(ConfigPath)) return;
-                var doc = XDocument.Load(ConfigPath);
-                var global = doc.Root?.Element("Global");
-                if (global != null)
-                {
-                    settings.DepthScale = (float?)global.Attribute("depthScale") ?? settings.DepthScale;
-                    settings.RoomHalfDepth = (float?)global.Attribute("roomHalfDepth") ?? settings.RoomHalfDepth;
-                    settings.LayerSpread = (float?)global.Attribute("layerSpread") ?? settings.LayerSpread;
-                    settings.SurfaceInset = (float?)global.Attribute("surfaceInset") ?? settings.SurfaceInset;
-                    settings.ShowIds = (bool?)global.Attribute("showIds") ?? settings.ShowIds;
-                    settings.WarmupAll = (bool?)global.Attribute("warmupAll") ?? settings.WarmupAll;
-                    settings.SurfaceTexture = (bool?)global.Attribute("surfaceTexture") ?? settings.SurfaceTexture;
-                }
-                var objects = doc.Root?.Element("Objects");
-                settings.Objects.Clear();
-                if (objects != null)
-                {
-                    foreach (var el in objects.Elements("Object"))
-                    {
-                        settings.Objects.Add(new ObjectRule
-                        {
-                            Prefab = (string)el.Attribute("prefab"),
-                            Submarine = (string)el.Attribute("submarine"),
-                            Side = (string)el.Attribute("side") ?? "both",
-                            EntityId = (int?)el.Attribute("entityId"),
-                            EditorId = (int?)el.Attribute("editorId"),
-                            Offset = (float?)el.Attribute("offset"),
-                            Depth = (float?)el.Attribute("depth"),
-                            Scale = (float?)el.Attribute("scale"),
-                        });
-                    }
-                }
+                XDocument.Load(ConfigPath);
+                Log("XML loaded.", Color.Lime);
             }
-            catch (Exception ex) { Log("Config: " + ex.Message, Color.OrangeRed); }
+            catch (Exception ex) { Log("XML: " + ex.Message, Color.OrangeRed); }
         }
 
-        // ====================================================================
-        //  УТИЛИТЫ
-        // ====================================================================
+        private void EnsureSb()
+        {
+            if (sb != null) return;
+            sb = new SpriteBatch(GameMain.Instance.GraphicsDevice);
+        }
 
-        private static MethodInfo FindMethod(Type type, string name, int parameterCount)
+        private Texture2D GetTex()
+        {
+            if (whiteTex != null) return whiteTex;
+            whiteTex = new Texture2D(GameMain.Instance.GraphicsDevice, 1, 1);
+            whiteTex.SetData(new[] { Color.White });
+            return whiteTex;
+        }
+
+        private static MethodInfo FindMethod(Type t, string name, int paramCount)
         {
             MethodInfo found = null;
-            foreach (MethodInfo m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                if (m.Name != name || m.GetParameters().Length != parameterCount) continue;
+                if (m.Name != name || m.GetParameters().Length != paramCount) continue;
                 if (found != null) return null;
                 found = m;
             }
             return found;
         }
 
-        private void AddAfter(string suffix, MethodInfo method, Func<object, Dictionary<string, object>, object> callback)
+        private void AddHook(string suffix, MethodInfo method, Func<object, Dictionary<string, object>, object> cb)
         {
             string id = Prefix + suffix;
             GameMain.LuaCs.Hook.HookMethod(id, method,
-                (instance, arguments) => callback(instance, arguments),
-                LuaCsHook.HookMethodType.After);
+                (inst, args) => cb(inst, args), LuaCsHook.HookMethodType.After);
             hooks.Add(new HookRegistration { Id = id, Method = method });
         }
 
         private void RemoveHooks()
         {
-            // Через рефлексию — чтобы работать на любой версии LuaCs
             try { GameMain.LuaCs.Hook.Remove(Prefix + "update", "think"); } catch { }
-            object hookManager = GameMain.LuaCs.Hook;
-            foreach (var reg in hooks)
+            try
             {
-                try
+                object hm = GameMain.LuaCs.Hook;
+                foreach (var reg in hooks)
                 {
-                    foreach (MethodInfo m in hookManager.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public))
+                    foreach (var m in hm.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public))
                     {
                         if (m.Name != "UnhookMethod" && m.Name != "RemovePatch") continue;
                         var pars = m.GetParameters();
                         if (pars.Length >= 2 && pars[0].ParameterType == typeof(string))
                         {
-                            m.Invoke(hookManager, pars.Length >= 3
+                            m.Invoke(hm, pars.Length >= 3
                                 ? new object[] { reg.Id, reg.Method, null }
                                 : new object[] { reg.Id, reg.Method });
                             break;
                         }
                     }
                 }
-                catch { }
             }
+            catch { }
             hooks.Clear();
         }
 
         private void Fail(string phase, Exception ex)
-        {
-            DebugConsole.ThrowError($"[Depth3D] {phase}: {ex.Message}", ex);
-        }
+            => DebugConsole.ThrowError($"[D3D] {phase}: {ex.Message}", ex);
 
         private static void Log(string msg, Color color)
-        {
-            DebugConsole.NewMessage("[Depth3D] " + msg, color);
-        }
+            => DebugConsole.NewMessage("[D3D] " + msg, color);
 
-        // ====================================================================
-        //  RENDERER (минимальная версия — цветные боксы)
-        //  Для полной графики замени на Renderer из "V3 3D Barotrauma.cs" :954
-        // ====================================================================
-
-        private sealed class Renderer : IDisposable
-        {
-            public bool WarmupPending;
-            private readonly Settings settings;
-            private readonly float viewDistance;
-            private SpriteBatch sb;
-
-            public Renderer(Settings cfg, float viewDist)
-            {
-                settings = cfg;
-                viewDistance = viewDist;
-            }
-
-            private void EnsureSb()
-            {
-                if (sb != null) return;
-                sb = new SpriteBatch(GameMain.Instance.GraphicsDevice);
-            }
-
-            public void Render(Character player, RenderMode mode, ViewMode sceneView, float yaw, float pitch, float fov, double time)
-            {
-                if (player == null) return;
-                EnsureSb();
-                if (sb == null) return;
-
-                sb.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied);
-                try
-                {
-                    var origin = player.WorldPosition;
-                    float cos = (float)Math.Cos(yaw), sin = (float)Math.Sin(yaw);
-                    var visible = new List<(Item item, float dist, float lateral)>();
-
-                    foreach (var item in Item.ItemList)
-                    {
-                        if (item == null || item.Removed || item.ParentInventory != null) continue;
-                        if (item.GetComponent<Holdable>() is { Attached: false }) continue;
-                        var delta = item.WorldPosition - origin;
-                        float forward = delta.X * cos + delta.Y * sin;
-                        if (forward < 10f || forward > viewDistance) continue;
-                        float lateral = -delta.X * sin + delta.Y * cos;
-                        visible.Add((item, forward, lateral));
-                    }
-
-                    visible.Sort((a, b) => b.dist.CompareTo(a.dist));
-                    int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
-
-                    foreach (var (item, dist, lat) in visible)
-                    {
-                        var rect = item.Rect;
-                        if (rect.Width <= 0 || rect.Height <= 0) continue;
-                        float scale = 300f / Math.Max(dist, 50f);
-                        int w = (int)(rect.Width * scale);
-                        int h = (int)(rect.Height * scale);
-                        if (w < 2 || h < 2) continue;
-                        var screenPos = new Vector2(cx + lat * scale, cy);
-                        Color fill = mode switch
-                        {
-                            RenderMode.Contours => Color.Transparent,
-                            RenderMode.Slices => Color.Orange * 0.35f,
-                            _ => Color.CornflowerBlue * 0.3f
-                        };
-                        Color border = Color.White * 0.4f;
-                        if (sceneView == ViewMode.Xray) { fill = Color.Purple * 0.25f; border = Color.Magenta * 0.5f; }
-
-                        var r = new Rectangle((int)screenPos.X - w / 2, (int)screenPos.Y - h / 2, w, h);
-                        if (fill.A > 0) sb.Draw(PixelTex.Get, r, fill);
-                        sb.Draw(PixelTex.Get, new Rectangle(r.X, r.Y, r.Width, 1), border);
-                        sb.Draw(PixelTex.Get, new Rectangle(r.X, r.Bottom - 1, r.Width, 1), border);
-                        sb.Draw(PixelTex.Get, new Rectangle(r.X, r.Y, 1, r.Height), border);
-                        sb.Draw(PixelTex.Get, new Rectangle(r.Right - 1, r.Y, 1, r.Height), border);
-                    }
-
-                    // Пол
-                    Color floorCol = floorLine == 1 ? Color.White * 0.15f
-                                   : floorLine == 2 ? Color.White * 0.06f
-                                   : Color.White * 0.3f;
-                    int floorY = cy + (int)(140f * 300f / 200f);
-                    if (floorY < GameMain.GraphicsHeight && floorY > 0)
-                        sb.Draw(PixelTex.Get, new Rectangle(0, floorY, GameMain.GraphicsWidth, 1), floorCol);
-                }
-                finally { sb.End(); }
-            }
-
-            public void DrawOverlay(RenderMode mode, bool captured, bool inWater, bool hints)
-            {
-                EnsureSb();
-                if (sb == null) return;
-                sb.Begin();
-                int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
-                sb.Draw(PixelTex.Get, new Rectangle(cx - 5, cy - 1, 10, 2), Color.White * 0.7f);
-                sb.Draw(PixelTex.Get, new Rectangle(cx - 1, cy - 5, 2, 10), Color.White * 0.7f);
-                sb.End();
-            }
-
-            public bool TryPick(Point pixel, float yaw, float pitch, bool allowLabels, out Item target, out Vector2 worldPos)
-            {
-                target = null; worldPos = Vector2.Zero;
-                var character = Character.Controlled;
-                if (character == null) return false;
-                float bestDist = float.MaxValue;
-                foreach (var item in Item.ItemList)
-                {
-                    if (item == null || item.Removed || item.ParentInventory != null) continue;
-                    var delta = item.WorldPosition - character.WorldPosition;
-                    float dist = delta.Length();
-                    if (dist > viewDistance || dist > bestDist) continue;
-                    float angle = (float)Math.Atan2(delta.Y, delta.X);
-                    float diff = Math.Abs(MathHelper.WrapAngle(angle - yaw));
-                    if (diff < 0.35f) { bestDist = dist; target = item; worldPos = item.WorldPosition; }
-                }
-                return target != null;
-            }
-
-            public void InvalidateView() { }
-            public void ClearScene() { }
-            public void ExportObjects()
-            {
-                try
-                {
-                    Directory.CreateDirectory("barodepth");
-                    using var w = new StreamWriter("barodepth/objects.csv", append: false);
-                    w.WriteLine("entityId;prefab;name");
-                    foreach (var item in Item.ItemList)
-                    {
-                        if (item == null || item.Removed) continue;
-                        string prefabStr = item.Prefab != null ? item.Prefab.Identifier.Value : "?";
-                        w.WriteLine($"{item.ID};{prefabStr};{item.Name}");
-                    }
-                    Log("Export done.", Color.Lime);
-                }
-                catch (Exception ex) { Log("Export: " + ex.Message, Color.Red); }
-            }
-            public void Dispose() { }
-        }
-
-        private static class PixelTex
-        {
-            private static Texture2D tex;
-            public static Texture2D Get
-            {
-                get
-                {
-                    if (tex != null) return tex;
-                    tex = new Texture2D(GameMain.Instance.GraphicsDevice, 1, 1);
-                    tex.SetData(new[] { Color.White });
-                    return tex;
-                }
-            }
-        }
+        private sealed class HookRegistration { public string Id; public MethodInfo Method; }
     }
 }
