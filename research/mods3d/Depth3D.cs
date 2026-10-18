@@ -342,7 +342,10 @@ namespace Depth3D
                     if (wire) fill = Color.Transparent;
 
                     if (fill.A > 0) sb.Draw(GetTex(), r, fill);
-                    DrawBorder(sb, r, border);
+                    sb.Draw(GetTex(), new Rectangle(r.X, r.Y, r.Width, 1), border);
+                    sb.Draw(GetTex(), new Rectangle(r.X, r.Bottom - 1, r.Width, 1), border);
+                    sb.Draw(GetTex(), new Rectangle(r.X, r.Y, 1, r.Height), border);
+                    sb.Draw(GetTex(), new Rectangle(r.Right - 1, r.Y, 1, r.Height), border);
                 }
 
                 Color fc = floorLine == 1 ? Color.White * 0.15f
