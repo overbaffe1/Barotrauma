@@ -1,13 +1,16 @@
 // ============================================================================
-//  Depth3D.cs v2.0 — НАСТОЯЩЕЕ 3D-ПРОСТРАНСТВО: коридоры, стены, перспектива
-//  CSHUB: Modules/Depth3D.cs | F5=3D | F9=режим | F6=стиль | LMB=use
+//  Depth3D.cs v3.0 — RAYCASTING 3D (Wolfenstein-style)
+//  CSHUB: Modules/Depth3D.cs | F5=3D | F9=режим | LMB=use
+//
+//  Настоящее 3D через raycasting: из головы игрока пускаются лучи,
+//  каждый луч находит стену (границу Hull), рисуется вертикальная полоса.
+//  Это даёт настоящее ощущение коридоров как в Wolfenstein 3D.
 // ============================================================================
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
@@ -22,21 +25,18 @@ namespace Depth3D
     public sealed class Depth3DMod : ACsMod
     {
         private const float MouseSens = 0.0027f;
-        private const float ViewDist = 3000f;
-        private const float RoomDepth = 300f;
-        private const float WallHeight = 100f;
+        private const float MaxRayDist = 2000f;
+        private const float RayStep = 8f;         // шаг рейкаста в display units
         private const string Prefix = "d3d.";
 
-        public enum WorldInterp { BoxWorld = 0, WireFrame = 1, Solid = 2, Xray = 3, Count = 4 }
-        private enum ViewStyle { Normal, Full, Xray }
+        private enum WorldInterp { Solid = 0, WireFrame = 1, Xray = 2, Count = 3 }
 
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly List<HookRegistration> hooks = new List<HookRegistration>();
         private WorldInterp interp = WorldInterp.Solid;
-        private ViewStyle style = ViewStyle.Full;
         private bool enabled, stopped, ready;
         private bool mouseCaptured, discardNext;
-        private bool showHints, clickPending, clickArmed, interactAvail, warnCursor, warmup = true;
+        private bool showHints, clickPending, clickArmed, interactAvail, warnCursor;
         private Character owner;
         private Vector2 savedCursor;
         private float yaw, pitch;
@@ -44,29 +44,12 @@ namespace Depth3D
         private ButtonState prevLeft;
         private Point clickPos;
         private KeyboardState prevKb;
-        private int floorLine;
         private SpriteBatch sb;
         private Texture2D whiteTex;
 
-        private static string InterpName(WorldInterp w) => w switch
-        {
-            WorldInterp.BoxWorld => "BOX WORLD",
-            WorldInterp.WireFrame => "WIREFRAME",
-            WorldInterp.Solid => "SOLID",
-            WorldInterp.Xray => "XRAY",
-            _ => "?"
-        };
-        private static string StyleName(ViewStyle s) => s switch
-        {
-            ViewStyle.Normal => "NORMAL",
-            ViewStyle.Full => "FULL",
-            ViewStyle.Xray => "XRAY",
-            _ => "?"
-        };
-
         public Depth3DMod()
         {
-            LoadPersist(); prevKb = Keyboard.GetState();
+            prevKb = Keyboard.GetState();
             try
             {
                 var drawMap = FindM(typeof(GameScreen), "DrawMap", 3);
@@ -77,15 +60,17 @@ namespace Depth3D
                 {
                     if (stopped || !enabled) return null;
                     if (!HasCtx()) { Disable(false); return null; }
-                    try { Render(); } catch (Exception ex) { Fail("render", ex); }
+                    try { DoRender(); } catch (Exception ex) { Fail("render", ex); }
                     return null;
                 });
+
                 AddHook("hud", draw, (inst, args) =>
                 {
                     if (stopped || !enabled || !HasCtx()) return null;
-                    try { Overlay(); } catch (Exception ex) { Fail("overlay", ex); }
+                    try { DoOverlay(); } catch (Exception ex) { Fail("overlay", ex); }
                     return null;
                 });
+
                 var curM = FindM(typeof(Character), "UpdateLocalCursor", 1);
                 if (curM != null)
                     AddHook("cursor", curM, (inst, args) =>
@@ -95,6 +80,7 @@ namespace Depth3D
                         return null;
                     });
                 else warnCursor = true;
+
                 var ctrlM = FindM(typeof(Character), "ControlLocalPlayer", 3);
                 if (ctrlM != null)
                     AddHook("interact", ctrlM, (inst, args) =>
@@ -111,7 +97,7 @@ namespace Depth3D
                     return null;
                 });
                 ready = true;
-                Log($"Ready. F5=3D | F9={InterpName(interp)}", Color.Cyan);
+                Log("Raycasting 3D ready. F5=on | Mouse=look | LMB=use", Color.Cyan);
             }
             catch (Exception ex) { stopped = true; RemoveHooks(); Log("Init: " + ex.Message, Color.OrangeRed); }
         }
@@ -127,11 +113,7 @@ namespace Depth3D
         {
             var kb = Keyboard.GetState(); var ms = Mouse.GetState();
             bool f5 = kb.IsKeyDown(Keys.F5) && prevKb.IsKeyUp(Keys.F5);
-            bool f6 = kb.IsKeyDown(Keys.F6) && prevKb.IsKeyUp(Keys.F6);
-            bool f7 = kb.IsKeyDown(Keys.F7) && prevKb.IsKeyUp(Keys.F7);
-            bool f8 = kb.IsKeyDown(Keys.F8) && prevKb.IsKeyUp(Keys.F8);
             bool f9 = kb.IsKeyDown(Keys.F9) && prevKb.IsKeyUp(Keys.F9);
-            bool b = PlayerInput.KeyHit(Keys.B);
             bool mP = ms.LeftButton == ButtonState.Pressed && prevLeft == ButtonState.Released;
             bool mR = ms.LeftButton == ButtonState.Released && prevLeft == ButtonState.Pressed;
             prevKb = kb; prevLeft = ms.LeftButton;
@@ -139,12 +121,9 @@ namespace Depth3D
             if (!GameMain.WindowActive) { mouseCaptured = false; showHints = false; clickPending = false; clickArmed = false; discardNext = true; return; }
             if (f5 && ready) { if (enabled) Disable(true); else if (!UiOwns()) Enable(); }
             if (!enabled) return;
-            if (f9 && !UiOwns()) { interp = (WorldInterp)(((int)interp + 1) % (int)WorldInterp.Count); Persist(); Log("MODE: " + InterpName(interp), Color.Cyan); }
-            if (f7 && !UiOwns()) Log("XML reload: not in v2.", Color.Orange);
-            if (f8 && !UiOwns()) ExportCSV();
-            if (b) { floorLine = (floorLine + 1) % 3; Persist(); }
+            if (f9 && !UiOwns()) { interp = (WorldInterp)(((int)interp + 1) % (int)WorldInterp.Count); Log("MODE: " + interp, Color.Cyan); }
+
             bool ui = UiOwns() || CrewGui();
-            if (f6 && !UiOwns()) { style = (ViewStyle)(((int)style + 1) % 3); Log("STYLE: " + StyleName(style), Color.Cyan); }
             showHints = kb.IsKeyDown(Keys.LeftAlt) && !ui;
             bool capture = !ui && !showHints;
             int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
@@ -158,7 +137,7 @@ namespace Depth3D
             float dx = MathHelper.Clamp(ms.X - cx, -250f, 250f);
             float dy = MathHelper.Clamp(ms.Y - cy, -250f, 250f);
             yaw = MathHelper.WrapAngle(yaw + dx * MouseSens);
-            pitch = MathHelper.Clamp(pitch - dy * MouseSens, -1.38f, 1.38f);
+            pitch = MathHelper.Clamp(pitch - dy * MouseSens, -1.0f, 1.0f);
             Mouse.SetPosition(cx, cy);
             if (warnCursor) Aim();
         }
@@ -171,17 +150,17 @@ namespace Depth3D
             var ms = Mouse.GetState(); savedMouse = new Point(ms.X, ms.Y); prevLeft = ms.LeftButton;
             clickPending = false; showHints = false; clickArmed = false;
             yaw = (ch.AnimController?.Dir ?? 1f) >= 0f ? 0f : MathHelper.Pi;
-            pitch = 0f; enabled = true; warmup = true; discardNext = true;
-            Log("ON / " + InterpName(interp), Color.LimeGreen);
+            pitch = 0f; enabled = true; discardNext = true;
+            Log("ON", Color.LimeGreen);
         }
-        private void Disable(bool announce)
+        private void Disable(bool ann)
         {
             if (!enabled) return;
             enabled = false; clickPending = false; showHints = false; clickArmed = false; mouseCaptured = false; discardNext = true;
             if (owner != null && !owner.Removed && ReferenceEquals(owner, Character.Controlled)) owner.CursorPosition = savedCursor;
             owner = null;
             if (GameMain.WindowActive) Mouse.SetPosition(savedMouse.X, savedMouse.Y);
-            if (announce) Log("OFF / 2D.", Color.Orange);
+            if (ann) Log("OFF.", Color.Orange);
         }
         private void Aim() { if (owner == null || owner.Removed) return; var dir = new Vector2((float)Math.Cos(yaw), (float)Math.Sin(yaw)); owner.CursorPosition = owner.WorldPosition + dir * 500f; }
         private void Commit()
@@ -194,7 +173,7 @@ namespace Depth3D
                 if (item == null || item.Removed || item.ParentInventory != null) continue;
                 var delta = item.WorldPosition - owner.WorldPosition;
                 float d = delta.Length();
-                if (d > ViewDist || d > bestD) continue;
+                if (d > MaxRayDist || d > bestD) continue;
                 float ang = (float)Math.Atan2(delta.Y, delta.X);
                 if (Math.Abs(MathHelper.WrapAngle(ang - yaw)) < 0.4f) { bestD = d; best = item; }
             }
@@ -205,167 +184,194 @@ namespace Depth3D
             }
         }
 
-        // ==== 3D РЕНДЕР ====
-        private float CosYaw, SinYaw, ProjScale;
-        private int ScrW, ScrH, ScrCX, ScrCY;
-        private Vector3 CamPos;
+        // ====================================================================
+        //  RAYCASTING RENDER
+        // ====================================================================
 
-        private void Render()
+        private void DoRender()
         {
             if (owner == null) return;
             EnsureSb();
-            CosYaw = (float)Math.Cos(yaw); SinYaw = (float)Math.Sin(yaw);
-            ScrW = GameMain.GraphicsWidth; ScrH = GameMain.GraphicsHeight;
-            ScrCX = ScrW / 2; ScrCY = ScrH / 2;
-            CamPos = new Vector3(owner.WorldPosition.X, owner.WorldPosition.Y, 0f);
-            float tanFov = (float)Math.Tan(MathHelper.ToRadians(78f) / 2f);
-            ProjScale = ScrH / 2f / tanFov;
+            var gd = GameMain.Instance.GraphicsDevice;
+            int scrW = GameMain.GraphicsWidth, scrH = GameMain.GraphicsHeight;
+
+            Vector2 eyePos = owner.WorldPosition;
+            float halfFov = MathHelper.ToRadians(78f) / 2f;
 
             sb.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied);
             try
             {
-                // Собираем стены из Hull-ов
-                var currentHull = Hull.FindHull(owner.WorldPosition, null);
-                float halfD = RoomDepth / 2f;
-                var quads = new List<(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Color col, float dist)>();
+                // Fill background (sky/abyss)
+                sb.Draw(GetTex(), new Rectangle(0, 0, scrW, scrH), Color.Black);
 
-                foreach (var hull in Hull.HullList)
+                int stripCount = 160; // fewer strips = faster, blockier but still 3D
+                float stripW = (float)scrW / stripCount;
+                float halfStripAngle = halfFov;
+
+                Color stripCol;
+                for (int i = 0; i < stripCount; i++)
                 {
-                    if (hull == null || hull.Removed) continue;
-                    var wr = hull.WorldRect;
-                    if (wr.Width < 20 || wr.Height < 20) continue;
-                    var hc = new Vector2(wr.X + wr.Width / 2f, wr.Y + wr.Height / 2f);
-                    float hd = Vector2.Distance(hc, new Vector2(CamPos.X, CamPos.Y));
-                    if (hd > ViewDist + wr.Width) continue;
-                    bool isCur = hull == currentHull;
-                    bool isAdj = false;
-                    if (!isCur && currentHull != null)
-                    { var adjSet = currentHull.GetConnectedHulls(false, 1); if (adjSet.Contains(hull)) { isAdj = true; } }
-                    if (!isCur && !isAdj && hd > ViewDist / 2f) continue;
+                    // Ray angle relative to facing direction
+                    float rayOffset = (i / (float)stripCount - 0.5f) * 2f; // -1 to 1
+                    float rayAngle = yaw + rayOffset * halfFov;
+                    float rayDirX = (float)Math.Cos(rayAngle);
+                    float rayDirY = (float)Math.Sin(rayAngle);
 
-                    float x0 = wr.X, y0 = wr.Y, x1 = wr.X + wr.Width, y1 = wr.Y + wr.Height;
-                    Color wc, fc, cc;
-                    if (isCur)
+                    // Raycast: step forward until we leave the current hull
+                    float dist = 0f;
+                    bool hitWall = false;
+                    Vector2 lastInside = eyePos;
+                    Hull startHull = Hull.FindHull(eyePos, null);
+
+                    for (float step = 0f; step < MaxRayDist; step += RayStep)
                     {
-                        wc = interp == WorldInterp.Solid ? Color.SlateGray * 0.6f : interp == WorldInterp.Xray ? Color.Cyan * 0.06f : interp == WorldInterp.WireFrame ? Color.Cyan * 0.4f : Color.CadetBlue * 0.3f;
-                        fc = interp == WorldInterp.Solid ? Color.SaddleBrown * 0.5f : Color.DarkSlateGray * 0.4f;
-                        cc = interp == WorldInterp.Solid ? Color.DimGray * 0.4f : Color.Gray * 0.12f;
+                        var testPos = eyePos + new Vector2(rayDirX * step, rayDirY * step);
+                        var hull = Hull.FindHull(testPos, startHull);
+
+                        if (hull == null)
+                        {
+                            // Left all hulls = hit a wall
+                            dist = step;
+                            hitWall = true;
+                            break;
+                        }
+                        lastInside = testPos;
+                        dist = step;
                     }
-                    else { wc = Color.DimGray * 0.15f; fc = Color.Brown * 0.1f; cc = Color.Gray * 0.08f; }
 
-                    // стены: left, right, far, floor, ceiling
-                    // left: x = x0
-                    quads.Add((new Vector3(x0, y1, -halfD), new Vector3(x0, y1, halfD), new Vector3(x0, y0, halfD), new Vector3(x0, y0, -halfD), wc, hd));
-                    // right: x = x1
-                    quads.Add((new Vector3(x1, y1, -halfD), new Vector3(x1, y1, halfD), new Vector3(x1, y0, halfD), new Vector3(x1, y0, -halfD), wc, hd));
-                    // far: y = y0
-                    quads.Add((new Vector3(x0, y0, -halfD), new Vector3(x1, y0, -halfD), new Vector3(x1, y0, halfD), new Vector3(x0, y0, halfD), wc * 0.8f, hd));
-                    // floor: y = y1
-                    quads.Add((new Vector3(x0, y1, -halfD), new Vector3(x1, y1, -halfD), new Vector3(x1, y1, halfD), new Vector3(x0, y1, halfD), fc, hd));
-                    // ceiling: y = y0 (same as far but different color)
-                    quads.Add((new Vector3(x0, y0, -halfD), new Vector3(x1, y0, -halfD), new Vector3(x1, y0, halfD), new Vector3(x0, y0, halfD), cc, hd + 1f));
+                    if (!hitWall && dist >= MaxRayDist) dist = MaxRayDist;
+                    if (dist < 10f) dist = 10f;
+
+                    // Perspective-corrected distance (fisheye correction)
+                    float correctedDist = dist * (float)Math.Cos(rayOffset * halfFov);
+                    if (correctedDist < 10f) correctedDist = 10f;
+
+                    // Wall strip height (taller = closer)
+                    float wallHeight = 300f; // world height of wall
+                    float stripH = wallHeight / correctedDist * (scrH / 2f);
+                    if (stripH > scrH * 2f) stripH = scrH * 2f;
+                    if (stripH < 2f) stripH = 2f;
+
+                    // Strip center on screen (pitch shifts up/down)
+                    float centerY = scrH / 2f + pitch * 200f;
+                    float stripY = centerY - stripH / 2f;
+
+                    // Color based on distance (fog) and side
+                    float brightness = 1.0f - Math.Min(dist / MaxRayDist, 1.0f);
+                    brightness = 0.1f + brightness * 0.9f;
+
+                    // Determine if this is a side wall (N/S) or front wall (E/W)
+                    // Simple: check if the last inside point is near a horizontal or vertical edge
+                    var hullAtHit = Hull.FindHull(lastInside, null);
+                    bool isSideWall = false;
+                    if (hullAtHit != null)
+                    {
+                        var wr = hullAtHit.WorldRect;
+                        float distToLeft = Math.Abs(lastInside.X - wr.X);
+                        float distToRight = Math.Abs(lastInside.X - (wr.X + wr.Width));
+                        float distToTop = Math.Abs(lastInside.Y - wr.Y);
+                        float distToBottom = Math.Abs(lastInside.Y - (wr.Y + wr.Height));
+                        float minH = Math.Min(distToLeft, distToRight);
+                        float minV = Math.Min(distToTop, distToBottom);
+                        isSideWall = minH < minV;
+                    }
+
+                    if (interp == WorldInterp.Xray)
+                    {
+                        stripCol = new Color(0.5f * brightness, 0.0f, 0.5f * brightness, 0.3f);
+                    }
+                    else if (isSideWall)
+                    {
+                        // Side walls (N/S facing) are darker
+                        stripCol = new Color(0.3f * brightness, 0.3f * brightness, 0.35f * brightness);
+                    }
+                    else
+                    {
+                        // Front walls (E/W facing) are lighter
+                        stripCol = new Color(0.5f * brightness, 0.5f * brightness, 0.55f * brightness);
+                    }
+
+                    if (interp == WorldInterp.WireFrame)
+                    {
+                        // Only draw edges of strips
+                        stripCol = new Color(0.0f, stripCol.G, stripCol.B, 0.8f);
+                        // Just draw the border lines of the strip
+                        int sx = (int)(i * stripW);
+                        sb.Draw(GetTex(), new Rectangle(sx, (int)stripY, 1, (int)stripH), stripCol);
+                        sb.Draw(GetTex(), new Rectangle(sx, (int)stripY, (int)stripW + 1, 1), stripCol);
+                        sb.Draw(GetTex(), new Rectangle(sx, (int)(stripY + stripH - 1), (int)stripW + 1, 1), stripCol);
+                    }
+                    else
+                    {
+                        int sx = (int)(i * stripW);
+                        int sw = (int)stripW + 1; // +1 to avoid seams
+                        sb.Draw(GetTex(), new Rectangle(sx, (int)stripY, sw, (int)stripH), stripCol);
+                    }
+
+                    // Draw floor below the wall
+                    float floorY = centerY + stripH / 2f;
+                    if (floorY < scrH && interp != WorldInterp.Xray)
+                    {
+                        Color floorCol = new Color(0.2f * brightness, 0.15f * brightness, 0.1f * brightness);
+                        sb.Draw(GetTex(), new Rectangle((int)(i * stripW), (int)floorY, (int)stripW + 1, scrH - (int)floorY), floorCol);
+                    }
+
+                    // Draw ceiling above the wall
+                    float ceilY = centerY - stripH / 2f;
+                    if (ceilY > 0 && interp != WorldInterp.Xray)
+                    {
+                        Color ceilCol = new Color(0.15f * brightness, 0.15f * brightness, 0.18f * brightness);
+                        sb.Draw(GetTex(), new Rectangle((int)(i * stripW), 0, (int)stripW + 1, (int)ceilY), ceilCol);
+                    }
                 }
 
-                quads.Sort((a, b) => b.dist.CompareTo(a.dist));
-
-                foreach (var (a, b, c, d, col, dist) in quads)
-                {
-                    var p0 = Project(a); var p1 = Project(b); var p2 = Project(c); var p3 = Project(d);
-                    if (p0 == null || p1 == null || p2 == null || p3 == null) continue;
-                    DrawFillQuad(sb, p0.Value, p1.Value, p2.Value, p3.Value, col);
-                }
-
-                // Предметы
-                var itemsToDraw = new List<(Item item, float dist, float screenX, float screenY, float w, float h)>();
+                // Draw items as sprites on top (nearby only)
                 foreach (var item in Item.ItemList)
                 {
                     if (item == null || item.Removed || item.ParentInventory != null) continue;
-                    var delta = item.WorldPosition - new Vector2(CamPos.X, CamPos.Y);
+                    if (item.Rect.Width < 10 || item.Rect.Height < 10) continue;
+                    var delta = item.WorldPosition - eyePos;
                     float d = delta.Length();
-                    if (d > ViewDist * 0.8f || d < 5f) continue;
-                    float rx = delta.X * CosYaw;
-                    float rz = -delta.X * SinYaw + delta.Y * 0f;
-                    // Proper camera-space transform
-                    float relX = delta.X, relY = delta.Y, relZ = 0f;
-                    float camRx = relX * CosYaw + relZ * SinYaw;
-                    float camRz = -relX * SinYaw + relZ * CosYaw;
-                    if (camRz < 5f) continue;
-                    float sx = ScrCX + (camRx / camRz) * ProjScale;
-                    float sy = ScrCY - (relY / camRz) * ProjScale;
-                    float w = item.Rect.Width / camRz * ProjScale;
-                    float h = item.Rect.Height / camRz * ProjScale;
-                    if (w < 3 || h < 3) continue;
-                    itemsToDraw.Add((item, d, sx, sy, w, h));
-                }
-                itemsToDraw.Sort((a, b) => b.dist.CompareTo(a.dist));
-                foreach (var (item, dist, sx, sy, w, h) in itemsToDraw)
-                {
-                    var r = new Rectangle((int)(sx - w / 2), (int)(sy - h / 2), (int)w, (int)h);
-                    Color fill = interp == WorldInterp.Xray ? Color.Purple * 0.15f
-                               : interp == WorldInterp.WireFrame ? Color.Transparent
-                               : interp == WorldInterp.Solid ? Color.SteelBlue * 0.5f
-                               : Color.CornflowerBlue * 0.35f;
-                    Color border = interp == WorldInterp.WireFrame ? Color.Cyan : Color.White * 0.4f;
-                    if (fill.A > 0) sb.Draw(GetTex(), r, fill);
-                    sb.Draw(GetTex(), new Rectangle(r.X, r.Y, r.Width, 1), border);
-                    sb.Draw(GetTex(), new Rectangle(r.X, r.Bottom - 1, r.Width, 1), border);
-                    sb.Draw(GetTex(), new Rectangle(r.X, r.Y, 1, r.Height), border);
-                    sb.Draw(GetTex(), new Rectangle(r.Right - 1, r.Y, 1, r.Height), border);
+                    if (d > ViewDist * 0.5f || d < 10f) continue;
+                    float angle = (float)Math.Atan2(delta.Y, delta.X);
+                    float relAngle = MathHelper.WrapAngle(angle - yaw);
+                    if (Math.Abs(relAngle) > halfFov) continue;
+
+                    // Screen position
+                    float screenX = scrW / 2f + (relAngle / halfFov) * (scrW / 2f);
+                    float correctedD = d * (float)Math.Cos(relAngle);
+                    float itemScale = (scrH / 2f) * (50f / Math.Max(correctedD, 30f));
+                    var center = new Vector2(screenX, scrH / 2f + pitch * 100f);
+                    int w = (int)(item.Rect.Width * itemScale / 50f);
+                    int h = (int)(item.Rect.Height * itemScale / 50f);
+                    if (w < 4 || h < 4 || w > scrW || h > scrH) continue;
+
+                    var r = new Rectangle((int)(center.X - w / 2), (int)(center.Y - h / 2), w, h);
+                    Color itemCol = interp == WorldInterp.Xray ? Color.Purple * 0.3f : Color.CornflowerBlue * 0.5f;
+                    sb.Draw(GetTex(), r, itemCol);
+                    sb.Draw(GetTex(), new Rectangle(r.X, r.Y, r.Width, 1), Color.White * 0.3f);
+                    sb.Draw(GetTex(), new Rectangle(r.X, r.Bottom - 1, r.Width, 1), Color.White * 0.3f);
+                    sb.Draw(GetTex(), new Rectangle(r.X, r.Y, 1, r.Height), Color.White * 0.3f);
+                    sb.Draw(GetTex(), new Rectangle(r.Right - 1, r.Y, 1, r.Height), Color.White * 0.3f);
                 }
             }
             finally { sb.End(); }
 
             // Crosshair
             sb.Begin();
-            int mcx = ScrW / 2, mcy = ScrH / 2;
-            sb.Draw(GetTex(), new Rectangle(mcx - 5, mcy - 1, 10, 2), Color.White * 0.7f);
-            sb.Draw(GetTex(), new Rectangle(mcx - 1, mcy - 5, 2, 10), Color.White * 0.7f);
-            sb.End();
-        }
-
-        private Point? Project(Vector3 world)
-        {
-            float relX = world.X - CamPos.X;
-            float relY = world.Y - CamPos.Y;
-            float relZ = world.Z - CamPos.Z;
-            float camX = relX * CosYaw + relZ * SinYaw;
-            float camZ = -relX * SinYaw + relZ * CosYaw;
-            if (camZ < 1f) return null;
-            float sx = ScrCX + (camX / camZ) * ProjScale;
-            float sy = ScrCY - (relY / camZ) * ProjScale;
-            return new Point((int)sx, (int)sy);
-        }
-
-        private void DrawFillQuad(SpriteBatch batch, Point a, Point b, Point c, Point d, Color color)
-        {
-            int minX = Math.Min(Math.Min(a.X, b.X), Math.Min(c.X, d.X));
-            int maxX = Math.Max(Math.Max(a.X, b.X), Math.Max(c.X, d.X));
-            int minY = Math.Min(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y));
-            int maxY = Math.Max(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y));
-            int w = maxX - minX, h = maxY - minY;
-            if (w < 1 || h < 1) return;
-            if (w > ScrW * 3 || h > ScrH * 3) return;
-            batch.Draw(GetTex(), new Rectangle(minX, minY, w, h), color);
-        }
-
-        private void Overlay()
-        {
-            EnsureSb();
-            sb.Begin();
-            int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
-            sb.Draw(GetTex(), new Rectangle(cx - 5, cy - 1, 10, 2), Color.White * 0.7f);
-            sb.Draw(GetTex(), new Rectangle(cx - 1, cy - 5, 2, 10), Color.White * 0.7f);
-            var font = GUIStyle.Font;
-            if (font != null)
+            int hc = GameMain.GraphicsWidth / 2, hc2 = GameMain.GraphicsHeight / 2;
+            sb.Draw(GetTex(), new Rectangle(hc - 5, hc2 - 1, 10, 2), Color.White * 0.7f);
+            sb.Draw(GetTex(), new Rectangle(hc - 1, hc2 - 5, 2, 10), Color.White * 0.7f);
+            var f = GUIStyle.Font;
+            if (f != null)
             {
-                string txt = "[" + InterpName(interp) + "] " + StyleName(style);
-                var sz = font.MeasureString(txt);
-                var pos = new Vector2(GameMain.GraphicsWidth - sz.X - 20f, 20f);
-                font.DrawString(sb, txt, pos + Vector2.One, Color.Black, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-                font.DrawString(sb, txt, pos, Color.Cyan, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                string t = interp.ToString();
+                f.DrawString(sb, t, new Vector2(10, 10), Color.Cyan);
             }
             sb.End();
         }
+
+        private void Overlay() { /* handled in DoRender */ }
 
         private void ExportCSV()
         {
@@ -385,31 +391,13 @@ namespace Depth3D
             catch (Exception ex) { Log("CSV: " + ex.Message, Color.Red); }
         }
 
-        private void LoadPersist()
+        private void EnsureSb()
         {
-            try
-            {
-                string p = "barodepth/depth3d.settings.xml";
-                if (!File.Exists(p)) return;
-                var root = XDocument.Load(p).Root;
-                if (root == null) return;
-                string s = (string)root.Attribute("interp") ?? "Solid";
-                if (Enum.TryParse(s, out WorldInterp parsed)) interp = parsed;
-                floorLine = (int?)root.Attribute("floor") ?? 0;
-            }
-            catch { }
-        }
-        private void Persist()
-        {
-            try
-            {
-                Directory.CreateDirectory("barodepth");
-                new XDocument(new XElement("s", new XAttribute("interp", interp.ToString()), new XAttribute("floor", floorLine))).Save("barodepth/depth3d.settings.xml");
-            }
-            catch { }
+            if (sb != null) return;
+            sb = new SpriteBatch(GameMain.Instance.GraphicsDevice);
         }
 
-        private void EnsureSb() { if (sb != null) return; sb = new SpriteBatch(GameMain.Instance.GraphicsDevice); }
+        private Texture2D whiteTex;
         private Texture2D GetTex()
         {
             if (whiteTex != null) return whiteTex;
@@ -417,6 +405,7 @@ namespace Depth3D
             whiteTex.SetData(new[] { Color.White });
             return whiteTex;
         }
+
         private static MethodInfo FindM(Type t, string n, int pc)
         {
             MethodInfo f = null;
