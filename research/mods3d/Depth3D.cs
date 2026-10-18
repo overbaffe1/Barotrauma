@@ -332,7 +332,7 @@ namespace Depth3D
                     if (item.Rect.Width < 10 || item.Rect.Height < 10) continue;
                     var delta = item.WorldPosition - eyePos;
                     float d = delta.Length();
-                    if (d > ViewDist * 0.5f || d < 10f) continue;
+                    if (d > MaxRayDist * 0.5f || d < 10f) continue;
                     float angle = (float)Math.Atan2(delta.Y, delta.X);
                     float relAngle = MathHelper.WrapAngle(angle - yaw);
                     if (Math.Abs(relAngle) > halfFov) continue;
@@ -371,7 +371,7 @@ namespace Depth3D
             sb.End();
         }
 
-        private void Overlay() { /* handled in DoRender */ }
+        private void DoOverlay() { /* handled in DoRender */ }
 
         private void ExportCSV()
         {
@@ -397,7 +397,6 @@ namespace Depth3D
             sb = new SpriteBatch(GameMain.Instance.GraphicsDevice);
         }
 
-        private Texture2D whiteTex;
         private Texture2D GetTex()
         {
             if (whiteTex != null) return whiteTex;
