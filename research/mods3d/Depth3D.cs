@@ -240,7 +240,7 @@ namespace Depth3D
                     bool isCur = hull == currentHull;
                     bool isAdj = false;
                     if (!isCur && currentHull != null)
-                    { foreach (var conn in currentHull.Connections) { if (conn.OtherHull(currentHull) == hull) { isAdj = true; break; } } }
+                    { var adjSet = currentHull.GetConnectedHulls(false, 1); if (adjSet.Contains(hull)) { isAdj = true; } }
                     if (!isCur && !isAdj && hd > ViewDist / 2f) continue;
 
                     float x0 = wr.X, y0 = wr.Y, x1 = wr.X + wr.Width, y1 = wr.Y + wr.Height;
@@ -346,6 +346,25 @@ namespace Depth3D
             if (w < 1 || h < 1) return;
             if (w > ScrW * 3 || h > ScrH * 3) return;
             batch.Draw(GetTex(), new Rectangle(minX, minY, w, h), color);
+        }
+
+        private void Overlay()
+        {
+            EnsureSb();
+            sb.Begin();
+            int cx = GameMain.GraphicsWidth / 2, cy = GameMain.GraphicsHeight / 2;
+            sb.Draw(GetTex(), new Rectangle(cx - 5, cy - 1, 10, 2), Color.White * 0.7f);
+            sb.Draw(GetTex(), new Rectangle(cx - 1, cy - 5, 2, 10), Color.White * 0.7f);
+            var font = GUIStyle.Font;
+            if (font != null)
+            {
+                string txt = "[" + InterpName(interp) + "] " + StyleName(style);
+                var sz = font.MeasureString(txt);
+                var pos = new Vector2(GameMain.GraphicsWidth - sz.X - 20f, 20f);
+                font.DrawString(sb, txt, pos + Vector2.One, Color.Black, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                font.DrawString(sb, txt, pos, Color.Cyan, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            }
+            sb.End();
         }
 
         private void ExportCSV()
